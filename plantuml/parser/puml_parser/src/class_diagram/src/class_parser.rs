@@ -1427,6 +1427,39 @@ mod tests {
     }
 
     #[test]
+    fn test_parse_param_pointer_trailing_const() {
+        for (input, expected_type, expected_name) in [
+            ("void* const", "void* const", None),
+            ("void* const ptr", "void* const", Some("ptr")),
+            ("int* const result", "int* const", Some("result")),
+        ] {
+            let pair = PlantUmlCommonParser::parse(Rule::param, input)
+                .unwrap()
+                .next()
+                .unwrap();
+
+            let param = super::ClassParseSession::parse_param(pair);
+
+            assert_eq!(param.param_type.as_deref(), Some(expected_type), "{input}");
+            assert_eq!(param.name.as_deref(), expected_name, "{input}");
+        }
+    }
+
+    #[test]
+    fn test_parse_param_const_prefixed_name_not_treated_as_const() {
+        // `constant` must be read as a name, not a `const` qualifier plus `ant`.
+        let pair = PlantUmlCommonParser::parse(Rule::param, "void* constant")
+            .unwrap()
+            .next()
+            .unwrap();
+
+        let param = super::ClassParseSession::parse_param(pair);
+
+        assert_eq!(param.param_type.as_deref(), Some("void*"));
+        assert_eq!(param.name.as_deref(), Some("constant"));
+    }
+
+    #[test]
     fn test_parse_file_error() {
         let mut parser = PumlClassParser;
 

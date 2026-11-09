@@ -1064,8 +1064,8 @@ fn parameters_match(
         && design_parameters.iter().zip(implementation_parameters).all(
             |(design_parameter, implementation_parameter)| {
                 design_parameter.name == implementation_parameter.name
-                    && normalized_optional_type(&design_parameter.param_type)
-                        == normalized_optional_type(&implementation_parameter.param_type)
+                    && normalized_optional_parameter_type(&design_parameter.param_type)
+                        == normalized_optional_parameter_type(&implementation_parameter.param_type)
                     && design_parameter.is_variadic == implementation_parameter.is_variadic
                     && design_parameter.is_pack_expansion
                         == implementation_parameter.is_pack_expansion
@@ -1105,7 +1105,7 @@ fn parameter_signature(parameters: &[class_diagram::FunctionArgument]) -> String
                 parameter
                     .param_type
                     .as_deref()
-                    .map(normalize_type_name)
+                    .map(normalize_parameter_type)
                     .unwrap_or_default(),
                 variadic
             )
@@ -1138,8 +1138,8 @@ fn parameter_differences(
             ));
         }
 
-        if normalized_optional_type(&design_parameter.param_type)
-            != normalized_optional_type(&implementation_parameter.param_type)
+        if normalized_optional_parameter_type(&design_parameter.param_type)
+            != normalized_optional_parameter_type(&implementation_parameter.param_type)
         {
             differences.push((
                 ParameterDifference::Type,
@@ -1350,6 +1350,41 @@ fn template_pack_marker(is_pack: bool) -> &'static str {
 
 fn normalized_optional_type(type_name: &Option<String>) -> Option<String> {
     type_name.as_deref().map(normalize_type_name)
+}
+
+// Top-level const on a by-value parameter does not affect the function
+// signature in C++ (`void f(void* const)` and `void f(void*)` are the same
+// function), so it must be ignored when matching design against implementation.
+fn normalized_optional_parameter_type(type_name: &Option<String>) -> Option<String> {
+    type_name.as_deref().map(normalize_parameter_type)
+}
+
+fn normalize_parameter_type(type_name: &str) -> String {
+    normalize_type_name(&strip_top_level_const(type_name))
+}
+
+fn strip_top_level_const(type_name: &str) -> String {
+    let mut stripped = type_name.trim().to_string();
+
+    // Trailing (east) const applies to the outermost value or pointer.
+    if let Some(prefix) = stripped.strip_suffix("const") {
+        if prefix.ends_with(char::is_whitespace) || prefix.ends_with('*') {
+            stripped = prefix.trim_end().to_string();
+        }
+    }
+
+    // Leading (west) const on a by-value type (no pointer or reference) is
+    // top-level; keep it when a `*`/`&` is present as that denotes a low-level
+    // const (e.g. pointer/reference to const).
+    if !stripped.contains('*') && !stripped.contains('&') {
+        if let Some(rest) = stripped.strip_prefix("const") {
+            if rest.starts_with(char::is_whitespace) {
+                stripped = rest.trim_start().to_string();
+            }
+        }
+    }
+
+    stripped
 }
 
 fn normalize_non_type_template_parameter_type(type_name: &str) -> String {
@@ -2026,6 +2061,54 @@ mod tests {
             relationship_display_name(&relationship),
             "vehicle::Engine -> Composition -> vehicle::Manufacturer"
         );
+    }
+
+    #[test]
+    fn parameter_type_normalization_ignores_top_level_const() {
+        // Top-level const on a by-value parameter is not part of the signature.
+        for (type_name, expected) in [
+            ("void* const", "void*"),
+            ("void *const", "void*"),
+            ("void*const", "void*"),
+            ("int* const", "int*"),
+            ("const int", "int"),
+            ("int const", "int"),
+            ("const std::vector<int>", "vector<int>"),
+        ] {
+            assert_eq!(
+                normalize_parameter_type(type_name),
+                expected,
+                "type_name: {type_name:?}",
+            );
+        }
+    }
+
+    #[test]
+    fn parameter_type_normalization_preserves_low_level_const() {
+        // Const that qualifies the pointee/referent is significant and kept.
+        for (type_name, expected) in [
+            ("const int*", "const int*"),
+            ("const void*", "const void*"),
+            ("const int&", "const int&"),
+            ("const int* const", "const int*"),
+        ] {
+            assert_eq!(
+                normalize_parameter_type(type_name),
+                expected,
+                "type_name: {type_name:?}",
+            );
+        }
+    }
+
+    #[test]
+    fn parameter_type_normalization_keeps_const_within_identifiers() {
+        for type_name in ["Constant", "WidgetConst", "const_iterator"] {
+            assert_eq!(
+                normalize_parameter_type(type_name),
+                normalize_type_name(type_name),
+                "type_name: {type_name:?}",
+            );
+        }
     }
 
     #[test]

@@ -35,9 +35,11 @@ generic_type_args = { "<" ~ !"<" ~ (type_arg ~ ("," ~ type_arg)*)? ~ ">" }
 type_arg = { type_expr | NUMBER }
 type_expr_list = { type_expr ~ ("," ~ type_expr)* }
 
-type_suffix = { array_suffix | reference_suffix | pointer_suffix }
+// A pointer may carry a trailing (east) const, e.g. `void* const`, which is a
+// top-level const on the pointer itself.
+type_suffix = { array_suffix | reference_suffix | pointer_suffix ~ const_prefix? }
 brace_enclosed_type = { "{" ~ type_expr ~ "}" }
-const_prefix = { "const" }
+const_prefix = @{ "const" ~ keyword_boundary }
 function_type_suffix = { "(" ~ type_expr_list? ~ ")" }
 prefix_array_prefix = { "[" ~ "]" }
 array_suffix = { "[" ~ (NUMBER | identifier)? ~ "]" }
