@@ -229,7 +229,7 @@ Every method modeled in the unit design entity must exist in the matching
 implementation entity. The method name, visibility, parameters, and method
 modifiers must match, and the normalized return type must also match (this
 applies to constructors and destructors too, which typically have no return
-type on either side). Method modifiers include `static`, `virtual`,
+type on either side). Method modifiers include `const`, `static`, `virtual`,
 `abstract`, `override`, constructor, destructor, and `noexcept`. Parameters
 match when they have the same count, with matching parameter name, normalized
 type, and pack-expansion (`...`) marker at each position.
@@ -244,6 +244,14 @@ An `abstract` or `override` method is implicitly `virtual` (matching C++
 semantics), so the effective modifier set includes `virtual` even if it was not
 written explicitly. The visibility classifier (`+`/`-`/`#`/`~`) is always
 written first, before any brace/stereotype modifier, e.g. `+ {virtual} Run()`.
+
+Method `const` qualification may be written as a bare trailing qualifier, e.g.
+`+ Empty() const : bool`, or as a stereotype before or after the return type,
+e.g. `+ Empty() <<const>> : bool` or `+ Empty() : bool <<const>>`.
+These forms are equivalent and can be combined with `noexcept`, e.g.
+`+ Empty() const noexcept : bool`. Method qualification is independent of
+`const` in a parameter or return type: `+ Value() : const int&` alone does not
+declare a const-qualified method.
 
 ```text
 ' PlantUML class diagram
@@ -279,9 +287,15 @@ C-style variadic parameters (e.g. `void Log(const char* fmt, ...)`) are not
 currently supported by the PlantUML parser and are not validated: a design
 parameter is always treated as non-variadic.
 
-Method lookup first tries the full normalized signature. If no exact signature
+Method lookup first tries the method name, normalized parameter types, and
+method `const` qualification. Thus `Check()` and `Check() const` are distinct
+overloads, even when their return types are identical. If no exact signature
 match exists and exactly one implementation method has the same name, that
-method is compared to produce field-level diagnostics. If multiple same-named
+method is compared to produce field-level diagnostics. A `const` mismatch is
+rejected in both directions: the design is const-qualified but the implementation
+is not, or the implementation is const-qualified but the design is not. For a
+unique same-named candidate, this produces a method-modifier mismatch showing
+`[Const]` versus `[]`. If multiple same-named
 implementation overloads exist, the design method is reported as missing because
 the validator cannot safely choose a candidate.
 
@@ -406,6 +420,7 @@ names are read as written and normalized only here.
 | Variable type, visibility, or static flag mismatch | Variable Consistency |
 | Missing method | Method Consistency |
 | Method return type, visibility, parameter, or modifier mismatch | Method Consistency |
+| Method `const` qualification mismatch in either direction | Method Consistency |
 | Method template parameter mismatch | Template Parameter Consistency |
 | Missing enum literal | Enum Literal Consistency |
 | Enum literal data mismatch | Enum Literal Consistency |

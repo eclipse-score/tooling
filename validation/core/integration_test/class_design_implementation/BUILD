@@ -35,6 +35,8 @@ filegroup(
         "//validation/core/integration_test/class_design_implementation/negative_method_missing:case_data",
         "//validation/core/integration_test/class_design_implementation/negative_method_missing_with_suggestion:case_data",
         "//validation/core/integration_test/class_design_implementation/negative_method_modifier_abstract_mismatch:case_data",
+        "//validation/core/integration_test/class_design_implementation/negative_method_modifier_const_missing_in_design:case_data",
+        "//validation/core/integration_test/class_design_implementation/negative_method_modifier_const_missing_in_implementation:case_data",
         "//validation/core/integration_test/class_design_implementation/negative_method_modifier_mismatch:case_data",
         "//validation/core/integration_test/class_design_implementation/negative_method_modifier_noexcept_mismatch:case_data",
         "//validation/core/integration_test/class_design_implementation/negative_method_modifier_override_mismatch:case_data",

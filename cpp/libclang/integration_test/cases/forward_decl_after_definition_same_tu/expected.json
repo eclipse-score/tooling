@@ -45,7 +45,7 @@
                     "visibility": "public",
                     "parameters": [],
                     "template_parameters": null,
-                    "modifiers": [],
+                    "modifiers": ["Const"],
                     "source_location": {
                         "file": "cpp/libclang/integration_test/cases/forward_decl_after_definition_same_tu/event_binding.h",
                         "line": 21

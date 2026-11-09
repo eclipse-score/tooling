@@ -16,6 +16,39 @@
 This guide describes class-diagram syntax that has specific semantic meaning in
 the PlantUML parser and resolver.
 
+## Const-qualified methods
+
+Method `const` qualification may be written as a bare qualifier after the
+parameter list or as a `<<const>>` stereotype before or after the return type.
+The following declarations are equivalent and may be combined with `noexcept`:
+
+```text
++ Empty() const noexcept : bool
++ Empty() <<const>> noexcept : bool
++ Empty() : bool <<const>> noexcept
+```
+
+Each describes the C++ declaration `bool Empty() const noexcept;`. Choose one
+form per method; these alternatives are not separate overloads.
+
+Method qualification is independent of `const` in a parameter or return type.
+For example, `+ Value() : const int&` declares a non-const method returning a
+reference to const data. To qualify the method as well, write
+`+ Value() const : const int&` or `+ Value() : const int& <<const>>`.
+
+Const and non-const methods with the same name and parameter types are distinct
+overloads. The parser preserves their method qualifiers, independently of
+their return types:
+
+```plantuml
+@startuml const_overloads
+class Engine {
+    + Value() : int&
+    + Value() const : const int&
+}
+@enduml
+```
+
 ## Free functions
 
 Use an `entity` with the `<<function>>` stereotype to group free functions.

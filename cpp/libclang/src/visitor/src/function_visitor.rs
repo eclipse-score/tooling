@@ -124,6 +124,7 @@ impl FunctionVisitor {
 
         let parsed_parameters = parse_callable_parameters(entity);
         let class_id = id.scope.qualified_name();
+        let is_const_method = entity.is_const_method();
 
         let return_type = entity
             .get_result_type()
@@ -188,6 +189,7 @@ impl FunctionVisitor {
                 ),
                 (kind == FunctionKind::Destructor, MethodModifier::Destructor),
                 (is_final_method, MethodModifier::Final),
+                (is_const_method, MethodModifier::Const),
             ]),
             source_location: parse_source_location(entity),
         };
@@ -199,6 +201,7 @@ impl FunctionVisitor {
             signature_key: CallableSignatureKey {
                 name: id.name.clone(),
                 parameters: parsed_parameters.parameter_keys,
+                is_const_method,
             },
         })
     }
@@ -215,6 +218,7 @@ impl FunctionVisitor {
             signature: CallableSignatureKey {
                 name: id.name.clone(),
                 parameters: parsed_parameters.parameter_keys,
+                is_const_method: false,
             },
         }) {
             return None;

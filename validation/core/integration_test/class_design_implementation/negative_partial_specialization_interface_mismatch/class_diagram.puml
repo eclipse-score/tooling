@@ -15,7 +15,7 @@
 
 namespace amp {
     class "move_only_function" as move_only_function {
-        + empty() noexcept : bool
+        + empty() const noexcept : bool
     }
 }
 

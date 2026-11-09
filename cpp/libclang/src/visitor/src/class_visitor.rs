@@ -397,6 +397,7 @@ mod tests {
                 signature: CallableSignatureKey {
                     name: "compute".to_string(),
                     parameters: vec![],
+                    is_const_method: false,
                 },
             }])
         );
@@ -419,6 +420,7 @@ mod tests {
             signature_key: CallableSignatureKey {
                 name: "compute".to_string(),
                 parameters: vec![],
+                is_const_method: false,
             },
         }
     }

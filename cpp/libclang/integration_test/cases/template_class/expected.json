@@ -94,7 +94,7 @@
               "is_variadic": false
             }
           ],
-          "modifiers": [],
+          "modifiers": ["Const"],
           "template_parameters": [
             {
               "Type": {
@@ -139,7 +139,7 @@
           "name": "capacity",
           "return_type": "int",
           "parameters": [],
-          "modifiers": [],
+          "modifiers": ["Const"],
           "template_parameters": null,
           "visibility": "public",
           "source_location": {

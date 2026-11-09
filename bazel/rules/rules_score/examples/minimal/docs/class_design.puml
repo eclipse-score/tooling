@@ -18,7 +18,7 @@
 class MyUnit {
     - store_ : std::unordered_map<std::string, std::string>
     + configure(key : const string&, value : const string&) : void
-    + get(key : const string&) : string
+    + get(key : const string&) : string <<const>>
 }
 
 @enduml

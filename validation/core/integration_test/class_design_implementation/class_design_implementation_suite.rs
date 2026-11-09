@@ -238,6 +238,16 @@ fn negative_method_modifier_mismatch() {
 }
 
 #[test]
+fn negative_method_modifier_const_missing_in_design() {
+    assert_case("negative_method_modifier_const_missing_in_design");
+}
+
+#[test]
+fn negative_method_modifier_const_missing_in_implementation() {
+    assert_case("negative_method_modifier_const_missing_in_implementation");
+}
+
+#[test]
 fn negative_method_modifier_override_mismatch() {
     assert_case("negative_method_modifier_override_mismatch");
 }
