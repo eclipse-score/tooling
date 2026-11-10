@@ -11,6 +11,7 @@ external
 # Per-developer Bazel overrides (e.g. a local disk cache path), imported via
 # `try-import %workspace%/user.bazelrc` in .bazelrc.
 user.bazelrc
+user.downloader_config
 
 __pycache__
 .ruff_cache/

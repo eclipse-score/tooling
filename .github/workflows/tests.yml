@@ -43,6 +43,10 @@ jobs:
           repository-cache: true
           cache-optimized: true
           cache-save: ${{ github.ref == 'refs/heads/main' }}
+      - name: Configure Ubuntu snapshot mirror
+        uses: ./.github/actions/configure_ubuntu_snapshot_mirror
+        with:
+          ubuntu-snapshot-mirror-url: ${{ secrets.UBUNTU_SNAPSHOT_MIRROR_URL }}
       - name: Run coverage module tests
         run: |
           bazel test //coverage/tests:all
@@ -112,6 +116,10 @@ jobs:
           repository-cache: true
           cache-optimized: true
           cache-save: ${{ github.ref == 'refs/heads/main' }}
+      - name: Configure Ubuntu snapshot mirror
+        uses: ./.github/actions/configure_ubuntu_snapshot_mirror
+        with:
+          ubuntu-snapshot-mirror-url: ${{ secrets.UBUNTU_SNAPSHOT_MIRROR_URL }}
       - name: Run ${{ matrix.name }}
         run: ${{ matrix.run }}
   rules_score_tests:
@@ -157,5 +165,9 @@ jobs:
           repository-cache: true
           cache-optimized: true
           cache-save: ${{ github.ref == 'refs/heads/main' }}
+      - name: Configure Ubuntu snapshot mirror
+        uses: ./.github/actions/configure_ubuntu_snapshot_mirror
+        with:
+          ubuntu-snapshot-mirror-url: ${{ secrets.UBUNTU_SNAPSHOT_MIRROR_URL }}
       - name: Run ${{ matrix.name }}
         run: ${{ matrix.run }}

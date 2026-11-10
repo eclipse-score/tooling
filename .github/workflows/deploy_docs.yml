@@ -50,6 +50,10 @@ jobs:
           disk-cache: true
           repository-cache: true
           bazelisk-cache: true
+      - name: Configure Ubuntu snapshot mirror
+        uses: ./.github/actions/configure_ubuntu_snapshot_mirror
+        with:
+          ubuntu-snapshot-mirror-url: ${{ secrets.UBUNTU_SNAPSHOT_MIRROR_URL }}
       - name: Install system dependencies
         run: |
           sudo apt-get update
