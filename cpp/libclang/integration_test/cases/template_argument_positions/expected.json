@@ -1,0 +1,194 @@
+{
+  "types": {
+    "argument_positions::Mixed": {
+      "id": "argument_positions::Mixed",
+      "name": "Mixed",
+      "enclosing_namespace_id": "argument_positions",
+      "stereotypes": [],
+      "entity_type": "Class",
+      "template_kind": "Primary",
+      "type_aliases": [],
+      "variables": [],
+      "methods": [],
+      "template_parameters": [
+        { "Type": { "name": "First", "is_pack": false } },
+        { "NonType": { "name": "Count", "value_type": "int", "is_pack": false } },
+        { "Type": { "name": "Last", "is_pack": false } }
+      ],
+      "enum_literals": [],
+      "relationships": [],
+      "source_location": {
+        "file": "cpp/libclang/integration_test/cases/template_argument_positions/template_argument_positions.cpp",
+        "line": 18
+      }
+    },
+    "argument_positions::Owner": {
+      "id": "argument_positions::Owner",
+      "name": "Owner",
+      "enclosing_namespace_id": "argument_positions",
+      "stereotypes": [],
+      "entity_type": "Class",
+      "template_kind": "Primary",
+      "type_aliases": [],
+      "variables": [],
+      "methods": [],
+      "template_parameters": [
+        { "Type": { "name": "T", "is_pack": false } }
+      ],
+      "enum_literals": [],
+      "relationships": [],
+      "source_location": {
+        "file": "cpp/libclang/integration_test/cases/template_argument_positions/template_argument_positions.cpp",
+        "line": 23
+      }
+    },
+    "argument_positions::Owner::Mixed": {
+      "id": "argument_positions::Owner::Mixed",
+      "name": "Mixed",
+      "enclosing_namespace_id": "argument_positions",
+      "stereotypes": [],
+      "entity_type": "Class",
+      "template_kind": "Primary",
+      "type_aliases": [],
+      "variables": [],
+      "methods": [],
+      "template_parameters": [
+        { "Type": { "name": "First", "is_pack": false } },
+        { "NonType": { "name": "Count", "value_type": "int", "is_pack": false } },
+        { "Type": { "name": "Last", "is_pack": false } }
+      ],
+      "enum_literals": [],
+      "relationships": [],
+      "source_location": {
+        "file": "cpp/libclang/integration_test/cases/template_argument_positions/template_argument_positions.cpp",
+        "line": 27
+      }
+    },
+    "argument_positions::Probe": {
+      "id": "argument_positions::Probe",
+      "name": "Probe",
+      "enclosing_namespace_id": "argument_positions",
+      "stereotypes": [],
+      "entity_type": "Class",
+      "type_aliases": [],
+      "variables": [
+        {
+          "name": "value",
+          "data_type": "argument_positions::Mixed<int, 3, float>",
+          "visibility": "public",
+          "is_static": false,
+          "source_location": {
+            "file": "cpp/libclang/integration_test/cases/template_argument_positions/template_argument_positions.cpp",
+            "line": 36
+          }
+        }
+      ],
+      "methods": [
+        {
+          "name": "accept",
+          "return_type": "void",
+          "visibility": "public",
+          "parameters": [{ "name": "input", "param_type": "Mixed<int, 3, float>", "is_variadic": false }],
+          "template_parameters": null,
+          "modifiers": [],
+          "source_location": {
+            "file": "cpp/libclang/integration_test/cases/template_argument_positions/template_argument_positions.cpp",
+            "line": 37
+          }
+        },
+        {
+          "name": "plain",
+          "return_type": "argument_positions::Mixed<int, 3, float>",
+          "visibility": "public",
+          "parameters": [],
+          "template_parameters": null,
+          "modifiers": [],
+          "source_location": {
+            "file": "cpp/libclang/integration_test/cases/template_argument_positions/template_argument_positions.cpp",
+            "line": 38
+          }
+        },
+        {
+          "name": "constant",
+          "return_type": "const argument_positions::Mixed<int, 3, float>",
+          "visibility": "public",
+          "parameters": [],
+          "template_parameters": null,
+          "modifiers": [],
+          "source_location": {
+            "file": "cpp/libclang/integration_test/cases/template_argument_positions/template_argument_positions.cpp",
+            "line": 41
+          }
+        },
+        {
+          "name": "varying",
+          "return_type": "volatile argument_positions::Mixed<int, 3, float>",
+          "visibility": "public",
+          "parameters": [],
+          "template_parameters": null,
+          "modifiers": [],
+          "source_location": {
+            "file": "cpp/libclang/integration_test/cases/template_argument_positions/template_argument_positions.cpp",
+            "line": 42
+          }
+        },
+        {
+          "name": "qualified",
+          "return_type": "volatile const argument_positions::Mixed<int, 3, float>",
+          "visibility": "public",
+          "parameters": [],
+          "template_parameters": null,
+          "modifiers": [],
+          "source_location": {
+            "file": "cpp/libclang/integration_test/cases/template_argument_positions/template_argument_positions.cpp",
+            "line": 43
+          }
+        },
+        {
+          "name": "inner_qualified",
+          "return_type": "const argument_positions::Mixed<const int, 3, volatile float>",
+          "visibility": "public",
+          "parameters": [],
+          "template_parameters": null,
+          "modifiers": [],
+          "source_location": {
+            "file": "cpp/libclang/integration_test/cases/template_argument_positions/template_argument_positions.cpp",
+            "line": 44
+          }
+        },
+        {
+          "name": "nested",
+          "return_type": "argument_positions::Owner<double>::Mixed<int, 3, float>",
+          "visibility": "public",
+          "parameters": [],
+          "template_parameters": null,
+          "modifiers": [],
+          "source_location": {
+            "file": "cpp/libclang/integration_test/cases/template_argument_positions/template_argument_positions.cpp",
+            "line": 48
+          }
+        },
+        {
+          "name": "nested_qualified",
+          "return_type": "volatile const argument_positions::Owner<double>::Mixed<int, 3, float>",
+          "visibility": "public",
+          "parameters": [],
+          "template_parameters": null,
+          "modifiers": [],
+          "source_location": {
+            "file": "cpp/libclang/integration_test/cases/template_argument_positions/template_argument_positions.cpp",
+            "line": 49
+          }
+        }
+      ],
+      "template_parameters": null,
+      "enum_literals": [],
+      "relationships": [],
+      "source_location": {
+        "file": "cpp/libclang/integration_test/cases/template_argument_positions/template_argument_positions.cpp",
+        "line": 32
+      }
+    }
+  },
+  "functions": []
+}
