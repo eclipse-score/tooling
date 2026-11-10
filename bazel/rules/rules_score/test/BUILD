@@ -2887,11 +2887,13 @@ assumed_system_requirements(
 
 feature_requirements(
     name = "feat_req_needs",
+    feat_id = "feat__bits",
     needs = ["fixtures/sphinx_needs/needs.json"],
 )
 
 component_requirements(
     name = "comp_req_needs",
+    comp_id = "comp__bits",
     needs = ["fixtures/sphinx_needs/needs.json"],
 )
 
@@ -2904,6 +2906,7 @@ assumptions_of_use(
 component_requirements(
     name = "comp_req_mixed_needs",
     srcs = [":comp_req_rst_trlc"],
+    comp_id = "comp__bits",
     needs = ["fixtures/sphinx_needs/needs.json"],
     deps = [
         ":asr_rst",

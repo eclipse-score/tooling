@@ -111,6 +111,7 @@ that `:satisfies:` / `:derived_from:` resolve in.
 component_requirements(
     name = "my_comp_reqs",
     needs = ["//my/component:docs"],  # score_docs_as_code docs_bundle or needs.json file
+    comp_id = "comp__my_component",
 )
 ```
 
@@ -125,9 +126,12 @@ same LOBSTER requirement items (kind `AssumedSystemReq`, `FeatReq`, `CompReq`,
 The needs are listed on a plain RST page; TRLC rendering and `<name>_test` only
 apply to `srcs`, which can be combined with `needs`. Tests trace to these
 requirements by need id (`RecordProperty("lobster-tracing", "comp_req__...")`).
-Override `needs_lobster_config` to change the need types or link fields, or to
-select a subset of a larger export with `id-pattern` (e.g. the feature
-requirements of one module in a platform-wide `needs.json`).
+`feature_requirements` and `component_requirements` require `feat_id` /
+`comp_id` with `needs`: only requirements whose `satisfied_by` link names that
+feature or component are converted, so a platform-wide `needs.json` can be
+passed as is. `stkh_req` and `aou_req` belong to the platform and are not
+filtered. All kinds share one conversion configuration
+(`lobster/config/lobster_sphinx_needs.yaml`).
 
 ---
 

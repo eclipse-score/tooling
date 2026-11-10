@@ -13,10 +13,11 @@
 """Convert Sphinx-Needs ``needs.json`` exports to LOBSTER requirement items.
 
 Counterpart of ``lobster-trlc`` for requirements written as Sphinx-Needs
-directives: every need matching a conversion rule becomes one
+directives: every need of the selected type (``--need-type``) becomes one
 ``lobster-req-trace`` item, so the rest of the LOBSTER pipeline cannot tell it
-apart from a TRLC requirement. The configuration mirrors the ``lobster-trlc``
-YAML::
+apart from a TRLC requirement. ``--satisfied-by`` keeps only the needs whose
+``satisfied_by`` link names the given feature or component. The central
+configuration mirrors the ``lobster-trlc`` YAML::
 
     conversion-rules:
       - need-type: comp_req          # Sphinx-Needs type to convert
@@ -26,7 +27,6 @@ YAML::
         description-fields: content  # optional, default "content", falls back to the title
         status-field: status         # optional, copied to the LOBSTER status
         exclude-status: [invalid]    # optional, needs with these statuses are skipped
-        id-pattern: ^comp_req__x__   # optional, only needs whose ID matches are converted
         tags:                        # link fields that become tracing targets
           - derived_from
           - field: covers
@@ -75,7 +75,6 @@ _RULE_KEYS = {
     "description-fields",
     "status-field",
     "exclude-status",
-    "id-pattern",
     "tags",
     "justification-up-fields",
     "justification-down-fields",
@@ -106,7 +105,6 @@ class ConversionRule:
     description_fields: list[str] = field(default_factory=lambda: ["content"])
     status_field: str | None = None
     exclude_status: list[str] = field(default_factory=list)
-    id_pattern: re.Pattern[str] | None = None
     tags: list[TagEntry] = field(default_factory=list)
     justification_up_fields: list[str] = field(default_factory=list)
     justification_down_fields: list[str] = field(default_factory=list)
@@ -157,11 +155,6 @@ def _parse_rule(raw: Any) -> ConversionRule:
     )
     if "description-fields" in raw:
         rule.description_fields = _as_list(raw["description-fields"], "description-fields")
-    if "id-pattern" in raw:
-        try:
-            rule.id_pattern = re.compile(raw["id-pattern"])
-        except (re.error, TypeError) as e:
-            raise ConfigError(f"invalid id-pattern {raw['id-pattern']!r}: {e}") from e
     return rule
 
 
@@ -177,6 +170,14 @@ def load_config(path: str | Path) -> list[ConversionRule]:
     if duplicates:
         raise ConfigError(f"{path}: more than one conversion rule for need types {duplicates}")
     return rules
+
+
+def select_rule(rules: list[ConversionRule], need_type: str) -> ConversionRule:
+    """Return the conversion rule of ``need_type``."""
+    for rule in rules:
+        if rule.need_type == need_type:
+            return rule
+    raise ConfigError(f"no conversion rule for need type {need_type!r}")
 
 
 def load_needs(path: str | Path) -> dict[str, dict[str, Any]]:
@@ -260,16 +261,20 @@ def convert_need(need: dict[str, Any], rule: ConversionRule, source: str) -> Req
     return item
 
 
-def convert(needs_files: list[str], rules: list[ConversionRule]) -> list[tuple[dict[str, Any], Requirement]]:
-    """Convert all needs matching a rule, sorted by need ID."""
-    by_type = {rule.need_type: rule for rule in rules}
+def _satisfies(need: dict[str, Any], satisfied_by: str) -> bool:
+    return any(parse_link(v, "req").tag == satisfied_by for v in _text_values(need, "satisfied_by"))
+
+
+def convert(
+    needs_files: list[str], rule: ConversionRule, satisfied_by: str | None = None
+) -> list[tuple[dict[str, Any], Requirement]]:
+    """Convert all needs of the rule's type, sorted by need ID."""
     converted: dict[str, tuple[dict[str, Any], Requirement]] = {}
     for path in needs_files:
         for need_id, need in load_needs(path).items():
-            rule = by_type.get(need.get("type", ""))
-            if rule is None:
+            if need.get("type") != rule.need_type:
                 continue
-            if rule.id_pattern and not rule.id_pattern.search(need_id):
+            if satisfied_by and not _satisfies(need, satisfied_by):
                 continue
             if rule.status_field and need.get(rule.status_field) in rule.exclude_status:
                 logger.info("Skipping %s with status %s", need_id, need.get(rule.status_field))
@@ -316,6 +321,8 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("needs", nargs="+", help="needs.json files to convert")
     parser.add_argument("--config", required=True, help="YAML file with the conversion rules")
+    parser.add_argument("--need-type", required=True, help="need type to convert, e.g. comp_req")
+    parser.add_argument("--satisfied-by", help="only convert needs whose satisfied_by link names this need ID")
     parser.add_argument("--out", required=True, help="output .lobster file")
     parser.add_argument("--rst-out", help="optional RST page listing the converted needs")
     parser.add_argument("--title", default="Requirements", help="heading of the RST page")
@@ -324,10 +331,13 @@ def main(argv: list[str] | None = None) -> int:
     logging.basicConfig(level=_LEVEL_MAP[args.log_level], format="%(levelname)s: %(message)s")
 
     try:
-        converted = convert(args.needs, load_config(args.config))
+        rule = select_rule(load_config(args.config), args.need_type)
+        converted = convert(args.needs, rule, args.satisfied_by)
     except ConfigError as e:
         logger.error("%s", e)
         return 1
+    if args.satisfied_by and not converted:
+        logger.warning("no %s need is satisfied by %s", args.need_type, args.satisfied_by)
 
     with open(args.out, "w", encoding="utf-8") as f:
         lobster_write(f, Requirement, GENERATOR, [item for _, item in converted])

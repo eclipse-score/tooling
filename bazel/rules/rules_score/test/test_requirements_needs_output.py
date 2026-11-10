@@ -31,6 +31,7 @@ class RequirementsNeedsOutputTest(unittest.TestCase):
         self.items = _items()
 
     def test_each_kind_gets_its_trlc_record_type(self):
+        # feat_req__other__feature and comp_req__other__get are satisfied by another feature/component.
         kinds = {name: item.kind for name, item in self.items.items()}
         self.assertEqual(
             kinds,

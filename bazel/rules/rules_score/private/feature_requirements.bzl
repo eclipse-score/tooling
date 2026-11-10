@@ -34,7 +34,7 @@ def feature_requirements(
         lobster_config = Label("//bazel/rules/rules_score/lobster/config:feature_requirement"),
         image_srcs = [],
         needs = [],
-        needs_lobster_config = Label("//bazel/rules/rules_score/lobster/config:needs_feature_requirement"),
+        feat_id = None,
         **kwargs):
     """Define feature requirements following S-CORE process guidelines.
 
@@ -60,11 +60,12 @@ def feature_requirements(
         lobster_config: Optional Lobster extraction config label. Defaults to the
             S-CORE feature requirement config.
         needs: score_docs_as_code ``docs_bundle`` targets or ``needs.json``
-            files with Sphinx-Needs requirements. They are converted by
-            ``lobster_sphinx_needs`` into the same LOBSTER items as TRLC
-            records; ``<name>_test`` only checks ``srcs``.
-        needs_lobster_config: lobster_sphinx_needs configuration selecting the
-            need types. Defaults to ``feat_req``.
+            files with Sphinx-Needs requirements. Their ``feat_req`` needs are
+            converted by ``lobster_sphinx_needs`` into the same LOBSTER items
+            as TRLC records; ``<name>_test`` only checks ``srcs``.
+        feat_id: ID of the feature (``feat`` need) the requirements belong
+            to. Mandatory with ``needs``: only ``feat_req`` needs whose
+            ``satisfied_by`` link names this feature are converted.
         visibility: Bazel visibility specification for the generated targets.
 
     Generated Targets:
@@ -86,6 +87,8 @@ def feature_requirements(
         )
         ```
     """
+    if needs and not feat_id:
+        fail("{}: needs requires feat_id".format(name))
     score_requirements_rule(
         name = name,
         srcs = srcs,
@@ -95,7 +98,7 @@ def feature_requirements(
         spec = spec,
         image_srcs = image_srcs,
         needs = needs,
-        needs_lobster_config = needs_lobster_config,
+        needs_satisfied_by = feat_id,
         **kwargs
     )
     if srcs != []:

@@ -43,7 +43,6 @@ def assumptions_of_use(
         deps = [],
         lobster_config = Label("//bazel/rules/rules_score/lobster/config:aou_config"),
         needs = [],
-        needs_lobster_config = Label("//bazel/rules/rules_score/lobster/config:needs_aou"),
         **kwargs):
     """Define Assumptions of Use following S-CORE process guidelines.
 
@@ -65,11 +64,10 @@ def assumptions_of_use(
         lobster_config: Lobster YAML configuration for AoU traceability
             extraction. Defaults to the standard S-CORE AoU config.
         needs: score_docs_as_code ``docs_bundle`` targets or ``needs.json``
-            files with Sphinx-Needs requirements. They are converted by
-            ``lobster_sphinx_needs`` into the same LOBSTER items as TRLC
-            records; ``<name>_test`` only checks ``srcs``.
-        needs_lobster_config: lobster_sphinx_needs configuration selecting the
-            need types. Defaults to ``aou_req``.
+            files with Sphinx-Needs requirements. All their ``aou_req`` needs
+            (platform level, not bound to a feature or component) are
+            converted by ``lobster_sphinx_needs`` into the same LOBSTER items
+            as TRLC records; ``<name>_test`` only checks ``srcs``.
         visibility: Bazel visibility specification for the generated targets.
 
     Generated Targets:
@@ -104,7 +102,6 @@ def assumptions_of_use(
         req_kind = "aou",
         lobster_config = lobster_config,
         needs = needs,
-        needs_lobster_config = needs_lobster_config,
         **kwargs
     )
     if srcs != []:

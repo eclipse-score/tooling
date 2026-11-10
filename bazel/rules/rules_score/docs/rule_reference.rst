@@ -396,6 +396,7 @@ traceability reports treat both sources alike.
    component_requirements(
        name = "comp_reqs",
        needs = ["//my/component:docs"],
+       comp_id = "comp__my_component",
    )
 
 .. list-table::
@@ -410,10 +411,20 @@ traceability reports treat both sources alike.
      - label list
      - no
      - score_docs_as_code ``docs_bundle`` targets (their ``needs.json`` export is used) or ``needs.json`` files
-   * - ``needs_lobster_config``
-     - label
-     - no
-     - ``lobster_sphinx_needs`` YAML configuration. Defaults per macro: ``stkh_req`` → ``AssumedSystemReq``, ``feat_req`` → ``FeatReq``, ``comp_req`` → ``CompReq`` (tracing ``derived_from`` and ``covers``), ``aou_req`` → ``AoU``
+   * - ``feat_id``
+     - string
+     - with ``needs``
+     - ``feature_requirements`` only: ID of the ``feat`` need; only ``feat_req`` needs whose ``satisfied_by`` link names it are converted
+   * - ``comp_id``
+     - string
+     - with ``needs``
+     - ``component_requirements`` only: ID of the ``comp`` need; only ``comp_req`` needs whose ``satisfied_by`` link names it are converted
+
+One central configuration (``//bazel/rules/rules_score/lobster/config:sphinx_needs_config``)
+maps the need types: ``stkh_req`` → ``AssumedSystemReq``, ``feat_req`` →
+``FeatReq``, ``comp_req`` → ``CompReq`` (tracing ``derived_from`` and
+``covers``), ``aou_req`` → ``AoU``. ``stkh_req`` and ``aou_req`` belong to the
+platform, not to a feature or component, so all of them are converted.
 
 Each converted need becomes ``req <need id>@<version>``; link values become
 tracing targets, a ``[version==N]`` filter becomes ``@N``. Needs with status

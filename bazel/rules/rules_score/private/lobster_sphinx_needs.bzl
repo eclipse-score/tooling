@@ -41,12 +41,15 @@ def needs_json_labels(needs):
             result.append(label_str + ".__internal__.needs_local")
     return result
 
-def _lobster_sphinx_needs_impl(ctx, needs_files, config, rst_basename, title, _lobster_sphinx_needs):
+def _lobster_sphinx_needs_impl(ctx, needs_files, need_type, satisfied_by, rst_basename, title, _lobster_sphinx_needs, _config):
     lobster_file = ctx.actions.declare_file(ctx.label.name + "_needs.lobster")
     rst_file = ctx.actions.declare_file(rst_basename)
 
     args = ctx.actions.args()
-    args.add("--config", config)
+    args.add("--config", _config)
+    args.add("--need-type", need_type)
+    if satisfied_by:
+        args.add("--satisfied-by", satisfied_by)
     args.add("--out", lobster_file)
     args.add("--rst-out", rst_file)
     args.add("--title", title)
@@ -54,7 +57,7 @@ def _lobster_sphinx_needs_impl(ctx, needs_files, config, rst_basename, title, _l
 
     ctx.actions.run(
         executable = _lobster_sphinx_needs,
-        inputs = needs_files + [config],
+        inputs = needs_files + [_config],
         outputs = [lobster_file, rst_file],
         arguments = [args],
         mnemonic = "LobsterSphinxNeeds",
@@ -69,6 +72,10 @@ subrule_lobster_sphinx_needs = subrule(
             default = Label("//bazel/rules/rules_score:lobster_sphinx_needs"),
             executable = True,
             cfg = "exec",
+        ),
+        "_config": attr.label(
+            default = Label("//bazel/rules/rules_score/lobster/config:sphinx_needs_config"),
+            allow_single_file = True,
         ),
     },
 )

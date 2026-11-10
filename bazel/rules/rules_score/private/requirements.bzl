@@ -37,6 +37,14 @@ _REQ_KIND_TITLES = {
     "failure_mode": "Failure Modes",
 }
 
+# Sphinx-Needs type of each requirement kind (S-CORE metamodel).
+_REQ_KIND_NEED_TYPES = {
+    "feature": "feat_req",
+    "component": "comp_req",
+    "assumed_system": "stkh_req",
+    "aou": "aou_req",
+}
+
 # ============================================================================
 # Private Rule Implementation
 # ============================================================================
@@ -126,11 +134,12 @@ def _requirements_impl(ctx):
     # Sphinx-Needs requirements: the same LOBSTER items as for TRLC records.
     # -------------------------------------------------------------------------
     if ctx.files.needs:
-        if not ctx.file.needs_lobster_config:
-            fail("{}: needs requires needs_lobster_config".format(ctx.label))
+        if ctx.attr.req_kind not in _REQ_KIND_NEED_TYPES:
+            fail("{}: needs is not supported for {} requirements".format(ctx.label, ctx.attr.req_kind))
         needs_lobster, needs_rst = subrule_lobster_sphinx_needs(
             ctx.files.needs,
-            ctx.file.needs_lobster_config,
+            _REQ_KIND_NEED_TYPES[ctx.attr.req_kind],
+            ctx.attr.needs_satisfied_by,
             "{}{}.rst".format(ctx.attr.name, "_needs" if use_trlc else ""),
             _REQ_KIND_TITLES[ctx.attr.req_kind],
         )
@@ -217,11 +226,10 @@ _score_requirements_rule = rule(
         "needs": attr.label_list(
             allow_files = [".json"],
             default = [],
-            doc = "Sphinx-Needs needs.json files whose requirements are converted with needs_lobster_config.",
+            doc = "Sphinx-Needs needs.json files whose requirements of this kind's need type are converted by lobster_sphinx_needs.",
         ),
-        "needs_lobster_config": attr.label(
-            allow_single_file = True,
-            doc = "lobster_sphinx_needs YAML configuration selecting the need types of this requirement kind.",
+        "needs_satisfied_by": attr.string(
+            doc = "Only convert needs whose satisfied_by link names this feature or component ID.",
         ),
         "deps": attr.label_list(
             providers = [TrlcProviderInfo],
@@ -265,7 +273,7 @@ def score_requirements_rule(
         deps = [],
         spec = [],
         needs = [],
-        needs_lobster_config = None,
+        needs_satisfied_by = None,
         **kwargs):
     """Macro wrapper around _score_requirements_rule that merges the spec.
 
@@ -277,7 +285,8 @@ def score_requirements_rule(
             always included automatically -- do not re-list it here.
         needs: score_docs_as_code ``docs_bundle`` targets or ``needs.json``
             files with Sphinx-Needs requirements.
-        needs_lobster_config: lobster_sphinx_needs configuration for ``needs``.
+        needs_satisfied_by: Feature or component ID the converted needs must
+            name in their ``satisfied_by`` link.
     """
     if srcs == [] and not needs:
         fail("{}: srcs or needs must be given".format(name))
@@ -292,6 +301,6 @@ def score_requirements_rule(
         lobster_config = lobster_config,
         spec = merged_spec,
         needs = needs_json_labels(needs),
-        needs_lobster_config = needs_lobster_config,
+        needs_satisfied_by = needs_satisfied_by,
         **kwargs
     )

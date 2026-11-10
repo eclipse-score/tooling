@@ -62,28 +62,10 @@ filegroup(
     visibility = ["//visibility:public"],
 )
 
-# lobster_sphinx_needs configurations for requirements given as needs.json
+# lobster_sphinx_needs configuration for requirements given as needs.json
 filegroup(
-    name = "needs_component_requirement",
-    srcs = ["lobster_needs_comp_req.yaml"],
-    visibility = ["//visibility:public"],
-)
-
-filegroup(
-    name = "needs_feature_requirement",
-    srcs = ["lobster_needs_feat_req.yaml"],
-    visibility = ["//visibility:public"],
-)
-
-filegroup(
-    name = "needs_assumed_system_requirement",
-    srcs = ["lobster_needs_assumed_system_req.yaml"],
-    visibility = ["//visibility:public"],
-)
-
-filegroup(
-    name = "needs_aou",
-    srcs = ["lobster_needs_aou.yaml"],
+    name = "sphinx_needs_config",
+    srcs = ["lobster_sphinx_needs.yaml"],
     visibility = ["//visibility:public"],
 )
 
