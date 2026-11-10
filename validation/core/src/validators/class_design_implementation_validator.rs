@@ -1352,39 +1352,61 @@ fn normalized_optional_type(type_name: &Option<String>) -> Option<String> {
     type_name.as_deref().map(normalize_type_name)
 }
 
-// Top-level const on a by-value parameter does not affect the function
-// signature in C++ (`void f(void* const)` and `void f(void*)` are the same
-// function), so it must be ignored when matching design against implementation.
 fn normalized_optional_parameter_type(type_name: &Option<String>) -> Option<String> {
     type_name.as_deref().map(normalize_parameter_type)
 }
 
 fn normalize_parameter_type(type_name: &str) -> String {
-    normalize_type_name(&strip_top_level_const(type_name))
+    strip_top_level_const(&normalize_type_name(type_name))
 }
 
+// Top-level const on a by-value parameter is not part of the C++ signature.
 fn strip_top_level_const(type_name: &str) -> String {
-    let mut stripped = type_name.trim().to_string();
+    if let Some(pointer) = type_name.strip_suffix("*const") {
+        return format!("{pointer}*");
+    }
+    match type_name.strip_prefix("const") {
+        Some(rest) if rest.starts_with(char::is_whitespace) && !has_top_level_declarator(rest) => {
+            rest.trim_start().to_string()
+        }
+        _ => type_name.to_string(),
+    }
+}
 
-    // Trailing (east) const applies to the outermost value or pointer.
-    if let Some(prefix) = stripped.strip_suffix("const") {
-        if prefix.ends_with(char::is_whitespace) || prefix.ends_with('*') {
-            stripped = prefix.trim_end().to_string();
+// A `*`, `&`, `[` or `(` outside template arguments makes a leading const low-level.
+fn has_top_level_declarator(type_name: &str) -> bool {
+    let mut depth = 0usize;
+    type_name.chars().any(|character| match character {
+        '<' => {
+            depth += 1;
+            false
+        }
+        '>' => {
+            depth = depth.saturating_sub(1);
+            false
+        }
+        '*' | '&' | '[' | '(' => depth == 0,
+        _ => false,
+    })
+}
+
+// `T* const` and `T *const` both become `T*const`.
+fn tighten_pointer_const(type_name: &str) -> String {
+    let mut tightened = String::with_capacity(type_name.len());
+    let mut rest = type_name;
+    while let Some(star) = rest.find('*') {
+        tightened.push_str(&rest[..=star]);
+        rest = &rest[star + 1..];
+        let trimmed = rest.trim_start();
+        let is_const_keyword = trimmed.strip_prefix("const").is_some_and(|tail| {
+            !tail.starts_with(|character: char| character.is_alphanumeric() || character == '_')
+        });
+        if is_const_keyword {
+            rest = trimmed;
         }
     }
-
-    // Leading (west) const on a by-value type (no pointer or reference) is
-    // top-level; keep it when a `*`/`&` is present as that denotes a low-level
-    // const (e.g. pointer/reference to const).
-    if !stripped.contains('*') && !stripped.contains('&') {
-        if let Some(rest) = stripped.strip_prefix("const") {
-            if rest.starts_with(char::is_whitespace) {
-                stripped = rest.trim_start().to_string();
-            }
-        }
-    }
-
-    stripped
+    tightened.push_str(rest);
+    tightened
 }
 
 fn normalize_non_type_template_parameter_type(type_name: &str) -> String {
@@ -1398,14 +1420,14 @@ fn normalize_non_type_template_parameter_type(type_name: &str) -> String {
 }
 
 fn normalize_type_name(type_name: &str) -> String {
-    normalize_qualified_name(
+    normalize_qualified_name(&tighten_pointer_const(
         &type_name
             .trim()
             .trim_start_matches("::")
             .replace("std::", "")
             .replace(" *", "*")
             .replace(" &", "&"),
-    )
+    ))
 }
 
 fn normalize_qualified_name(reference: &str) -> String {
@@ -2072,8 +2094,9 @@ mod tests {
             ("void*const", "void*"),
             ("int* const", "int*"),
             ("const int", "int"),
-            ("int const", "int"),
             ("const std::vector<int>", "vector<int>"),
+            ("const std::vector<int*>", "vector<int*>"),
+            ("const std::function<void(int&)>", "function<void(int&)>"),
         ] {
             assert_eq!(
                 normalize_parameter_type(type_name),
@@ -2091,6 +2114,10 @@ mod tests {
             ("const void*", "const void*"),
             ("const int&", "const int&"),
             ("const int* const", "const int*"),
+            ("const int[]", "const int[]"),
+            ("const char[8]", "const char[8]"),
+            ("int* const*", "int*const*"),
+            ("int* const&", "int*const&"),
         ] {
             assert_eq!(
                 normalize_parameter_type(type_name),
@@ -2153,6 +2180,25 @@ mod tests {
             normalize_type_name("vehicle.Payload &"),
             "vehicle::Payload&"
         );
+    }
+
+    #[test]
+    fn type_name_normalization_tightens_whitespace_before_pointer_const() {
+        for (type_name, expected) in [
+            ("int* const", "int*const"),
+            ("int *const", "int*const"),
+            ("int*  const", "int*const"),
+            ("int*\tconst", "int*const"),
+            ("const int* const", "const int*const"),
+            ("Foo* constant", "Foo* constant"),
+            ("Foo* const_iterator", "Foo* const_iterator"),
+        ] {
+            assert_eq!(
+                normalize_type_name(type_name),
+                expected,
+                "type_name: {type_name:?}",
+            );
+        }
     }
 
     #[test]
