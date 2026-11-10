@@ -1460,6 +1460,92 @@ mod tests {
     }
 
     #[test]
+    fn test_parse_param_const_keyword_is_not_a_name() {
+        assert!(parse_single_class_member_file("+ f(int const)").is_err());
+    }
+
+    #[test]
+    fn test_parse_method_with_const_pointer_and_const_value_params() {
+        let result = parse_single_class_member_file(
+            "+ do_deallocate(void* const p, const std::size_t bytes, const std::size_t alignment) override",
+        )
+        .unwrap();
+
+        let ClassUmlTopLevel::Type(TypeDefinition::ClassLikeDef(class_def)) = &result.elements[0]
+        else {
+            panic!("expected class element");
+        };
+
+        let method = &class_def.members.methods[0];
+        let params: Vec<_> = method
+            .params
+            .iter()
+            .map(|param| (param.name.as_deref(), param.param_type.as_deref()))
+            .collect();
+        assert_eq!(
+            params,
+            vec![
+                (Some("p"), Some("void* const")),
+                (Some("bytes"), Some("const std::size_t")),
+                (Some("alignment"), Some("const std::size_t")),
+            ]
+        );
+        assert_eq!(method.modifiers, vec!["override"]);
+    }
+
+    #[test]
+    fn test_parse_const_pointer_return_type_is_not_a_const_method() {
+        for (member, return_type, modifiers) in [
+            ("+ Get() : Foo* const", "Foo* const", vec![]),
+            (
+                "+ Get() : Foo* const <<const>>",
+                "Foo* const",
+                vec!["<<const>>"],
+            ),
+            ("+ Get() const : Foo* const", "Foo* const", vec!["const"]),
+            ("+ Get() const : Foo*", "Foo*", vec!["const"]),
+            ("+ Get() : Foo* <<const>>", "Foo*", vec!["<<const>>"]),
+        ] {
+            let result = parse_single_class_member_file(member).expect(member);
+            let ClassUmlTopLevel::Type(TypeDefinition::ClassLikeDef(class_def)) =
+                &result.elements[0]
+            else {
+                panic!("expected class element");
+            };
+
+            let method = &class_def.members.methods[0];
+            assert_eq!(method.r#type.as_deref(), Some(return_type), "{member}");
+            assert_eq!(method.modifiers, modifiers, "{member}");
+        }
+    }
+
+    #[test]
+    fn test_parse_bare_const_after_return_type_rejected() {
+        assert!(parse_single_class_member_file("+ Get() : bool const").is_err());
+        assert!(parse_single_class_member_file("+ Get() : std::string const noexcept").is_err());
+    }
+
+    #[test]
+    fn test_parse_pointer_trailing_const_in_attribute_and_alias() {
+        let result =
+            parse_single_class_member_file("- p : int* const\n    +using P = int* const").unwrap();
+
+        let ClassUmlTopLevel::Type(TypeDefinition::ClassLikeDef(class_def)) = &result.elements[0]
+        else {
+            panic!("expected class element");
+        };
+
+        assert_eq!(
+            class_def.members.attributes[0].r#type.as_deref(),
+            Some("int* const")
+        );
+        assert_eq!(
+            class_def.members.type_aliases[0].original_type,
+            "int* const"
+        );
+    }
+
+    #[test]
     fn test_parse_file_error() {
         let mut parser = PumlClassParser;
 

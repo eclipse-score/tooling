@@ -1,0 +1,113 @@
+{
+    "pointer_trailing_const.puml": {
+        "name": "pointer_trailing_const",
+        "elements": [
+            {
+                "Type": {
+                    "ClassLikeDef": {
+                        "name": {
+                            "internal": "Allocator",
+                            "alias": null
+                        },
+                        "namespace": "",
+                        "package": "",
+                        "source_location": {
+                            "file": "",
+                            "line": 15
+                        },
+                        "type_aliases": [],
+                        "attributes": [
+                            {
+                                "visibility": "Private",
+                                "name": "buffer_",
+                                "type": "int* const",
+                                "modifiers": [],
+                                "source_location": {
+                                    "file": "",
+                                    "line": 16
+                                }
+                            }
+                        ],
+                        "methods": [
+                            {
+                                "visibility": "Public",
+                                "name": "do_deallocate",
+                                "params": [
+                                    {
+                                        "name": "p",
+                                        "param_type": "void* const"
+                                    },
+                                    {
+                                        "name": "bytes",
+                                        "param_type": "const std::size_t"
+                                    },
+                                    {
+                                        "name": "alignment",
+                                        "param_type": "const std::size_t"
+                                    }
+                                ],
+                                "type": null,
+                                "template_parameters": null,
+                                "modifiers": [
+                                    "override"
+                                ],
+                                "source_location": {
+                                    "file": "",
+                                    "line": 17
+                                }
+                            },
+                            {
+                                "visibility": "Public",
+                                "name": "Get",
+                                "params": [],
+                                "type": "Foo* const",
+                                "template_parameters": null,
+                                "modifiers": [],
+                                "source_location": {
+                                    "file": "",
+                                    "line": 18
+                                }
+                            },
+                            {
+                                "visibility": "Public",
+                                "name": "Size",
+                                "params": [],
+                                "type": "std::size_t",
+                                "template_parameters": null,
+                                "modifiers": [
+                                    "const"
+                                ],
+                                "source_location": {
+                                    "file": "",
+                                    "line": 19
+                                }
+                            },
+                            {
+                                "visibility": "Public",
+                                "name": "Name",
+                                "params": [],
+                                "type": "std::string",
+                                "template_parameters": null,
+                                "modifiers": [
+                                    "<<const>>"
+                                ],
+                                "source_location": {
+                                    "file": "",
+                                    "line": 20
+                                }
+                            }
+                        ],
+                        "kind": {
+                            "Class": {
+                                "is_abstract": false,
+                                "extends": [],
+                                "implements": []
+                            }
+                        }
+                    }
+                }
+            }
+        ],
+        "relationships": []
+    }
+}
