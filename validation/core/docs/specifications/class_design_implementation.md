@@ -49,11 +49,13 @@ method, enum literal, relationship, and template parameter items.
 
 If the same class ID is declared more than once across the unit design's input
 class diagrams (e.g. an overview and a detail `.puml` file), the declarations
-merge when at most one of them has a body (members, type aliases or enum
-literals); the relationships of all declarations are united. Two declarations
-with a body are reported as a failure naming both source locations, independent
-of entity type consistency. A different entity type or stereotype across the
-declarations is a failure as well.
+merge: members, type aliases, enum literals and relationships of all
+declarations are united, and a member redeclared identically is kept once. A
+member redeclared with a different definition (same name and, for methods,
+parameter list), and a different entity type, stereotype or template parameter
+list, are failures naming both source locations. Two declarations with a body
+that are spelled with different names (e.g. different aliases of specializations
+sharing an id) are reported as a duplicate class.
 *(Requirement: {requirement:downstream-ref}`Tools.ClassDesignImplementationDeclarationMerge`)*
 
 ```text

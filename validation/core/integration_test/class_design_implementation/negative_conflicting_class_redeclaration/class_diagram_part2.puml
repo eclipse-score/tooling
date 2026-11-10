@@ -15,8 +15,8 @@
 
 skinparam classAttributeIconSize 0
 
-class engine {
-    + stop() : void
+class Engine {
+    + start() : int
 }
 
 @enduml

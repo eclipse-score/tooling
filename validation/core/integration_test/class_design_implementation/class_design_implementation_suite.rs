@@ -163,8 +163,13 @@ fn negative_relationship_missing_with_suggestion() {
 }
 
 #[test]
-fn negative_duplicate_class_entity_input() {
-    assert_case("negative_duplicate_class_entity_input");
+fn negative_conflicting_class_redeclaration() {
+    assert_case("negative_conflicting_class_redeclaration");
+}
+
+#[test]
+fn positive_class_declared_in_multiple_diagrams() {
+    assert_case("positive_class_declared_in_multiple_diagrams");
 }
 
 #[test]
