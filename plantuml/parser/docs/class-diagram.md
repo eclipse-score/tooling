@@ -49,6 +49,22 @@ class Engine {
 @enduml
 ```
 
+## Const pointers in types
+
+A `const` that follows `*` is part of the type, not a method qualifier. It is
+accepted in return types, parameter types, attributes, and type aliases:
+
+```text
++ Get() : const int* const
++ Release(p: void* const, count: const int) : void
+- buffer_ : int* const
++ using Handle = int* const
+```
+
+A bare `const` after the return type is not accepted; write the method
+qualifier after the parameter list or use `<<const>>`. East-const spelling
+(`int const`) is not supported; write `const int`.
+
 ## Free functions
 
 Use an `entity` with the `<<function>>` stereotype to group free functions.

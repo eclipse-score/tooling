@@ -101,6 +101,11 @@ fn test_friend_method() {
 }
 
 #[test]
+fn test_pointer_trailing_const() {
+    run_class_diagram_parser_case("pointer_trailing_const");
+}
+
+#[test]
 fn test_ignored_visibility_statements() {
     run_class_diagram_parser_case("ignored_visibility_statements");
 }

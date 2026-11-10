@@ -1064,8 +1064,8 @@ fn parameters_match(
         && design_parameters.iter().zip(implementation_parameters).all(
             |(design_parameter, implementation_parameter)| {
                 design_parameter.name == implementation_parameter.name
-                    && normalized_optional_type(&design_parameter.param_type)
-                        == normalized_optional_type(&implementation_parameter.param_type)
+                    && normalized_optional_parameter_type(&design_parameter.param_type)
+                        == normalized_optional_parameter_type(&implementation_parameter.param_type)
                     && design_parameter.is_variadic == implementation_parameter.is_variadic
                     && design_parameter.is_pack_expansion
                         == implementation_parameter.is_pack_expansion
@@ -1105,7 +1105,7 @@ fn parameter_signature(parameters: &[class_diagram::FunctionArgument]) -> String
                 parameter
                     .param_type
                     .as_deref()
-                    .map(normalize_type_name)
+                    .map(normalize_parameter_type)
                     .unwrap_or_default(),
                 variadic
             )
@@ -1138,8 +1138,8 @@ fn parameter_differences(
             ));
         }
 
-        if normalized_optional_type(&design_parameter.param_type)
-            != normalized_optional_type(&implementation_parameter.param_type)
+        if normalized_optional_parameter_type(&design_parameter.param_type)
+            != normalized_optional_parameter_type(&implementation_parameter.param_type)
         {
             differences.push((
                 ParameterDifference::Type,
@@ -1352,6 +1352,63 @@ fn normalized_optional_type(type_name: &Option<String>) -> Option<String> {
     type_name.as_deref().map(normalize_type_name)
 }
 
+fn normalized_optional_parameter_type(type_name: &Option<String>) -> Option<String> {
+    type_name.as_deref().map(normalize_parameter_type)
+}
+
+fn normalize_parameter_type(type_name: &str) -> String {
+    strip_top_level_const(&normalize_type_name(type_name))
+}
+
+// Top-level const on a by-value parameter is not part of the C++ signature.
+fn strip_top_level_const(type_name: &str) -> String {
+    if let Some(pointer) = type_name.strip_suffix("*const") {
+        return format!("{pointer}*");
+    }
+    match type_name.strip_prefix("const") {
+        Some(rest) if rest.starts_with(char::is_whitespace) && !has_top_level_declarator(rest) => {
+            rest.trim_start().to_string()
+        }
+        _ => type_name.to_string(),
+    }
+}
+
+// A `*`, `&`, `[` or `(` outside template arguments makes a leading const low-level.
+fn has_top_level_declarator(type_name: &str) -> bool {
+    let mut depth = 0usize;
+    type_name.chars().any(|character| match character {
+        '<' => {
+            depth += 1;
+            false
+        }
+        '>' => {
+            depth = depth.saturating_sub(1);
+            false
+        }
+        '*' | '&' | '[' | '(' => depth == 0,
+        _ => false,
+    })
+}
+
+// `T* const` and `T *const` both become `T*const`.
+fn tighten_pointer_const(type_name: &str) -> String {
+    let mut tightened = String::with_capacity(type_name.len());
+    let mut rest = type_name;
+    while let Some(star) = rest.find('*') {
+        tightened.push_str(&rest[..=star]);
+        rest = &rest[star + 1..];
+        let trimmed = rest.trim_start();
+        let is_const_keyword = trimmed.strip_prefix("const").is_some_and(|tail| {
+            !tail.starts_with(|character: char| character.is_alphanumeric() || character == '_')
+        });
+        if is_const_keyword {
+            rest = trimmed;
+        }
+    }
+    tightened.push_str(rest);
+    tightened
+}
+
 fn normalize_non_type_template_parameter_type(type_name: &str) -> String {
     // Preserve existing behavior for potentially literal-bearing expressions.
     // Whitespace within literals is significant and must not be collapsed.
@@ -1363,14 +1420,14 @@ fn normalize_non_type_template_parameter_type(type_name: &str) -> String {
 }
 
 fn normalize_type_name(type_name: &str) -> String {
-    normalize_qualified_name(
+    normalize_qualified_name(&tighten_pointer_const(
         &type_name
             .trim()
             .trim_start_matches("::")
             .replace("std::", "")
             .replace(" *", "*")
             .replace(" &", "&"),
-    )
+    ))
 }
 
 fn normalize_qualified_name(reference: &str) -> String {
@@ -2029,6 +2086,59 @@ mod tests {
     }
 
     #[test]
+    fn parameter_type_normalization_ignores_top_level_const() {
+        // Top-level const on a by-value parameter is not part of the signature.
+        for (type_name, expected) in [
+            ("void* const", "void*"),
+            ("void *const", "void*"),
+            ("void*const", "void*"),
+            ("int* const", "int*"),
+            ("const int", "int"),
+            ("const std::vector<int>", "vector<int>"),
+            ("const std::vector<int*>", "vector<int*>"),
+            ("const std::function<void(int&)>", "function<void(int&)>"),
+        ] {
+            assert_eq!(
+                normalize_parameter_type(type_name),
+                expected,
+                "type_name: {type_name:?}",
+            );
+        }
+    }
+
+    #[test]
+    fn parameter_type_normalization_preserves_low_level_const() {
+        // Const that qualifies the pointee/referent is significant and kept.
+        for (type_name, expected) in [
+            ("const int*", "const int*"),
+            ("const void*", "const void*"),
+            ("const int&", "const int&"),
+            ("const int* const", "const int*"),
+            ("const int[]", "const int[]"),
+            ("const char[8]", "const char[8]"),
+            ("int* const*", "int*const*"),
+            ("int* const&", "int*const&"),
+        ] {
+            assert_eq!(
+                normalize_parameter_type(type_name),
+                expected,
+                "type_name: {type_name:?}",
+            );
+        }
+    }
+
+    #[test]
+    fn parameter_type_normalization_keeps_const_within_identifiers() {
+        for type_name in ["Constant", "WidgetConst", "const_iterator"] {
+            assert_eq!(
+                normalize_parameter_type(type_name),
+                normalize_type_name(type_name),
+                "type_name: {type_name:?}",
+            );
+        }
+    }
+
+    #[test]
     fn non_type_whitespace_normalization_collapses_whitespace() {
         for (type_name, expected) in [
             ("unsigned  long", "unsigned long"),
@@ -2070,6 +2180,25 @@ mod tests {
             normalize_type_name("vehicle.Payload &"),
             "vehicle::Payload&"
         );
+    }
+
+    #[test]
+    fn type_name_normalization_tightens_whitespace_before_pointer_const() {
+        for (type_name, expected) in [
+            ("int* const", "int*const"),
+            ("int *const", "int*const"),
+            ("int*  const", "int*const"),
+            ("int*\tconst", "int*const"),
+            ("const int* const", "const int*const"),
+            ("Foo* constant", "Foo* constant"),
+            ("Foo* const_iterator", "Foo* const_iterator"),
+        ] {
+            assert_eq!(
+                normalize_type_name(type_name),
+                expected,
+                "type_name: {type_name:?}",
+            );
+        }
     }
 
     #[test]

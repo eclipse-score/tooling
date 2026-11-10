@@ -113,6 +113,11 @@ fn positive_variable_features() {
 }
 
 #[test]
+fn positive_top_level_const_features() {
+    assert_case("positive_top_level_const_features");
+}
+
+#[test]
 fn positive_unresolved_type_not_int() {
     assert_case("positive_unresolved_type_not_int");
 }
@@ -270,6 +275,11 @@ fn negative_method_modifier_noexcept_mismatch() {
 #[test]
 fn negative_method_parameter_count_mismatch() {
     assert_case("negative_method_parameter_count_mismatch");
+}
+
+#[test]
+fn negative_method_parameter_low_level_const_mismatch() {
+    assert_case("negative_method_parameter_low_level_const_mismatch");
 }
 
 #[test]

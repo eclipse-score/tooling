@@ -429,6 +429,18 @@ section "Tool Requirements" {
                 satisfied_by = Verifier
             }
 
+            ToolQualification.ToolRequirement ClassDesignImplementationTopLevelConstParameters {
+                description = '''The validator shall ignore top-level `const`
+                on method and free function parameters when comparing unit
+                design and implementation parameter types, and shall continue
+                to report a mismatch for low-level `const` (for example
+                `const int*` versus `int*`). The validator shall not ignore
+                top-level `const` on return types, variable data types, or
+                type alias original types.'''
+                derived_from = [UseCases.Validate_Unit_Specification_Documents]
+                satisfied_by = Verifier
+            }
+
         }
 
         section "Class Design Sequence Validator" {
