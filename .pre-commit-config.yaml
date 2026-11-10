@@ -16,7 +16,7 @@ repos:
     hooks:
       - id: check-yaml
       - id: end-of-file-fixer
-        exclude: requirements_lock.txt|\.svg$
+        exclude: requirements_lock.txt|\.svg$|transfer_fta/expected_fta_events\.trlc$
       - id: trailing-whitespace
       - id: check-shebang-scripts-are-executable
       - id: check-executables-have-shebangs

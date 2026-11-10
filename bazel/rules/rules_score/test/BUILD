@@ -72,6 +72,7 @@ load(
     ":dependable_element_unit_staging_test.bzl",
     "unit_design_collision_fails_test",
 )
+load(":fta_findings_test.bzl", "fta_findings_fixture")
 load(
     ":html_generation_test.bzl",
     "auto_config_generation_test",
@@ -2699,6 +2700,32 @@ lobster_ci_report_test(
     index = ":stale_measure_version_example_lib_index",
 )
 
+# Fault trees whose diagrams transfer into a partial fault tree (a
+# `$TransferOutEvent`) and into an event nothing defines. The build succeeds;
+# the unresolved transfer is reported as a finding of the traceability report.
+# The goldens hold the generated RootCause records and the review index: the
+# root cause of the transferred-into diagram carries the failure mode of the
+# diagram that transfers into it, and the index names the gate.
+fta_findings_fixture(
+    name = "transfer_fta",
+    contains = [
+        "top_fta.puml:22: lobster error: $TransferInGate TransferMissing transfers into \"NoSuchEvent\", but no $TransferOutEvent with the alias NoSuchEvent exists",
+    ],
+    failure_modes_src = "fixtures/transfer_fta/failure_modes.trlc",
+    golden_events = "fixtures/transfer_fta/expected_fta_events.trlc",
+    golden_index = "fixtures/transfer_fta/expected_fta_index.json",
+    lacks = ["TransferShared"],
+)
+
+# A diagram naming a failure mode no `failure_modes` dep defines: the build
+# succeeds, the root causes carry no failure mode and a finding names the gap.
+fta_findings_fixture(
+    name = "unknown_failure_mode",
+    contains = [
+        "top_fta.puml:18: lobster error: $FailureMode covers TransferFtaSafetyAnalysis.TopFailure, which no failure_modes target of this fault_trees target defines",
+    ],
+)
+
 # Unit, Component, and Dependable Element test suite
 unit_component_test_suite(name = "unit_component_tests")
 
@@ -2972,7 +2999,21 @@ py_test(
     name = "test_safety_analysis_assembler",
     size = "small",
     srcs = ["test_safety_analysis_assembler.py"],
-    deps = ["@score_tooling//bazel/rules/rules_score:safety_analysis_assembler"],
+    deps = [
+        "@score_tooling//bazel/rules/rules_score:fta_index",
+        "@score_tooling//bazel/rules/rules_score:safety_analysis_assembler",
+    ],
+)
+
+py_test(
+    name = "test_fta_lobster",
+    size = "small",
+    srcs = ["test_fta_lobster.py"],
+    deps = [
+        "@lobster//lobster/common",
+        "@score_tooling//bazel/rules/rules_score:fta_index",
+        "@score_tooling//bazel/rules/rules_score:fta_lobster",
+    ],
 )
 
 py_test(
@@ -3076,12 +3117,15 @@ test_suite(
         ":sphinx_module_tests",
         ":test_aou_forwarding_to_lobster",
         ":test_bazel_sphinx_needs",
+        ":test_fta_lobster",
         ":test_merge_lobster_items",
         ":test_rst_to_trlc",
         ":test_safety_analysis_assembler",
         ":test_sphinx_html_merge",
         ":test_sphinx_module_ext",
         ":test_trlc_rst_image_rendering",
+        ":transfer_fta_events_golden_test",
+        ":transfer_fta_index_golden_test",
         ":transitive_modules_dedup_test",
         ":unit_component_tests",
         "//fixtures/image_srcs:requirements_image_tests",

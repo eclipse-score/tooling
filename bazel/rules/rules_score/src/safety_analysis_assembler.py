@@ -39,6 +39,7 @@ import os
 import re
 import sys
 
+from fta_index import Finding, FtaIndex
 from trlc_rst import TRLCRST, TRLCParseError
 
 logger = logging.getLogger(__name__)
@@ -61,6 +62,7 @@ _OVERVIEW_COLUMNS = (
 _OVERVIEW_TITLE = "Overview"
 _FAILURE_MODES_TITLE = "Failure Modes"
 _FAULT_TREES_TITLE = "Fault Trees"
+_FINDINGS_TITLE = "Fault Tree Findings"
 _SAFETY_MEASURES_TITLE = "Safety Measures"
 _ROOT_CAUSES_TITLE = "Root Causes"
 
@@ -181,6 +183,25 @@ def _badge(role: str, text: str) -> str:
 
 def _asil_badge(safety: str) -> str:
     return _badge(_ASIL_BADGE.get(safety, _DEFAULT_BADGE), f"ASIL {safety}")
+
+
+@dataclasses.dataclass(frozen=True)
+class _PageContext:
+    """What the failure-mode sections of the page are rendered from.
+
+    Attributes:
+        renderer: The parsed TRLC model.
+        obj_map: Record fqn to record.
+        diagrams: Fault-tree diagram basename to its Sphinx label.
+        assessments: Root cause fqn to the fqn of the assessment listing it.
+        fta_index: The review evidence of the fault trees.
+    """
+
+    renderer: TRLCRST
+    obj_map: dict
+    diagrams: dict[str, str]
+    assessments: dict[str, str]
+    fta_index: FtaIndex
 
 
 # ---------------------------------------------------------------------------
@@ -308,16 +329,24 @@ def _assessment_blocks(renderer: TRLCRST, obj_map: dict, assessment_fqn: str | N
     ]
 
 
-def _root_cause_card(
-    renderer: TRLCRST, obj_map: dict, rc_fqn: str, diagrams: dict[str, str], assessments: dict[str, str]
-) -> _Directive:
-    """One root-cause card: title, source diagram/line, and its assessment."""
-    fields = obj_map[rc_fqn].to_python_dict()
+def _root_cause_card(page: _PageContext, rc_fqn: str, fm_fqn: str) -> _Directive:
+    """One root-cause card: title, source diagram/line, transfer gates and its assessment."""
+    root_cause = page.obj_map[rc_fqn]
+    fields = root_cause.to_python_dict()
     diagram = fields.get("diagram", "")
-    source = _ref_text(diagrams[diagram], diagram) if diagram in diagrams else _escape(diagram)
-    body: list = [f"Source: {source}, line {fields.get('line')}"]
-    body.extend(_assessment_blocks(renderer, obj_map, assessments.get(rc_fqn)))
+    body: list = [f"Source: {_diagram_link(diagram, page.diagrams)}, line {fields.get('line')}"]
+    gates = page.fta_index.via.get(root_cause.name, {}).get(fm_fqn, [])
+    if gates:
+        shown = ", ".join(
+            f"``{gate.alias}`` ({_diagram_link(gate.diagram, page.diagrams)}, line {gate.line})" for gate in gates
+        )
+        body.append(f"Reached through transfer gate: {shown}")
+    body.extend(_assessment_blocks(page.renderer, page.obj_map, page.assessments.get(rc_fqn)))
     return _card(_escape(fields.get("title", "")), body)
+
+
+def _diagram_link(diagram: str, diagrams: dict[str, str]) -> str:
+    return _ref_text(diagrams[diagram], diagram) if diagram in diagrams else _escape(diagram)
 
 
 def _root_causes_for_failure_mode(obj_map: dict, fm_fqn: str) -> list[str]:
@@ -329,18 +358,16 @@ def _root_causes_for_failure_mode(obj_map: dict, fm_fqn: str) -> list[str]:
     ]
 
 
-def _fm_dropdown(
-    renderer: TRLCRST, obj_map: dict, fqn: str, diagrams: dict[str, str], assessments: dict[str, str]
-) -> _Directive:
+def _fm_dropdown(page: _PageContext, fqn: str) -> _Directive:
     """One collapsible failure-mode dropdown.
 
     The Root Causes part is omitted for a failure mode no fault tree covers.
     """
-    body = [_attr_grid(obj_map[fqn]), _description_card(renderer, fqn)]
-    cards = [
-        _root_cause_card(renderer, obj_map, rc, diagrams, assessments)
-        for rc in _root_causes_for_failure_mode(obj_map, fqn)
-    ]
+    body = [_attr_grid(page.obj_map[fqn]), _description_card(page.renderer, fqn)]
+    trees = sorted({tree.diagram for tree in page.fta_index.failure_mode_trees.get(fqn, [])})
+    if trees:
+        body.append("Fault tree: " + ", ".join(_diagram_link(tree, page.diagrams) for tree in trees))
+    cards = [_root_cause_card(page, rc, fqn) for rc in _root_causes_for_failure_mode(page.obj_map, fqn)]
     if cards:
         body.append(_Directive("rubric", _ROOT_CAUSES_TITLE))
         body.append(_grid(cards, columns=1))
@@ -368,12 +395,22 @@ def _render_overview(obj_map: dict, fm_fqns: list[str]) -> str:
     return _heading(_OVERVIEW_TITLE, "-") + "\n" + "\n".join(lines) + "\n"
 
 
-def _render_failure_modes(
-    renderer: TRLCRST, obj_map: dict, fm_fqns: list[str], diagrams: dict[str, str], assessments: dict[str, str]
-) -> str:
-    dropdowns = [_fm_dropdown(renderer, obj_map, fqn, diagrams, assessments) for fqn in fm_fqns]
-    body = "\n\n".join(d.render() for d in dropdowns)
+def _render_failure_modes(page: _PageContext, fm_fqns: list[str]) -> str:
+    body = "\n\n".join(_fm_dropdown(page, fqn).render() for fqn in fm_fqns)
     return _heading(_FAILURE_MODES_TITLE, "-") + "\n" + body + "\n"
+
+
+def _render_findings(findings: list[Finding], diagrams: dict[str, str]) -> str:
+    """One warning listing every gap the fault-tree diagrams leave in the tracing."""
+    if not findings:
+        return ""
+    items = [
+        f"* **{finding.kind}** ({_diagram_link(finding.diagram, diagrams)}, line {finding.line}): "
+        f"{_escape(finding.message)}"
+        for finding in findings
+    ]
+    warning = _Directive("warning", body=["\n".join(items)])
+    return _heading(_FINDINGS_TITLE, "-") + "\n" + warning.render() + "\n"
 
 
 def _render_fault_trees(diagrams: dict[str, str]) -> str:
@@ -473,13 +510,25 @@ def _check_inputs(obj_map: dict, assessment_files: list[str]) -> list[str]:
     return errors
 
 
-def _build_body(renderer: TRLCRST, title: str, fta_package: str, diagram_names: list[str]) -> str:
+def _build_body(
+    renderer: TRLCRST,
+    title: str,
+    fta_package: str,
+    diagram_names: list[str],
+    fta_index: FtaIndex,
+) -> str:
     obj_map = renderer.objects_by_fqn()
     fm_fqns = [fqn for fqn, obj in obj_map.items() if obj.n_typ.name == "FailureMode"]
     measure_fqns = [fqn for fqn, obj in obj_map.items() if obj.n_typ.name in _MEASURE_KINDS]
     diagrams = {name: _diagram_anchor(fta_package, name) for name in sorted(set(diagram_names))}
     by_root_cause = _assessments_by_root_cause(obj_map)
-    assessments = {rc_fqn: fqns[0] for rc_fqn, fqns in by_root_cause.items()}
+    page = _PageContext(
+        renderer=renderer,
+        obj_map=obj_map,
+        diagrams=diagrams,
+        assessments={rc_fqn: fqns[0] for rc_fqn, fqns in by_root_cause.items()},
+        fta_index=fta_index,
+    )
     listed = {
         measure_fqn
         for fqn, obj in obj_map.items()
@@ -490,8 +539,9 @@ def _build_body(renderer: TRLCRST, title: str, fta_package: str, diagram_names: 
     sections = [
         _heading(title, "="),
         _render_overview(obj_map, fm_fqns),
-        _render_failure_modes(renderer, obj_map, fm_fqns, diagrams, assessments),
+        _render_failure_modes(page, fm_fqns),
         _render_fault_trees(diagrams),
+        _render_findings(fta_index.findings, diagrams),
         _render_measures(renderer, obj_map, measure_fqns, set(measure_fqns) - listed),
     ]
     return "\n".join(s for s in sections if s)
@@ -519,6 +569,11 @@ def main() -> None:
         nargs="*",
         default=[],
         help="Basenames of the fault-tree .puml diagrams staged next to the page; each is shown once.",
+    )
+    parser.add_argument(
+        "--fta-index",
+        dest="fta_index",
+        help="fta_index.json produced by puml_cli FTA mode: fault trees of the failure modes, transfer gates, findings.",
     )
     parser.add_argument("--failuremodes", nargs="*", default=[], help="FailureMode .trlc files.")
     parser.add_argument(
@@ -569,7 +624,12 @@ def main() -> None:
             logger.error("%s", error)
         sys.exit(1)
 
-    body = _build_body(renderer, args.title, args.fta_package, args.diagrams)
+    try:
+        fta_index = FtaIndex.load(args.fta_index) if args.fta_index else FtaIndex.empty()
+    except ValueError as exc:
+        logger.error("%s", exc)
+        sys.exit(1)
+    body = _build_body(renderer, args.title, args.fta_package, args.diagrams, fta_index)
 
     with open(args.template, encoding="utf-8", newline="") as fh:
         template = fh.read()

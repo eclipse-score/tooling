@@ -112,18 +112,20 @@ are rendered under :doc:`tool_reference/index`.
      - ``//plantuml/parser/puml_cli`` ``--fta-output-dir`` (Rust; FTA model in
        the ``puml_fta`` crate)
      - ``fault_trees``
-     - Analysis only: parses the ``$FailureMode`` / ``$RootCause`` / gate macro
-       calls of each root-cause FTA diagram and emits ``fta_events.trlc``, a
+     - Analysis only: parses the ``$FailureMode`` / ``$RootCause`` / gate /
+       transfer macro calls of each root-cause FTA diagram, resolves transfers
+       and emits ``fta_events.trlc``, a
        generated stub file (imported as the ``<fta_package>`` package) containing
        one ``RootCause`` record per reachable ``$RootCause`` alias; each
-       record lists the failure modes of the ``$FailureMode`` root it hangs
-       under.  The authored
+       record lists the failure modes of every tree it is part of.  It also
+       emits ``fta_index.json``, the review evidence of the assembler: the
+       source path of each diagram, the trees and transfer gates of each
+       failure mode and the findings.  The authored
        diagram keeps its ``!include fta_metamodel.puml``; the metamodel ships in
        the docs toolchain runfiles and is put on PlantUML's global include path
        (``-Dplantuml.include.path``) so the include resolves at render even under
-       sphinxcontrib-plantuml's ``-pipe`` mode.  Unrooted root causes and
-       malformed TRLC aliases are reported as build warnings rather than silently
-       dropped.
+       sphinxcontrib-plantuml's ``-pipe`` mode.  Malformed diagrams fail the
+       build; gaps in a fault tree are findings in the index and never fail it.
    * - **safety_analysis_assembler**
      - ``//bazel/rules/rules_score:safety_analysis_assembler``
        (``src/safety_analysis_assembler.py``, local; links the ``TRLCRST`` library)
@@ -212,7 +214,8 @@ feed that pipeline:
   ``<architectural_design>.lobster`` (enables failure-mode-to-interface tracing).
 * **FMEA** (``failure_modes`` / ``assessments.trlc``) → ``lobster-trlc``;
   **FTA** (``fta.puml``) → ``puml_cli`` (FTA mode) → ``fta_events.trlc`` →
-  ``lobster-trlc`` → ``<fault_trees>.lobster``.
+  ``lobster-trlc`` → ``fta_root_causes.lobster``, and ``fta_index.json`` →
+  ``fta_findings.lobster``.
 * **Unit tests** (gtest) → ``gtest_report`` → ``<unit>.lobster``.
 
 Lobster report assembly (``dependable_element``)
@@ -360,15 +363,21 @@ assessments (``assessments``) and the measures they list (``safety_measures``).
 ``failure_modes`` runs ``lobster-trlc`` over its records into
 ``<name>.lobster``; it provides ``FailureModesInfo`` and ``TrlcProviderInfo``.
 
-The ``fault_trees`` rule drives two actions:
+The ``fault_trees`` rule drives four actions:
 
+#. **fta_lobster known-failure-modes** lists the failure modes defined by the
+   ``failure_modes`` targets of ``deps`` (from their ``lobster-trlc`` output).
 #. **puml_cli (FTA mode)** parses each ``fta_*.puml`` directly (no rewriting)
-   and writes ``fta_events.trlc`` (the generated ``RootCause`` stubs).  The
+   and writes ``fta_events.trlc`` (the generated ``RootCause`` stubs) and
+   ``fta_index.json``.  The
    diagrams keep their ``!include
    fta_metamodel.puml``; the metamodel is on PlantUML's global include path
    (shipped in the docs toolchain runfiles), so it resolves at render time.
+#. **fta_lobster findings** turns the findings of ``fta_index.json`` into
+   ``fta_findings.lobster`` (``AnalysisInfo.lobster_files["fta_findings.lobster"]``),
+   one item per finding in the level "Fault Tree Findings".
 #. **lobster-trlc** turns the generated ``RootCause`` records into
-   ``<fault_trees>.lobster`` (``AnalysisInfo.lobster_files["fta_root_causes.lobster"]``). The ``failure_modes`` files travel as inputs, so the
+   ``fta_root_causes.lobster`` (``AnalysisInfo.lobster_files["fta_root_causes.lobster"]``). The ``failure_modes`` files travel as inputs, so the
    ``import``s of ``fta_events.trlc`` resolve.
 
 The ``safety_analysis`` rule drives two actions:
@@ -399,7 +408,7 @@ The ``safety_analysis`` rule drives two actions:
 
 The lobster outputs travel separately on ``AnalysisInfo.lobster_files`` (one
 ``AnalysisInfo`` per ``safety_analysis``: ``failuremodes.lobster``,
-``assessments.lobster``, ``fta_root_causes.lobster``)
+``assessments.lobster``, ``fta_root_causes.lobster``, ``fta_findings.lobster``)
 into the ``dependability_analysis`` traceability report.  The AoU targets passed
 as ``safety_measures`` travel on ``SafetyAnalysisProviderInfo.aou_targets``; the
 ``dependable_element`` derives its own AoUs from them (deduplicated by label),

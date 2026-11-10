@@ -23,7 +23,7 @@
 
 use class_diagram::ClassDiagram;
 use component_diagram::LogicComponent;
-use puml_fta::{FtaModel, GateKind, NodeKind};
+use puml_fta::{FtaModel, NodeKind};
 use sequence_logic::SequenceTree;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
@@ -73,7 +73,12 @@ pub enum IdMapModel<'a> {
     Component(&'a HashMap<String, LogicComponent>),
     Class(&'a ClassDiagram),
     Sequence(&'a SequenceTree),
-    Fta(&'a FtaModel),
+    /// `package` is the TRLC package of the fault trees; it qualifies the
+    /// aliases of `$TransferOutEvent`s.
+    Fta {
+        model: &'a FtaModel,
+        package: &'a str,
+    },
 }
 
 // ---------------------------------------------------------------------------
@@ -334,34 +339,51 @@ fn empty_idmap(source: &str) -> IdMapFile {
 
 /// Produce an [`IdMapFile`] from a resolved FTA model.
 ///
-/// A node is a **define** when it is the tree's failure mode (`NodeKind::FailureMode`,
-/// `connection` is `None` — a relation sink never used as a source); it defines
-/// every failure-mode FQN it covers, so a `$TransferInGate` can name any of them.
-/// A gate node is a **reference** only when [`FtaNode::gate_kind`] is
-/// `GateKind::TransferIn` (a `$TransferInGate` naming a failure mode of another
-/// fault tree; a link to its own diagram is dropped by the consumer);
-/// `GateKind::And`/`GateKind::Or` gates are internal and produce
-/// no cross-diagram link. All other nodes (root-cause/intermediate events) are
-/// likewise internal.
-fn fta_model_to_idmap(model: &FtaModel, source: &str) -> IdMapFile {
+/// **Defines** (what a `$TransferInGate` of another diagram can name):
+/// - a `$FailureMode` defines every failure-mode FQN it covers;
+/// - a `$TransferOutEvent` defines `<package>.<alias>`;
+/// - an `$IntermediateEvent` under a `$FailureMode` defines
+///   `<failure-mode FQN>.<alias>` for every FQN of that `$FailureMode`.
+///
+/// A `$TransferInGate` is a **reference** to its target (`<package>.<target>`
+/// when the target is a bare `$TransferOutEvent` alias); a link to its own
+/// diagram is dropped by the consumer.  Gates and root causes are internal and
+/// produce no cross-diagram link.
+fn fta_model_to_idmap(model: &FtaModel, package: &str, source: &str) -> IdMapFile {
     let mut defines = Vec::new();
     let mut references = Vec::new();
+    let roots = model.root_failure_modes();
 
     for node in &model.nodes {
-        match node.kind {
-            NodeKind::FailureMode => {
-                defines.extend(node.failure_modes.iter().map(|fm| IdMapEntry {
+        match &node.kind {
+            NodeKind::FailureMode { failure_modes } => {
+                defines.extend(failure_modes.iter().map(|fm| IdMapEntry {
                     alias: node.alias.clone(),
                     id: fm.clone(),
                 }));
             }
-            NodeKind::Gate if node.gate_kind == Some(GateKind::TransferIn) => {
-                references.push(IdMapEntry {
-                    alias: node.alias.clone(),
-                    id: node.alias.clone(),
-                });
+            NodeKind::TransferOutEvent => defines.push(IdMapEntry {
+                alias: node.alias.clone(),
+                id: format!("{package}.{}", node.alias),
+            }),
+            NodeKind::IntermediateEvent => {
+                for root in roots.get(node.alias.as_str()).into_iter().flatten() {
+                    defines.extend(root.failure_modes().iter().map(|fm| IdMapEntry {
+                        alias: node.alias.clone(),
+                        id: format!("{fm}.{}", node.alias),
+                    }));
+                }
             }
-            _ => {} // RootCause, IntermediateEvent, $AndGate/$OrGate — internal, no link.
+            NodeKind::TransferInGate { target } => references.push(IdMapEntry {
+                alias: node.alias.clone(),
+                id: if target.contains('.') {
+                    target.clone()
+                } else {
+                    format!("{package}.{target}")
+                },
+            }),
+            // RootCause, $AndGate/$OrGate: internal, no link.
+            NodeKind::RootCause | NodeKind::AndGate | NodeKind::OrGate => {}
         }
     }
 
@@ -405,7 +427,7 @@ pub fn write_idmap_to_file(
         IdMapModel::Component(m) => comp_model_to_idmap(m, &source, diagram_name),
         IdMapModel::Class(m) => class_model_to_idmap(m, &source),
         IdMapModel::Sequence(m) => sequence_model_to_idmap(m, &source),
-        IdMapModel::Fta(m) => fta_model_to_idmap(m, &source),
+        IdMapModel::Fta { model, package } => fta_model_to_idmap(model, package, &source),
     };
 
     write_idmap_json(input_path, output_dir, &idmap)
@@ -1041,7 +1063,7 @@ mod tests {
         let sequence = sequence_model_to_idmap(&sequence_tree(&[], vec![]), "pkg/s.puml");
         assert!(sequence.match_by_name);
 
-        let fta = fta_model_to_idmap(&FtaModel { nodes: vec![] }, "pkg/f.puml");
+        let fta = fta_model_to_idmap(&FtaModel { nodes: vec![] }, "Pkg", "pkg/f.puml");
         assert!(!fta.match_by_name);
         assert!(!empty_idmap("pkg/e.puml").match_by_name);
     }
@@ -1055,55 +1077,129 @@ mod tests {
 
     // ── FTA converter ──────────────────────────────────────────────────────
 
-    fn fta_node(kind: NodeKind, gate_kind: Option<GateKind>, alias: &str) -> FtaNode {
+    fn fta_node(kind: NodeKind, alias: &str) -> FtaNode {
         FtaNode {
             kind,
             name: None,
             alias: alias.to_string(),
-            connection: None,
-            gate_kind,
-            failure_modes: Vec::new(),
-            line: None,
+            connections: Vec::new(),
+            line: 0,
         }
     }
 
     fn fta_failure_mode(fqns: &[&str]) -> FtaNode {
+        fta_node(
+            NodeKind::FailureMode {
+                failure_modes: fqns.iter().map(|f| f.to_string()).collect(),
+            },
+            fqns[0],
+        )
+    }
+
+    fn fta_transfer_in(alias: &str, target: &str, connection: &str) -> FtaNode {
         FtaNode {
-            alias: fqns[0].to_string(),
-            failure_modes: fqns.iter().map(|f| f.to_string()).collect(),
-            ..fta_node(NodeKind::FailureMode, None, fqns[0])
+            connections: vec![connection.to_string()],
+            ..fta_node(
+                NodeKind::TransferInGate {
+                    target: target.to_string(),
+                },
+                alias,
+            )
+        }
+    }
+
+    fn fta_child(kind: NodeKind, alias: &str, connection: &str) -> FtaNode {
+        FtaNode {
+            connections: vec![connection.to_string()],
+            ..fta_node(kind, alias)
         }
     }
 
     #[test]
-    fn fta_failure_mode_is_define_and_transfer_gate_is_reference() {
+    fn fta_failure_mode_is_define_and_transfer_gate_is_reference_to_its_target() {
         let model = FtaModel {
             nodes: vec![
                 fta_failure_mode(&["pkg.TopFailure"]),
-                // $TransferInGate: alias is a foreign top-event FQN → reference.
-                fta_node(
-                    NodeKind::Gate,
-                    Some(GateKind::TransferIn),
-                    "other.ForeignTop",
-                ),
-                // $AndGate/$OrGate are internal regardless of alias shape —
-                // classification is driven by `gate_kind`, not the alias, so a
-                // dotted alias on a non-transfer gate must NOT be misread as a
-                // cross-diagram reference (regression test).
-                fta_node(NodeKind::Gate, Some(GateKind::And), "And.Gate1"),
-                fta_node(NodeKind::Gate, Some(GateKind::Or), "OG"),
+                // $TransferInGate: a reference to its target, not to its own alias.
+                fta_transfer_in("T1", "other.ForeignTop", "pkg.TopFailure"),
+                // $AndGate/$OrGate are internal regardless of alias shape.
+                fta_node(NodeKind::AndGate, "And.Gate1"),
+                fta_node(NodeKind::OrGate, "OG"),
                 // Root causes are internal even when the alias looks like an FQN.
-                fta_node(NodeKind::RootCause, None, "pkg.Cause"),
-                fta_node(NodeKind::IntermediateEvent, None, "IE"),
+                fta_node(NodeKind::RootCause, "pkg.Cause"),
             ],
         };
 
-        let idmap = fta_model_to_idmap(&model, "pkg/fta.puml");
+        let idmap = fta_model_to_idmap(&model, "Fta", "pkg/fta.puml");
 
         let define_ids: Vec<&str> = idmap.defines.iter().map(|e| e.id.as_str()).collect();
-        let reference_ids: Vec<&str> = idmap.references.iter().map(|e| e.id.as_str()).collect();
         assert_eq!(define_ids, ["pkg.TopFailure"]);
-        assert_eq!(reference_ids, ["other.ForeignTop"]);
+        assert_eq!(idmap.references.len(), 1);
+        assert_eq!(idmap.references[0].id, "other.ForeignTop");
+        assert_eq!(idmap.references[0].alias, "T1");
+    }
+
+    #[test]
+    fn fta_transfer_out_event_defines_its_alias_qualified_by_the_package() {
+        let model = FtaModel {
+            nodes: vec![fta_node(NodeKind::TransferOutEvent, "Shared1")],
+        };
+
+        let idmap = fta_model_to_idmap(&model, "Fta", "pkg/fta.puml");
+
+        assert_eq!(idmap.defines.len(), 1);
+        assert_eq!(idmap.defines[0].id, "Fta.Shared1");
+        assert_eq!(idmap.defines[0].alias, "Shared1");
+    }
+
+    #[test]
+    fn fta_transfer_gate_to_a_bare_alias_references_it_qualified_by_the_package() {
+        let model = FtaModel {
+            nodes: vec![
+                fta_failure_mode(&["pkg.A"]),
+                fta_transfer_in("T1", "Shared1", "pkg.A"),
+                fta_transfer_in("T2", "pkg.B", "pkg.A"),
+            ],
+        };
+
+        let idmap = fta_model_to_idmap(&model, "Fta", "pkg/fta.puml");
+
+        let references: Vec<(&str, &str)> = idmap
+            .references
+            .iter()
+            .map(|e| (e.alias.as_str(), e.id.as_str()))
+            .collect();
+        assert_eq!(references, [("T1", "Fta.Shared1"), ("T2", "pkg.B")]);
+    }
+
+    #[test]
+    fn fta_intermediate_event_defines_one_id_per_failure_mode_above_it() {
+        let model = FtaModel {
+            nodes: vec![
+                fta_failure_mode(&["pkg.A", "pkg.B"]),
+                fta_child(NodeKind::OrGate, "OG", "pkg.A"),
+                fta_child(NodeKind::IntermediateEvent, "Ie", "OG"),
+                // Not under any failure mode: nothing to define.
+                fta_child(NodeKind::IntermediateEvent, "Lost", "Missing"),
+            ],
+        };
+
+        let idmap = fta_model_to_idmap(&model, "Fta", "pkg/fta.puml");
+
+        let defines: Vec<(&str, &str)> = idmap
+            .defines
+            .iter()
+            .map(|e| (e.alias.as_str(), e.id.as_str()))
+            .collect();
+        assert_eq!(
+            defines,
+            [
+                ("pkg.A", "pkg.A"),
+                ("Ie", "pkg.A.Ie"),
+                ("pkg.A", "pkg.B"),
+                ("Ie", "pkg.B.Ie"),
+            ]
+        );
     }
 
     #[test]
@@ -1112,7 +1208,7 @@ mod tests {
             nodes: vec![fta_failure_mode(&["pkg.Zed", "pkg.Alpha", "pkg.Mid"])],
         };
 
-        let idmap = fta_model_to_idmap(&model, "pkg/fta.puml");
+        let idmap = fta_model_to_idmap(&model, "Fta", "pkg/fta.puml");
 
         let define_ids: Vec<&str> = idmap.defines.iter().map(|e| e.id.as_str()).collect();
         assert_eq!(define_ids, ["pkg.Alpha", "pkg.Mid", "pkg.Zed"]);

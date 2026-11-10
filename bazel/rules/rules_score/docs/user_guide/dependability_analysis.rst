@@ -293,13 +293,19 @@ so that the procedure definitions are available.
    * - ``$OrGate(alias, connection)``
      - OR gate: any single child is sufficient for the parent to occur.
        ``connection`` is the alias of the parent node.
-   * - ``$TransferInGate(alias, connection)``
-     - Transfer-in gate: the root causes of another fault tree count as
-       causes of this tree. ``alias`` is the fully-qualified TRLC name
-       (``Package.RecordName``) of any failure mode the other tree's
-       ``$FailureMode`` covers (``fm1`` .. ``fm8``). ``connection`` is the
-       alias of the parent node. See :ref:`fta-transfer-in` for the
-       limitations.
+   * - ``$TransferInGate(name, target, alias, connection)``
+     - Transfer-in gate: the root causes below ``target`` count as causes of
+       this tree. ``target`` is a ``$TransferOutEvent`` alias, a failure mode
+       (``Package.RecordName``) or an intermediate event of a failure mode
+       (``Package.RecordName.Alias``). ``name`` is the text of the triangle
+       and must equal the text of the target. ``alias`` is the plain
+       identifier of the gate; ``connection`` is the alias of the parent
+       node. See :ref:`fta-transfer-in`.
+   * - ``$TransferOutEvent(name, alias)``
+     - Root of a partial fault tree that has no failure mode of its own;
+       other diagrams transfer into it. It has no ``connection``. ``alias`` is
+       a plain identifier, unique among all diagrams of a ``fault_trees``
+       target.
 
 Each element points to its **parent** via the ``connection`` parameter — the
 arrow goes *from* the element *up* to the parent. Declare the tree from the top
@@ -382,21 +388,43 @@ in Step 3.
 Transferring into another fault tree
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-``$TransferInGate(alias, connection)`` reuses a fault tree instead of copying
-it: the root causes of the tree whose ``$FailureMode`` covers ``alias``, and of
-every tree that tree transfers into in turn, become root causes of the
-transferring tree.
+``$TransferInGate(name, target, alias, connection)`` reuses a fault tree
+instead of copying it: the root causes below ``target``, and below every
+target those transfer into in turn, become root causes of the transferring
+tree. ``target`` has one of three forms:
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 70
+
+   * - ``target``
+     - Transfers into
+   * - ``SharedEvent``
+     - The ``$TransferOutEvent`` with this alias: a partial fault tree that
+       several failure modes share.
+   * - ``MessagePassing.ChannelBroken``
+     - Every ``$FailureMode`` node that covers this failure mode: its whole
+       tree.
+   * - ``MessagePassing.ChannelBroken.Overload``
+     - The ``$IntermediateEvent`` with alias ``Overload`` below that failure
+       mode: only the part of the tree below it.
 
 .. code-block:: text
 
     ' message_lost_fta.puml
     $FailureMode("Message lost", "MessagePassing.MessageLost")
     $OrGate("OG1", "MessagePassing.MessageLost")
-    $TransferInGate("MessagePassing.ChannelBroken", "OG1")
+    $TransferInGate("Overload", "MessagePassing.ChannelBroken.Overload", "T1", "OG1")
 
     ' channel_broken_fta.puml
     $FailureMode("Channel broken", "MessagePassing.ChannelBroken")
+    $OrGate("OG2", "MessagePassing.ChannelBroken")
+    $IntermediateEvent("Overload", "Overload", "OG2")
     ...
+
+A diagram may hold only a partial fault tree: start it with a
+``$TransferOutEvent`` instead of a ``$FailureMode``. Its root causes belong to
+every failure mode whose tree transfers into it.
 
 An inherited root cause is generated and assessed once (Step 3), keeps the
 diagram and line of its own ``$RootCause`` call, and lists the failure modes of
@@ -404,28 +432,47 @@ every tree it is part of. The ASIL of its assessment must be at least that of
 the highest of these failure modes, so adding a transfer can make an existing
 assessment fail the ASIL check.
 
-Limitations:
+Malformed diagrams fail the build: a macro call with missing arguments or an
+invalid name, alias or target, an alias reused for a different node in one
+diagram, a
+``$TransferOutEvent`` alias used twice, a ``Package.RecordName.Alias`` target
+that matches several intermediate events, and a cycle of connections and
+transfers.
 
-* Only the ``alias`` identifies the target; there is no separate label. The
-  triangle is drawn without text; with ``clickable_plantuml`` it links to the
-  diagram that defines the target.
-* ``alias`` must be a failure-mode name (``Package.RecordName``). Free labels
-  such as ``Transfer1`` fail the build.
-* The target tree must be in a diagram of the same ``fault_trees`` target (the
-  same diagram or another one of its ``srcs``). Transfers into another
-  ``fault_trees`` target are not possible.
-* A target that no ``$FailureMode`` covers, that several ``$FailureMode`` calls
-  cover, or that leads back to the transferring tree (also through other
-  trees) fails the build.
-* ``alias`` is also the PlantUML name of the triangle. Several gates of one
-  diagram naming the same target therefore share one triangle that is linked
-  to each of their parents.
-* For the same reason, a gate cannot name the first failure mode (``fm1``) of
-  a ``$FailureMode`` of its own diagram: both would be one shape, so the build
-  fails. Name another failure mode (``fm2`` .. ``fm8``) of that tree or move
-  the tree into its own diagram.
-* A gate whose ``connection`` does not lead to a ``$FailureMode`` is ignored
-  with a warning.
+Incomplete fault trees never fail the build. ``fault_trees`` reports each gap
+as an item of its own level, "Fault Tree Findings", at the line of the macro
+call in the traceability report of the ``dependable_element``, where
+``lobster-ci-report`` fails it. A finding is not a root cause and needs no
+assessment; fixing the diagram removes it:
+
+.. list-table::
+   :header-rows: 1
+   :widths: 35 65
+
+   * - Finding
+     - Meaning
+   * - ``UnknownTransferTarget``
+     - A ``$TransferInGate`` target matches nothing in the diagrams of the
+       ``fault_trees`` target.
+   * - ``TransferNameMismatch``
+     - The ``name`` of a ``$TransferInGate`` differs from the text of its
+       target.
+   * - ``UnknownFailureMode``
+     - A ``$FailureMode`` covers a failure mode no ``failure_modes`` target in
+       ``deps`` defines. The root causes of that tree carry no such failure
+       mode.
+   * - ``DanglingConnection``
+     - A ``connection`` names an alias the diagram does not define.
+   * - ``UnreferencedTransferOutEvent``
+     - A ``$TransferOutEvent`` that no ``$TransferInGate`` targets.
+   * - ``UndevelopedEvent``
+     - An event or gate has nothing connected below it.
+   * - ``RootCauseTitleMismatch``
+     - One root cause alias carries different titles.
+
+A root cause that reaches no failure mode is generated with an empty
+``failure_modes`` list and is therefore reported as lacking an upward
+reference.
 
 Step 3 — Assess every root cause
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

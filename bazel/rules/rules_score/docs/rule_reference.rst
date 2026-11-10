@@ -729,7 +729,7 @@ which breaks the dependency cycle between measures and analysis.
    * - ``deps``
      - label list
      - no
-     - ``failure_modes`` targets holding the failure modes the diagrams reference (default ``[]``)
+     - ``failure_modes`` targets holding the failure modes the diagrams reference (default ``[]``). A failure mode a diagram names that no listed target defines is dropped from the root causes and reported as a "Fault Tree Findings" item; the build does not fail.
    * - ``fta_package``
      - string
      - no
@@ -749,7 +749,7 @@ which breaks the dependency cycle between measures and analysis.
      - no
      - Bazel visibility
 
-**Generated targets:** ``<name>`` (generated ``fta_events.trlc`` and the root-cause lobster file; no standalone test)
+**Generated targets:** ``<name>`` (generated ``fta_events.trlc``, ``fta_index.json``, the root-cause lobster file and the "Fault Tree Findings" lobster file with one item per gap found in the diagrams; no standalone test)
 
 .. _rule-safety-analysis:
 

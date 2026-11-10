@@ -144,7 +144,8 @@ FaultTreesInfo = provider(
         "fta_package": "TRLC package name of the generated fta_events.trlc.",
         "fta_events": "File: generated fta_events.trlc (RootCause records).",
         "diagrams": "List of authored fault-tree .puml Files.",
-        "lobster_files": "Dict mapping the canonical lobster file name ('fta_root_causes.lobster') to its File.",
+        "fta_index": "File: fta_index.json (diagram source paths, failure mode trees, transfer gates of root causes, findings); None without diagrams.",
+        "lobster_files": "Dict mapping the canonical lobster file name to its File: 'fta_root_causes.lobster' (the root causes) and 'fta_findings.lobster' (one item per finding); empty without diagrams.",
     },
 )
 

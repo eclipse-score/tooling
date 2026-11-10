@@ -26,8 +26,8 @@ reference both:
      ``$FailureMode``/``$RootCause``/gate macro calls of each diagram and emits
      ``fta_events.trlc`` — the generated ``ScoreReq.RootCause`` records, each
      linking to the ``FailureMode`` records of its tree (see
-     ``puml_fta::render_trlc_stub``).  The root-cause lobster file is produced
-     here.  The assessments reference the root causes as
+     ``puml_fta::render_trlc_stub``).  The root-cause and the findings lobster
+     files are produced here.  The assessments reference the root causes as
      ``<fta_package>.<RootCause>``.
   3. ``safety_analysis`` – the page.  Takes the failure modes, the fault trees,
      the ``safety_measures`` (``assumptions_of_use`` / ``component_requirements``
@@ -61,7 +61,7 @@ The ``.puml`` diagrams travel as ``aux_srcs`` so Sphinx can
 resolve ``.. uml::`` without adding them to the toctree.
 
 ``AnalysisInfo`` carries all lobster traceability files (failuremodes,
-assessments, fta_root_causes) as a ``lobster_files`` dict
+assessments, fta_root_causes, fta_findings) as a ``lobster_files`` dict
 keyed by canonical filename.  ``SafetyAnalysisProviderInfo`` carries the AoU
 targets consumed as measures; the ``dependable_element`` derives its own AoUs
 from them.  All Sphinx source files travel
@@ -109,12 +109,20 @@ def _default_fta_package(label):
 # ============================================================================
 
 def _process_root_causes(ctx, fta_package):
-    """Generate the TRLC stub of the fault-tree diagrams.
+    """Generate the TRLC stub, the review index and the findings of the fault-tree diagrams.
 
     ``puml_cli`` (FTA mode) parses the ``$FailureMode``/``$RootCause``/gate macro
     calls straight from each diagram and emits ``fta_events.trlc`` into ``{label}/``
     (the generated ``RootCause`` records, package *fta_package*; see
-    ``puml_fta::render_trlc_stub``).
+    ``puml_fta::render_trlc_stub``) and ``fta_index.json`` (review evidence for
+    the page and the incomplete spots; see ``puml_fta::render_index``).
+    ``fta_lobster`` turns the findings of the index into ``fta_findings.lobster``,
+    one item per incomplete spot, e.g. a transfer into nothing.  Findings never
+    fail the build; the traceability report lists them.
+
+    Failure modes the diagrams name that no ``failure_modes`` dep defines are
+    dropped from the records and reported as findings.  ``fta_lobster`` lists the
+    defined ones from the lobster files of the deps for ``puml_cli``.
 
     The diagrams are *not* rewritten; ``safety_analysis`` stages them unmodified.
     Their ``!include fta_metamodel.puml`` is resolved at render time via the docs
@@ -126,10 +134,11 @@ def _process_root_causes(ctx, fta_package):
         fta_package: TRLC package name for the generated ``fta_events.trlc``.
 
     Returns:
-        Tuple ``(puml_inputs, fta_events_trlc)``.
-        ``puml_inputs`` (the authored ``.puml`` diagrams) is empty when
-        there are no PlantUML inputs; ``fta_events_trlc`` is always a File
-        (an empty stub package when there are no diagrams).
+        Struct ``(diagrams, fta_events, fta_index, findings_lobster)``.
+        ``diagrams`` (the authored ``.puml`` diagrams) is empty when there are
+        no PlantUML inputs; ``fta_events`` is always a File (an empty stub
+        package when there are no diagrams); ``fta_index`` and
+        ``findings_lobster`` are None when there are no diagrams.
     """
     puml_inputs = ctx.files.srcs
 
@@ -143,23 +152,61 @@ def _process_root_causes(ctx, fta_package):
             fta_events_trlc,
             "// no root cause diagrams\npackage {}\n".format(fta_package),
         )
-        return [], fta_events_trlc
+        return struct(diagrams = [], fta_events = fta_events_trlc, fta_index = None, findings_lobster = None)
+
+    fta_index = ctx.actions.declare_file("{}/fta_index.json".format(ctx.label.name))
+    findings_lobster = ctx.actions.declare_file("{}/fta_findings.lobster".format(ctx.label.name))
+    known_failure_modes = ctx.actions.declare_file("{}/known_failure_modes.txt".format(ctx.label.name))
+    fm_lobster_files = depset(transitive = [dep[FailureModesInfo].srcs for dep in ctx.attr.deps])
+
+    known_args = ctx.actions.args()
+    known_args.add("--log-level", get_log_level(ctx))
+    known_args.add("known-failure-modes")
+    known_args.add("--output", known_failure_modes)
+    known_args.add_all(fm_lobster_files)
+    ctx.actions.run(
+        inputs = fm_lobster_files,
+        outputs = [known_failure_modes],
+        executable = ctx.executable._fta_lobster,
+        arguments = [known_args],
+        progress_message = "Listing the failure modes of %s" % ctx.label.name,
+    )
 
     args = ctx.actions.args()
     for src in puml_inputs:
         args.add("--file", src.path)
     args.add("--fta-output-dir", fta_events_trlc.dirname)
     args.add("--fta-package", fta_package)
+    args.add("--failure-modes-file", known_failure_modes)
     args.add("--log-level", get_log_level(ctx))
     ctx.actions.run(
-        inputs = puml_inputs,
-        outputs = [fta_events_trlc],
+        inputs = puml_inputs + [known_failure_modes],
+        outputs = [fta_events_trlc, fta_index],
         executable = ctx.executable._puml_cli,
         arguments = [args],
         progress_message = "Processing root cause FTA diagrams for %s" % ctx.label.name,
     )
 
-    return puml_inputs, fta_events_trlc
+    findings_args = ctx.actions.args()
+    findings_args.add("--log-level", get_log_level(ctx))
+    findings_args.add("findings")
+    findings_args.add("--index", fta_index)
+    findings_args.add("--package", fta_package)
+    findings_args.add("--output", findings_lobster)
+    ctx.actions.run(
+        inputs = [fta_index],
+        outputs = [findings_lobster],
+        executable = ctx.executable._fta_lobster,
+        arguments = [findings_args],
+        progress_message = "Listing the findings of the fault trees of %s" % ctx.label.name,
+    )
+
+    return struct(
+        diagrams = puml_inputs,
+        fta_events = fta_events_trlc,
+        fta_index = fta_index,
+        findings_lobster = findings_lobster,
+    )
 
 # ============================================================================
 # Private Rule Implementation
@@ -177,7 +224,7 @@ def _unseen_files(depsets, known):
 def _fault_trees_impl(ctx):
     fta_package = ctx.attr.fta_package if ctx.attr.fta_package else _default_fta_package(ctx.label)
 
-    diagrams, fta_events_trlc = _process_root_causes(ctx, fta_package)
+    fta = _process_root_causes(ctx, fta_package)
 
     # fta_events.trlc ``import``s every FailureMode package its RootCause
     # records reference, so the failure mode files travel with it in every
@@ -187,24 +234,32 @@ def _fault_trees_impl(ctx):
     spec = depset(ctx.files.spec, transitive = [info.spec for info in fm_infos])
 
     lobster_files = {}
-    if diagrams:
+    if fta.diagrams:
         lobster_files["fta_root_causes.lobster"], _ = subrule_lobster_trlc(
-            [fta_events_trlc] + fm_files.to_list() + spec.to_list(),
+            [fta.fta_events] + fm_files.to_list() + spec.to_list(),
             ctx.file._rc_lobster_config,
         )
 
+        # A level of its own: the findings are not root causes to trace.
+        lobster_files["fta_findings.lobster"] = fta.findings_lobster
+
     return [
-        DefaultInfo(files = depset([fta_events_trlc] + lobster_files.values())),
+        DefaultInfo(files = depset([fta.fta_events] + lobster_files.values())),
         FaultTreesInfo(
             fta_package = fta_package,
-            fta_events = fta_events_trlc,
-            diagrams = diagrams,
+            fta_events = fta.fta_events,
+            diagrams = fta.diagrams,
+            fta_index = fta.fta_index,
             lobster_files = lobster_files,
+        ),
+        OutputGroupInfo(
+            fta_events = depset([fta.fta_events]),
+            fta_index = depset([fta.fta_index] if fta.fta_index else []),
         ),
         # Lets safety_analysis resolve `<fta_package>.<RootCause>`.
         TrlcProviderInfo(
             spec = spec,
-            reqs = depset([fta_events_trlc]),
+            reqs = depset([fta.fta_events]),
             deps = fm_files,
         ),
     ]
@@ -257,6 +312,8 @@ def _safety_analysis_impl(ctx):
     args.add("--fta-package", fault_trees.fta_package)
     args.add("--fta-events", fta_events_trlc.path)
     args.add_all("--diagrams", [f.basename for f in diagram_aux_files])
+    if fault_trees.fta_index:
+        args.add("--fta-index", fault_trees.fta_index.path)
     args.add("--log-level", get_log_level(ctx))
     if failuremode_files:
         args.add("--failuremodes")
@@ -277,7 +334,8 @@ def _safety_analysis_impl(ctx):
             assessment_files +
             measure_files +
             dep_files +
-            [fta_events_trlc, ctx.file._template],
+            [fta_events_trlc, ctx.file._template] +
+            ([fault_trees.fta_index] if fault_trees.fta_index else []),
         ),
         outputs = [safety_analysis_rst],
         executable = ctx.executable._safety_analysis_assembler,
@@ -363,6 +421,12 @@ _fault_trees = rule(
                 allow_files = True,
                 cfg = "exec",
                 doc = "puml_cli binary used in FTA mode to extract fta_events.trlc.",
+            ),
+            "_fta_lobster": attr.label(
+                default = Label("//bazel/rules/rules_score:fta_lobster"),
+                executable = True,
+                cfg = "exec",
+                doc = "Lists the known failure modes for puml_cli and writes the findings as lobster items.",
             ),
             "_rc_lobster_config": attr.label(
                 default = Label("//bazel/rules/rules_score/lobster/config:fta_root_causes_config"),

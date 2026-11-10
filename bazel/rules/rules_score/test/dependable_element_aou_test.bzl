@@ -112,6 +112,9 @@ def _assessment_config_test_impl(ctx):
     # Requirements are restricted or traced by them.
     asserts.false(env, "requires" in blocks["{RC_BLOCK}"], blocks["{RC_BLOCK}"])
     asserts.false(env, "Root Causes" in blocks["{COMP_REQ_BLOCK}"], blocks["{COMP_REQ_BLOCK}"])
+
+    # Fault tree findings are a level of their own that traces to nothing.
+    asserts.false(env, "trace to" in blocks["{FINDINGS_BLOCK}"], blocks["{FINDINGS_BLOCK}"])
     return analysistest.end(env)
 
 assessment_config_test = analysistest.make(

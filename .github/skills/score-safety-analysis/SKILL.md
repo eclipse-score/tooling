@@ -164,14 +164,15 @@ $RootCause("<Root cause label 2>", "<RootCauseAlias2>", "OG1")
 | `$AndGate(alias, connection)` | All children required | parent alias |
 | `$RootCause(name, alias, connection)` | Root cause / leaf — `alias` must be a **plain TRLC identifier** (no dotted `Package.Name`) | enclosing gate alias |
 | `$IntermediateEvent(name, alias, connection)` | Intermediate cause | parent gate alias |
-| `$TransferInGate(alias, connection)` | Transfer in the root causes of another tree; `alias` is a `FailureMode` FQN covered by that tree's `$FailureMode` (any of `fm1`..`fm8`) | parent alias |
+| `$TransferInGate(name, target, alias, connection)` | Transfer in the root causes below `target`; `name` is the triangle text and must equal the target's text; `target` is a `$TransferOutEvent` alias, `Pkg.FailureMode` (whole tree) or `Pkg.FailureMode.IntermediateAlias` (subtree) | parent alias |
+| `$TransferOutEvent(name, alias)` | Root of a partial tree without own failure mode; transfer target | — (root, no connection) |
 
 **Rules:**
 - `$RootCause` alias is a plain identifier; the `puml_cli` FTA parser auto-generates a `fta_events.trlc` stub (imported as `<fta_package>`, default derived from the target label) containing a `RootCause` record named after that alias (its `failure_modes` lists the `FailureMode`s of the tree's `$FailureMode` root) — a `RootCauseAssessment` references it explicitly (e.g. `root_causes = [sample_safety_analysis_fta.JustBadLuck]`); there is no implicit name-matching.
 - Build top-down in the file: `$FailureMode` first, then gates, then `$RootCause` leaves.
 - The same `$RootCause` alias may appear in multiple FTAs (shared root cause).
-- `$TransferInGate` target must be covered by exactly one `$FailureMode` in the `srcs` of the same `fault_trees` target (other diagrams or the same one); unknown, ambiguous or cyclic targets fail the build. The transferring tree also inherits the root causes of the target tree (transitively).
-- `$TransferInGate` limits: the alias must be a failure-mode FQN (free labels such as `Transfer1` fail); no transfer into another `fault_trees` target; the alias is also the PlantUML shape name, so gates of one diagram with the same target share one triangle, and a gate cannot name `fm1` of a `$FailureMode` in its own diagram (name `fm2`..`fm8` or use a separate diagram). An inherited root cause is assessed once, and its assessment ASIL must be at least that of every failure mode of every tree it is part of.
+- `$TransferInGate` target lives in the `srcs` of the same `fault_trees` target (same or other diagram); the transferring tree inherits the root causes below it (transitively). Syntax errors, an alias reused for a different node in one diagram (an identical call may repeat to add a parent), an ambiguous target or a cycle of connections and transfers fail the build; a target matching nothing, a `name` that differs from the target text, an unknown failure mode, a dangling `connection`, an unused `$TransferOutEvent` and an undeveloped event are items of the level "Fault Tree Findings" in the traceability report (no assessment needed; fix the diagram), never build errors.
+- A diagram may hold only a partial tree: start it with `$TransferOutEvent` and let other trees transfer into it. No transfer into another `fault_trees` target. An inherited root cause is assessed once, and its assessment ASIL must be at least that of every failure mode of every tree it is part of.
 - `$OrGate` is the default for independent root causes; use `$AndGate` only when all causes must co-occur.
 
 ## Step 3 — Write Root Cause Assessments (`assessments.trlc`)

@@ -53,3 +53,14 @@ ScoreReq.RootCauseAssessment OverrunAssessed {
     rationale = "The component runs synchronously in the thread of its caller, without blocking calls or queues, so it has no execution time that could overrun and no response that could be late."
     version = 1
 }
+
+ScoreReq.RootCauseAssessment ClockAssessed {
+    root_causes = [
+        sample_safety_analysis_fta.ClockJumpsBackwards,
+        sample_safety_analysis_fta.ClockStops
+    ]
+    measures = []
+    safety = ScoreReq.Asil.D
+    rationale = "The component reads no wall clock; it only uses a monotonic counter of its caller, so clock faults cannot change its result."
+    version = 1
+}

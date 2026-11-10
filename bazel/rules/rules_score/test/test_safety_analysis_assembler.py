@@ -19,6 +19,7 @@ import types
 import unittest
 
 import safety_analysis_assembler as fa
+from fta_index import Finding, FtaIndex, SourceRef
 
 
 class _Type:
@@ -272,13 +273,17 @@ class CheckInputsTest(unittest.TestCase):
         self.assertEqual(fa._check_inputs(objs, []), [])
 
 
+def _build_body(renderer, diagrams, index=None):
+    return fa._build_body(renderer, "Title", "Lib", diagrams, index or FtaIndex.empty())
+
+
 class BuildBodyTest(unittest.TestCase):
     def setUp(self):
         self.renderer = _FakeRenderer(_objs())
         self.diagrams = _DIAGRAMS
 
     def test_overview_and_failure_mode_section_rendered(self):
-        body = fa._build_body(self.renderer, "Title", "Lib", self.diagrams)
+        body = _build_body(self.renderer, self.diagrams)
         self.assertIn("Title\n=====", body)
         self.assertIn("Overview", body)
         # Overview table lists each failure mode with its interface.
@@ -325,10 +330,47 @@ class BuildBodyTest(unittest.TestCase):
         self.assertIn(":gutter: 3", body)
 
     def test_fault_trees_section_shows_each_diagram_once(self):
-        body = fa._build_body(self.renderer, "Title", "Lib", self.diagrams + self.diagrams)
+        body = _build_body(self.renderer, self.diagrams + self.diagrams)
         self.assertIn("Fault Trees\n-----------", body)
         self.assertIn(".. _safety-analysis-lib-diagram-fta-a-puml:", body)
         self.assertEqual(body.count(".. uml:: fta_a.puml"), 1)
+
+    def test_failure_mode_links_to_its_fault_tree(self):
+        index = FtaIndex.empty()
+        index.failure_mode_trees["Lib.FM_A"] = [SourceRef("fta_a.puml", 1, "fm")]
+        body = _build_body(self.renderer, self.diagrams, index)
+        self.assertIn("Fault tree: :ref:`fta_a.puml <safety-analysis-lib-diagram-fta-a-puml>`", body)
+
+    def test_root_cause_card_names_the_transfer_gate_it_is_reached_through(self):
+        index = FtaIndex.empty()
+        index.via["RC_A"] = {"Lib.FM_A": [SourceRef("fta_a.puml", 9, "T1")]}
+        body = _build_body(self.renderer, self.diagrams, index)
+        self.assertIn(
+            "Reached through transfer gate: ``T1`` (:ref:`fta_a.puml <safety-analysis-lib-diagram-fta-a-puml>`, line 9)",
+            body,
+        )
+
+    def test_gate_of_another_failure_mode_is_not_shown(self):
+        index = FtaIndex.empty()
+        index.via["RC_A"] = {"Lib.Other": [SourceRef("fta_a.puml", 9, "T1")]}
+        body = _build_body(self.renderer, self.diagrams, index)
+        self.assertNotIn("Reached through", body)
+
+    def test_findings_are_listed_in_a_warning_section(self):
+        index = FtaIndex.empty()
+        index.findings.append(Finding("UnknownTransferTarget", "fta_a.puml", 4, "no such *target*"))
+        body = _build_body(self.renderer, self.diagrams, index)
+        self.assertIn("Fault Tree Findings\n-------------------", body)
+        self.assertIn(".. warning::", body)
+        self.assertIn(
+            "**UnknownTransferTarget** (:ref:`fta_a.puml <safety-analysis-lib-diagram-fta-a-puml>`, line 4): "
+            "no such \\*target\\*",
+            body,
+        )
+
+    def test_without_findings_there_is_no_findings_section(self):
+        body = _build_body(self.renderer, self.diagrams)
+        self.assertNotIn("Fault Tree Findings", body)
 
     def test_unstaged_diagram_source_is_escaped_plain_text(self):
         objs = _objs()
@@ -337,19 +379,19 @@ class BuildBodyTest(unittest.TestCase):
             "RootCause",
             {"title": "Root cause A", "diagram": "x*y.puml", "line": 2, "failure_modes": ["Lib.FM_A"]},
         )
-        body = fa._build_body(_FakeRenderer(objs), "Title", "Lib", self.diagrams)
+        body = _build_body(_FakeRenderer(objs), self.diagrams)
         self.assertIn("Source: x\\*y.puml, line 2", body)
 
     def test_root_cause_without_assessment_is_flagged(self):
         objs = _objs()
         objs["Lib.RC_B"] = _root_cause("RC_B")
-        body = fa._build_body(_FakeRenderer(objs), "Title", "Lib", self.diagrams)
+        body = _build_body(_FakeRenderer(objs), self.diagrams)
         self.assertEqual(body.count(":bdg-danger:`Not assessed`"), 1)
 
     def test_assessment_without_measures_is_rendered_as_not_applicable(self):
         objs = _objs()
         objs["Lib.Asm_A"] = _assessment("Asm_A", ["Lib.RC_A"], [], "does not apply")
-        body = fa._build_body(_FakeRenderer(objs), "Title", "Lib", self.diagrams)
+        body = _build_body(_FakeRenderer(objs), self.diagrams)
         self.assertEqual(body.count(":bdg-secondary:`Not applicable`"), 1)
         self.assertIn("does not apply", body)
         self.assertNotIn("Not assessed", body)
@@ -358,32 +400,32 @@ class BuildBodyTest(unittest.TestCase):
         objs = _objs()
         objs["Lib.RC_B"] = _root_cause("RC_B")
         objs["Lib.Asm_A"] = _assessment("Asm_A", ["Lib.RC_A", "Lib.RC_B"], ["Lib.AoU_1"], "shared rationale")
-        body = fa._build_body(_FakeRenderer(objs), "Title", "Lib", self.diagrams)
+        body = _build_body(_FakeRenderer(objs), self.diagrams)
         self.assertEqual(body.count("**Asm_A**"), 2)
         self.assertEqual(body.count("shared rationale"), 2)
 
     def test_assessment_card_shows_pinned_measure_version(self):
-        body = fa._build_body(self.renderer, "Title", "Lib", self.diagrams)
+        body = _build_body(self.renderer, self.diagrams)
         self.assertEqual(body.count(":bdg-light:`v1`"), 1)
 
     def test_assessment_card_shows_assessment_asil(self):
         objs = _objs()
         objs["Lib.Asm_A"] = _assessment("Asm_A", ["Lib.RC_A"], ["Lib.AoU_1"], safety="D")
-        body = fa._build_body(_FakeRenderer(objs), "Title", "Lib", self.diagrams)
+        body = _build_body(_FakeRenderer(objs), self.diagrams)
         self.assertIn("**Asm_A** :bdg-danger:`ASIL D`", body)
 
     def test_measures_section_shows_record_version(self):
-        body = fa._build_body(self.renderer, "Title", "Lib", self.diagrams)
+        body = _build_body(self.renderer, self.diagrams)
         self.assertEqual(body.count(":bdg-light:`v3`"), 1)
 
     def test_measure_without_version_has_no_version_badge(self):
         objs = {"Lib.AoU_Orphan": _objs()["Lib.AoU_Orphan"]}
-        body = fa._build_body(_FakeRenderer(objs), "Title", "Lib", [])
+        body = _build_body(_FakeRenderer(objs), [])
         self.assertIn("**AoU_Orphan**", body)
         self.assertNotIn(":bdg-light:", body)
 
     def test_unlisted_measure_is_flagged_in_measures_section(self):
-        body = fa._build_body(self.renderer, "Title", "Lib", self.diagrams)
+        body = _build_body(self.renderer, self.diagrams)
         self.assertEqual(body.count(":bdg-warning:`Not in an assessment`"), 1)
 
     def test_root_cause_title_is_escaped(self):
@@ -393,24 +435,24 @@ class BuildBodyTest(unittest.TestCase):
             "RootCause",
             {"title": "a*b", "diagram": "fta_a.puml", "line": 2, "failure_modes": ["Lib.FM_A"]},
         )
-        body = fa._build_body(_FakeRenderer(objs), "Title", "Lib", self.diagrams)
+        body = _build_body(_FakeRenderer(objs), self.diagrams)
         self.assertIn(".. grid-item-card:: a\\*b", body)
 
     def test_global_measures_section_lists_all(self):
-        body = fa._build_body(self.renderer, "Title", "Lib", self.diagrams)
+        body = _build_body(self.renderer, self.diagrams)
         self.assertIn("Safety Measures\n---------------", body)
         self.assertIn("**AoU_1**", body)
         self.assertIn("**AoU_Orphan**", body)
         self.assertIn(":bdg-info:`Assumption of Use`", body)
 
     def test_failure_mode_without_root_cause_has_no_root_causes_rubric(self):
-        body = fa._build_body(self.renderer, "Title", "Lib", self.diagrams)
+        body = _build_body(self.renderer, self.diagrams)
         self.assertIn(".. dropdown:: Lib.FM_Orphan\n", body)
         self.assertEqual(body.count(".. rubric:: Root Causes"), 1)
 
     def test_no_fault_trees_renders_all_failure_modes_without_fta(self):
         renderer = _FakeRenderer(_objs_no_fta())
-        body = fa._build_body(renderer, "Title", "Lib", [])
+        body = _build_body(renderer, [])
         self.assertIn(".. dropdown:: Lib.FM_A\n", body)
         self.assertIn(".. dropdown:: Lib.FM_Orphan\n", body)
         self.assertNotIn(".. uml::", body)
@@ -675,11 +717,12 @@ class MainIntegrationTest(unittest.TestCase):
             self.assertEqual(rst.count(":bdg-danger:`Not assessed`"), 1)
             self.assertEqual(rst.count(":bdg-warning:`Not in an assessment`"), 0)
 
-    def _assemble(self, tmp, failuremodes=(), assessments=(), safetymeasures=(), spec=()):
+    def _assemble(self, tmp, failuremodes=(), assessments=(), safetymeasures=(), spec=(), fta_index=None):
         rsl = self._write(tmp, "types.rsl", _RSL)
         api = self._write(tmp, "api.trlc", _API_TRLC)
         fta = self._write(tmp, "fta_events.trlc", _FTA_TRLC)
         template = self._write(tmp, "tmpl.rst", "{body}\n")
+        index_args = ["--fta-index", self._write(tmp, "fta_index.json", fta_index)] if fta_index else []
         argv = [
             "safety_analysis_assembler",
             "--output",
@@ -692,6 +735,7 @@ class MainIntegrationTest(unittest.TestCase):
             "TestSafetyAnalysis",
             "--fta-events",
             fta,
+            *index_args,
             "--failuremodes",
             *failuremodes,
             "--assessments",
@@ -748,6 +792,32 @@ class MainIntegrationTest(unittest.TestCase):
             # The AoU / CompReq are only parsed for reference resolution, so they are no own measures.
             with self.assertRaises(SystemExit) as ctx:
                 self._assemble(tmp, failuremodes=[fm], assessments=[asm], spec=[aou, cr])
+            self.assertEqual(ctx.exception.code, 1)
+
+    def _assemble_full(self, tmp, fta_index):
+        fm = self._write(tmp, "fm.trlc", _FM_TRLC)
+        aou = self._write(tmp, "aou.trlc", _AOU_TRLC)
+        cr = self._write(tmp, "cr.trlc", _COMPREQ_TRLC)
+        asm = self._write(tmp, "asm.trlc", _ASSESSMENTS_TRLC)
+        self._assemble(tmp, failuremodes=[fm], assessments=[asm], safetymeasures=[aou, cr], fta_index=fta_index)
+        with open(os.path.join(tmp, "safety_analysis.rst"), encoding="utf-8") as fh:
+            return fh.read()
+
+    def test_fta_index_findings_are_rendered(self):
+        index = (
+            '{"version": 1, "diagrams": {"a.puml": "pkg/a.puml"}, "failure_mode_trees": {}, "via": {}, '
+            '"findings": [{"kind": "UndevelopedEvent", "diagram": "a.puml", "line": 3, "message": "no cause"}]}'
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            rst = self._assemble_full(tmp, index)
+        self.assertIn("Fault Tree Findings", rst)
+        self.assertIn("**UndevelopedEvent**", rst)
+
+    def test_fta_index_of_unsupported_version_exits_nonzero(self):
+        index = '{"version": 99, "diagrams": {}, "failure_mode_trees": {}, "via": {}, "findings": []}'
+        with tempfile.TemporaryDirectory() as tmp:
+            with self.assertRaises(SystemExit) as ctx:
+                self._assemble_full(tmp, index)
             self.assertEqual(ctx.exception.code, 1)
 
     def test_malformed_fta_events_exits_nonzero(self):

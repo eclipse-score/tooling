@@ -125,6 +125,20 @@ section "Potential Errors" {
             impact_type = ToolQualification.Impact_Type.Safety
         }
 
+        ToolQualification.PotentialError Misattributed_Root_Cause {
+            description = '''
+                A fault-tree root cause is attributed to a failure mode its
+                diagram does not lead to, or an incomplete fault tree (a
+                transfer into nothing, a failure mode no failure_modes
+                target defines, an undeveloped event) passes unnoticed, so
+                the safety analysis shows a root cause under the wrong
+                failure mode or hides a gap.
+            '''
+            impacts = ["Failure mode with missing or foreign root causes in the safety case"]
+            affects = [Render_Safety_Analyses, Aggregate_Safety_Analysis_Report]
+            impact_type = ToolQualification.Impact_Type.Safety
+        }
+
     }
 
     section "Architecture" {

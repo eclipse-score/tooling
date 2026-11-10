@@ -11,15 +11,16 @@
 // SPDX-License-Identifier: Apache-2.0
 // *******************************************************************************
 
-//! `--fta-output-dir` mode: Fault-Tree-Analysis diagrams to `RootCause` TRLC.
+//! `--fta-output-dir` mode: Fault-Tree-Analysis diagrams to `RootCause` TRLC
+//! and a JSON index of the review evidence and findings.
 
-use log::debug;
-use std::collections::HashSet;
+use log::{debug, warn};
+use std::collections::{BTreeMap, HashSet};
 use std::fs;
 use std::path::PathBuf;
 use std::rc::Rc;
 
-use puml_fta::{merge_root_causes, render_trlc_stub, FaultTree, FtaModel};
+use puml_fta::{render_index, render_trlc_stub, resolve_root_causes, FtaModel};
 use puml_idmap::{write_idmap_to_file, IdMapModel};
 use puml_parser::{DiagramParser, ProcedureParserService};
 use puml_utils::LogLevel;
@@ -28,11 +29,21 @@ use crate::inputs::{collect_input_files, source_path_for_output};
 use crate::sinks::{create_output_dir, IdmapOutputs};
 use crate::Args;
 
-/// FTA processing pipeline: parse the fault-tree macro calls straight from
-/// each source diagram (the metamodel's ``!procedure`` definitions carry no
-/// fault-tree topology themselves) and emit the generated ``fta_events.trlc``
-/// stub. Diagrams are analysis-only here; they are staged/rendered as-authored
-/// by the Bazel rule, not rewritten by this pipeline.
+/// Fully qualified failure mode names, one per line; blank lines are ignored.
+fn read_known_failure_modes(path: &str) -> Result<HashSet<String>, Box<dyn std::error::Error>> {
+    let text = fs::read_to_string(path).map_err(|e| format!("{path}: {e}"))?;
+    Ok(text
+        .lines()
+        .map(str::trim)
+        .filter(|line| !line.is_empty())
+        .map(str::to_string)
+        .collect())
+}
+
+/// Parse the fault-tree macro calls of every input diagram, attribute the root
+/// causes to failure modes across all diagrams, and write `fta_events.trlc`
+/// and `fta_index.json` to `output_dir`.  The diagrams themselves are not
+/// rewritten.
 pub fn run_fta(
     args: &Args,
     output_dir: &str,
@@ -50,13 +61,19 @@ pub fn run_fta(
     let mut sorted: Vec<Rc<PathBuf>> = inputs.into_iter().collect();
     sorted.sort();
 
-    let mut all_trees: Vec<FaultTree> = Vec::new();
-    // Fault trees reference each diagram by basename; two inputs sharing a
-    // basename (in different directories) would be indistinguishable downstream.
+    let known_failure_modes = args
+        .failure_modes_file
+        .as_deref()
+        .map(read_known_failure_modes)
+        .transpose()?;
+
+    let mut models: Vec<(String, FtaModel)> = Vec::new();
+    let mut source_paths: BTreeMap<String, String> = BTreeMap::new();
+    // Findings and TRLC records name a diagram by basename, so two inputs with
+    // the same basename in different directories would be indistinguishable.
     let mut seen_basenames: HashSet<String> = HashSet::new();
-    // Independent of the basename check above, which only fires on an exact
-    // basename match: two inputs with the same file *stem* would overwrite
-    // each other's `<stem>.idmap.json`.
+    // Two inputs with the same file stem would overwrite each other's
+    // `<stem>.idmap.json`.
     let mut idmap_outputs = args
         .idmap_output_dir
         .as_deref()
@@ -83,23 +100,21 @@ pub fn run_fta(
             .into());
         }
 
-        // Analysis only: the fault-tree topology comes entirely from the
-        // `$FailureMode(...)` / `$RootCause(...)` / gate macro *calls*, which the
-        // procedure parser reads straight from the source (the `!include
-        // fta_metamodel.puml` line is inert text).  The diagram is rendered
-        // as-authored by Sphinx/PlantUML, which finds the metamodel via the
-        // toolchain's global `plantuml.include.path`.
+        // The topology comes from the macro calls in the source; the
+        // `!include fta_metamodel.puml` line is inert text.
         let source = fs::read_to_string(file.as_path())?;
         let parsed = ProcedureParserService.parse_file(file, &source, log_level)?;
         let model =
             FtaModel::from_procedure_file(&parsed).map_err(|e| format!("FTA {basename}: {e}"))?;
-        all_trees.extend(model.fault_trees(basename)?);
+        let source_file = source_path_for_output(file);
 
         if let Some(outputs) = idmap_outputs.as_mut() {
             outputs.claim(file, "FTA input")?;
-            let source_file = source_path_for_output(file);
             write_idmap_to_file(
-                IdMapModel::Fta(&model),
+                IdMapModel::Fta {
+                    model: &model,
+                    package: fta_package,
+                },
                 file,
                 Some(&source_file),
                 None,
@@ -107,13 +122,32 @@ pub fn run_fta(
             )?;
         }
 
+        source_paths.insert(basename.to_string(), source_file);
+        models.push((basename.to_string(), model));
         debug!("Processed FTA diagram: {}", file.display());
     }
 
-    let root_causes = merge_root_causes(&all_trees)?;
+    let diagrams: Vec<(&str, &FtaModel)> = models
+        .iter()
+        .map(|(name, model)| (name.as_str(), model))
+        .collect();
+    let resolution = resolve_root_causes(&diagrams, known_failure_modes.as_ref())?;
+    for finding in &resolution.findings {
+        warn!(
+            "FTA {}:{}: {}: {}",
+            finding.diagram,
+            finding.line,
+            finding.kind.as_str(),
+            finding.message
+        );
+    }
     fs::write(
         out.join("fta_events.trlc"),
-        render_trlc_stub(fta_package, &root_causes),
+        render_trlc_stub(fta_package, &resolution.root_causes),
+    )?;
+    fs::write(
+        out.join("fta_index.json"),
+        render_index(&resolution, &source_paths),
     )?;
     Ok(())
 }

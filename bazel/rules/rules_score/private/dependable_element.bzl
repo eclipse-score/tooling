@@ -1548,6 +1548,7 @@ def _dependable_element_index_impl(ctx):
     interface_req_list = public_api_lobster_list
     fm_list = sa_lobster_files.get("failuremodes.lobster", [])
     rc_list = sa_lobster_files.get("fta_root_causes.lobster", [])
+    findings_list = sa_lobster_files.get("fta_findings.lobster", [])
     assessment_list = sa_lobster_files.get("assessments.lobster", [])
 
     # =========================================================================
@@ -1638,6 +1639,7 @@ def _dependable_element_index_impl(ctx):
         interface_req_list,
         fm_list,
         rc_list,
+        findings_list,
         assessment_list,
         own_aou_list,
     ])
@@ -1771,6 +1773,13 @@ def _dependable_element_index_impl(ctx):
                     trace_to = _cond_names((has_fm, "Failure Modes")),
                     emit_empty = strict,
                 ),
+                # Not traced: an item of this level is a gap of the fault
+                # trees and fails the report on its own.
+                "{FINDINGS_BLOCK}": format_lobster_block(
+                    "requirements",
+                    "Fault Tree Findings",
+                    findings_list,
+                ),
                 # Target level: every own AoU must be a measure of an assessment.
                 "{OWN_AOU_BLOCK}": format_lobster_block(
                     "requirements",
@@ -1792,7 +1801,7 @@ def _dependable_element_index_impl(ctx):
             },
         )
 
-        all_lobster_inputs = feat_req_list + comp_req_list + comp_arch_list + comp_test_list + interface_req_list + fm_list + rc_list + assessment_list + own_aou_list + received_aou_list + forwarded_aou_markers_list + coverage_lobster_files
+        all_lobster_inputs = feat_req_list + comp_req_list + comp_arch_list + comp_test_list + interface_req_list + fm_list + rc_list + findings_list + assessment_list + own_aou_list + received_aou_list + forwarded_aou_markers_list + coverage_lobster_files
         lobster_report_file = subrule_lobster_report(all_lobster_inputs, lobster_config)
         lobster_files = [lobster_config, lobster_report_file]
 

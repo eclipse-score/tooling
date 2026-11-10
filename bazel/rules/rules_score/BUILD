@@ -89,7 +89,7 @@ py_binary(
 )
 
 # Safety-analysis page assembler: builds the failure-mode-centric safety_analysis.rst body
-# in-process via the extended TRLCRST library and the FTA chains JSON from puml_cli.
+# in-process via the extended TRLCRST library and the fta_index.json from puml_cli.
 py_binary(
     name = "safety_analysis_assembler",
     srcs = ["src/safety_analysis_assembler.py"],
@@ -97,7 +97,29 @@ py_binary(
     main = "src/safety_analysis_assembler.py",
     visibility = ["//visibility:public"],
     deps = [
+        ":fta_index",
         "@trlc//tools/trlc_rst:trlc_rst_lib",
+    ],
+)
+
+# Typed reader of the fta_index.json that puml_cli writes in FTA mode
+py_library(
+    name = "fta_index",
+    srcs = ["src/fta_index.py"],
+    imports = ["src"],
+    visibility = ["//visibility:public"],
+)
+
+# Lobster glue of the fault trees: known failure modes for puml_cli, findings as lobster items
+py_binary(
+    name = "fta_lobster",
+    srcs = ["src/fta_lobster.py"],
+    imports = ["src"],
+    main = "src/fta_lobster.py",
+    visibility = ["//visibility:public"],
+    deps = [
+        ":fta_index",
+        "@lobster//lobster/common",
     ],
 )
 

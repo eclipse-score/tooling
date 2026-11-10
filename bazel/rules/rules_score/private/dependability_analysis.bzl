@@ -149,6 +149,7 @@ def _dependability_analysis_impl(ctx):
                 "{PUBLIC_API_SOURCES}": format_lobster_sources(api_lobster_files),
                 "{FM_SOURCES}": format_lobster_sources(lobster_files.get("failuremodes.lobster", [])),
                 "{RC_SOURCES}": format_lobster_sources(lobster_files.get("fta_root_causes.lobster", [])),
+                "{FINDINGS_SOURCES}": format_lobster_sources(lobster_files.get("fta_findings.lobster", [])),
             },
         )
 

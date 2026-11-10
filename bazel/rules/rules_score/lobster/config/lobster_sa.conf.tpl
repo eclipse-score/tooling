@@ -11,3 +11,7 @@ activity "Root Causes" {
 {RC_SOURCES}
   trace to: "Failure Modes";
 }
+
+requirements "Fault Tree Findings" {
+{FINDINGS_SOURCES}
+}

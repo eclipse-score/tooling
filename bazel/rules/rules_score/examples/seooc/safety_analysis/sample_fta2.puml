@@ -23,5 +23,6 @@ $OrGate("OG1", "SampleLibrary.SampleFailureMode2")
 
 $RootCause("Watchdog timer", "WatchdogTimer", "OG1")
 $RootCause("Deadline monitor", "DeadlineMonitor", "OG1")
+$TransferInGate("System clock misbehaves", "ClockMisbehaves", "TransferClock", "OG1")
 
 @enduml

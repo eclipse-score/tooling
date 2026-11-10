@@ -1,1 +1,2 @@
 cr_checker/resources/templates.ini
+bazel/rules/rules_score/test/fixtures/transfer_fta/expected_fta_events.trlc

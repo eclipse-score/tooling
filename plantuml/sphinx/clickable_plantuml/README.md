@@ -189,12 +189,16 @@ Given the resolved model of one `.puml` diagram:
    - It is a `$FailureMode` node — the tree root whose `connection` is `None`,
      never used as a relation source (FTA diagrams). Each failure-mode FQN of
      the node is a define.
+   - It is a `$TransferOutEvent` (`<fault_trees package>.<alias>` is the define,
+     so equal aliases of different `fault_trees` targets do not collide) or an
+     `$IntermediateEvent` below a `$FailureMode` (`<FQN>.<alias>` is the define,
+     once per FQN of that `$FailureMode`) (FTA diagrams).
 2. **references** – Elements that link away to another diagram:
    - Top-level leaf boxes and relation endpoints (component diagrams).
    - All participants (sequence diagrams — no defines in sequence).
-   - `$TransferInGate` nodes; the alias is the TRLC FQN (`Package.Record`) of
-     a failure mode covered by another fault tree, which links to the diagram
-     defining it (FTA diagrams).
+   - `$TransferInGate` nodes; the `target` (a `$TransferOutEvent` alias,
+     qualified with the same package, `Package.Record` or `Package.Record.Alias`)
+     links to the diagram defining it (FTA diagrams).
    - Internal FTA nodes (`$RootCause`, `$IntermediateEvent`, `$AndGate`,
      `$OrGate`) are omitted — they do not cross-link to other diagrams.
 

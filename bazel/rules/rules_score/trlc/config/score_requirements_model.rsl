@@ -176,8 +176,8 @@ type RootCause "A fault-tree root cause (leaf node), generated from a $RootCause
                   String
     line          "Source line of the originating macro call within its diagram."
                   Integer
-    failure_modes "The FailureMode(s) named by the $FailureMode macro of the fault tree(s) this root cause hangs under."
-                  FailureMode[1 .. *]
+    failure_modes "The FailureMode(s) named by the $FailureMode macro of the fault tree(s) this root cause hangs under, directly or through a transfer. Empty while no tree reaches a known failure mode; the fault_trees findings name the gap."
+                  FailureMode[0 .. *]
 }
 
 type AoU "Assumption of Use — a safety-relevant condition that a user must fulfil. Acts as a preventive measure when a RootCauseAssessment lists it." extends RequirementSafety {

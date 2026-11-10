@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "diagrams": {
+    "shared_fta.puml": "fixtures/transfer_fta/shared_fta.puml",
+    "top_fta.puml": "fixtures/transfer_fta/top_fta.puml"
+  },
+  "failure_mode_trees": {
+    "TransferFtaSafetyAnalysis.TopFailure": [
+      {
+        "diagram": "top_fta.puml",
+        "line": 18,
+        "alias": "TransferFtaSafetyAnalysis.TopFailure"
+      }
+    ]
+  },
+  "via": {
+    "ResourceExhausted": {
+      "TransferFtaSafetyAnalysis.TopFailure": [
+        {
+          "diagram": "top_fta.puml",
+          "line": 21,
+          "alias": "TransferShared"
+        }
+      ]
+    }
+  },
+  "findings": [
+    {
+      "kind": "UnknownTransferTarget",
+      "diagram": "top_fta.puml",
+      "line": 22,
+      "message": "$TransferInGate TransferMissing transfers into \"NoSuchEvent\", but no $TransferOutEvent with the alias NoSuchEvent exists"
+    }
+  ]
+}

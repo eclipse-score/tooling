@@ -60,10 +60,11 @@ package "failure_modes rule action" {
     component "lobster-trlc" <<tool>> as ltrlc_fm
 }
 
-' ── fault_trees rule: two tool actions ──────────────────────────────────────
+' ── fault_trees rule: four tool actions ─────────────────────────────────────
 package "fault_trees rule actions" {
     component "puml_cli  (FTA mode)\n--fta-output-dir\n[crate: puml_fta]" <<tool>> as puml
     component "lobster-trlc"                                              <<tool>> as ltrlc_ft
+    component "fta_lobster\n(known-failure-modes,\nfindings)"            <<tool>> as ftl
 }
 
 ' ── safety_analysis rule: two tool actions ──────────────────────────────────
@@ -76,16 +77,18 @@ package "safety_analysis rule actions" {
 package "Generated files" {
     rectangle "fta_*.puml\n(authored, symlinked)"   <<gen>> as puml_inl
     rectangle "fta_events.trlc\n(RootCause stubs)" <<gen>> as fta_events
+    rectangle "fta_index.json\n(review index, findings)" <<gen>> as fta_index
     rectangle "safety_analysis.rst"               <<gen>> as safety_analysis_rst
     rectangle "failure_modes lobster"                        <<gen>> as fm_lob
-    rectangle "<fault_trees>.lobster" <<gen>> as ft_lob
+    rectangle "fta_root_causes.lobster" <<gen>> as ft_lob
+    rectangle "fta_findings.lobster" <<gen>> as ff_lob
     rectangle "<safety_analysis>.lobster" <<gen>> as sm_lob
 }
 
 ' ── Providers ────────────────────────────────────────────────────────────────
-rectangle "TrlcProviderInfo + FaultTreesInfo\n────────────────\nfta_events.trlc, failure modes (deps)\nlobster_files, diagrams" <<prov>> as ftpi
+rectangle "TrlcProviderInfo + FaultTreesInfo\n────────────────\nfta_events.trlc, failure modes (deps)\nfta_index, lobster_files, diagrams" <<prov>> as ftpi
 rectangle "SphinxSourcesInfo\n────────────────\nsrcs:     safety_analysis.rst\ndeps:     safety_analysis.rst\naux_srcs: fta_*.puml" <<prov>> as ssi
-rectangle "AnalysisInfo.lobster_files\n────────────────\nfailuremodes.lobster\nassessments.lobster\nfta_root_causes.lobster" <<prov>> as ai
+rectangle "AnalysisInfo.lobster_files\n────────────────\nfailuremodes.lobster\nassessments.lobster\nfta_root_causes.lobster\nfta_findings.lobster" <<prov>> as ai
 rectangle "SafetyAnalysisProviderInfo\n────────────────\naou_targets (safety_measures)" <<prov>> as sapi
 
 ' ── Downstream rules + staging ───────────────────────────────────────────────
@@ -104,6 +107,7 @@ rsl      --> ltrlc_ft
 lcfg     --> ltrlc_ft
 
 fta_events --> asm
+fta_index --> asm : diagram sources,\ntransfer gates
 fta_puml --> asm : diagram names\n(one .. uml:: each)
 fm_trlc  --> asm
 sm_trlc  --> asm
@@ -122,6 +126,11 @@ lcfg     --> ltrlc
 fta_puml --> puml_inl : symlinked beside safety_analysis.rst
 meta     --> stage : on PlantUML include path
 puml  --> fta_events
+puml  --> fta_index
+fm_lob --> ftl : known\nfailure modes
+ftl   --> puml : --failure-modes-file
+fta_index --> ftl : findings
+ftl   --> ff_lob
 asm   --> safety_analysis_rst
 ltrlc_fm --> fm_lob
 ltrlc_ft --> ft_lob
@@ -131,9 +140,11 @@ ltrlc --> sm_lob
 safety_analysis_rst --> ssi
 puml_inl --> ssi
 ft_lob --> ai
+ff_lob --> ai
 fm_lob --> ai
 sm_lob --> ai
 fta_events --> ftpi
+fta_index  --> ftpi
 fm_trlc    --> ftpi
 aou_trlc   --> sapi
 

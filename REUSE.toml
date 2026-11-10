@@ -43,7 +43,9 @@ path = ["cr_checker/resources/config.json",
         "python_basics/requirements.in",
         "python_basics/requirements.txt",
         "bazel/rules/rules_score/test/requirements.in",
-        "bazel/rules/rules_score/test/requirements.txt"
+        "bazel/rules/rules_score/test/requirements.txt",
+        "bazel/rules/rules_score/test/fixtures/transfer_fta/expected_fta_events.trlc",
+        "bazel/rules/rules_score/test/fixtures/transfer_fta/expected_fta_index.json"
  ]
 SPDX-FileCopyrightText = "Copyright (c) 2026 Contributors to the Eclipse Foundation"
 SPDX-License-Identifier = "Apache-2.0"

@@ -229,7 +229,10 @@ records.
 
 **`bazel build` (`fault_trees`)** — extracts FTA events from `.puml` diagrams
 into `fta_events.trlc` (generated `RootCause` records, usable via the target's
-`TrlcProviderInfo`) and runs `lobster-trlc` on the root causes.
+`TrlcProviderInfo`) and `fta_index.json`, and runs `lobster-trlc` on the root
+causes. Gaps in the diagrams (a transfer into nothing, a failure mode no
+`failure_modes` dep defines, ...) do not fail the build; they are items of the
+level "Fault Tree Findings" that `lobster-ci-report` fails.
 
 **`bazel build` (`safety_analysis`)** — generates `safety_analysis.rst` (failure
 modes with their root causes, assessments and measures, fault trees) and runs

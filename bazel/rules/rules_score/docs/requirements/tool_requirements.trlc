@@ -185,6 +185,58 @@ section "Tool Requirements" {
 
     }
 
+    section "Fault Tree Transfers" {
+
+        ToolQualification.ToolRequirement Attribute_Root_Causes_Through_Transfers {
+            description = '''
+                The fault_trees rule shall attribute every root cause to
+                each failure mode of the $FailureMode macros it hangs under,
+                directly or through a $TransferInGate whose target is a
+                failure mode, an intermediate event of another diagram or a
+                $TransferOutEvent, and shall not attribute it to a failure
+                mode it does not lead to.
+            '''
+            mitigates = [Misattributed_Root_Cause]
+            derived_from = [Render_Safety_Analyses]
+            satisfied_by = Tools.PlantumlParser
+        }
+
+        ToolQualification.ToolRequirement Reject_Malformed_Fault_Tree {
+            description = '''
+                The fault_trees rule shall fail the build when a diagram
+                contains a fault-tree macro call with missing or non-string
+                arguments, an invalid failure mode name, alias or transfer
+                target, an alias reused for a different node, an alias of a $TransferOutEvent
+                used twice, a transfer target that matches several events
+                or a cycle of connections and transfers, and the error
+                message shall name the diagram and the line.
+            '''
+            mitigates = [Misattributed_Root_Cause]
+            derived_from = [Render_Safety_Analyses]
+            satisfied_by = Tools.PlantumlParser
+        }
+
+        ToolQualification.ToolRequirement Report_Incomplete_Fault_Tree {
+            description = '''
+                The fault_trees rule shall report, as an item of the
+                "Fault Tree Findings" level of the lobster traceability
+                report that fails lobster-ci-report and not as a build
+                error, a transfer into a target that matches nothing, a
+                transfer whose text differs from its target, a connection
+                to an alias the diagram does not define, a $FailureMode no
+                failure_modes target defines, a $TransferOutEvent that no
+                $TransferInGate targets, an event or gate without a node
+                connected below it and a root cause alias with different
+                titles, and the message shall name the diagram and the
+                line.
+            '''
+            mitigates = [Misattributed_Root_Cause]
+            derived_from = [Aggregate_Safety_Analysis_Report, Gate_Traceability_At_Test_Time]
+            satisfied_by = Tools.PlantumlParser
+        }
+
+    }
+
     section "Architecture Parsing" {
 
         ToolQualification.ToolRequirement Reject_Invalid_PlantUML {

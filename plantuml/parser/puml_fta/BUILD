@@ -14,13 +14,17 @@ load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
 
 rust_library(
     name = "puml_fta",
-    srcs = ["src/lib.rs"],
+    srcs = [
+        "src/lib.rs",
+        "src/model.rs",
+        "src/render.rs",
+        "src/resolve.rs",
+    ],
     visibility = ["//plantuml/parser:__subpackages__"],
     deps = [
         "//plantuml/parser/puml_parser:parser_core",
         "//plantuml/parser/puml_parser/src/preprocessor/src/procedure:procedure_preprocessor",
         "//plantuml/parser/puml_utils",
-        "@crates_score_tooling//:log",
         "@crates_score_tooling//:serde",
         "@crates_score_tooling//:serde_json",
         "@crates_score_tooling//:thiserror",
@@ -34,7 +38,6 @@ rust_test(
         "//plantuml/parser/puml_parser:parser_core",
         "//plantuml/parser/puml_parser/src/preprocessor/src/procedure:procedure_preprocessor",
         "//plantuml/parser/puml_utils",
-        "@crates_score_tooling//:log",
         "@crates_score_tooling//:serde",
         "@crates_score_tooling//:serde_json",
         "@crates_score_tooling//:thiserror",

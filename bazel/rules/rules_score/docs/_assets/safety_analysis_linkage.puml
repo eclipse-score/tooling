@@ -69,7 +69,7 @@ package "This dependable_element" {
 FailureMode "0..*" --> "1..*" ApiMethod : interface
 
 ' ── Generated from the $RootCause macros of the FTA diagrams ────────────────
-RootCause "1..*" --> FailureMode : failure_modes
+RootCause "0..*" --> FailureMode : failure_modes
 
 ' ── Assessment: every RootCause is covered by exactly one assessment ────────
 RootCauseAssessment "0..*" --> "1..*" RootCause : root_causes
