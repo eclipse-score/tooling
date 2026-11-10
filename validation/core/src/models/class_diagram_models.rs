@@ -480,14 +480,28 @@ mod tests {
         };
         let mut overview = entity("Unit.Sample", "overview.puml", 3);
         overview.relationships = vec![relationship("Unit.A"), relationship("Unit.B")];
+        let mut other_overview = entity("Unit.Sample", "other.puml", 4);
+        other_overview.relationships = vec![relationship("Unit.B")];
         let mut detail = with_method(entity("Unit.Sample", "detail.puml", 5), "Run");
         detail.relationships = vec![relationship("Unit.B"), relationship("Unit.C")];
 
-        let diagrams = vec![ClassDiagram {
-            name: "classes".to_string(),
-            entities: vec![overview, detail],
-            free_functions: Vec::new(),
-        }];
+        let diagrams = vec![
+            ClassDiagram {
+                name: "module".to_string(),
+                entities: vec![overview],
+                free_functions: Vec::new(),
+            },
+            ClassDiagram {
+                name: "other".to_string(),
+                entities: vec![other_overview],
+                free_functions: Vec::new(),
+            },
+            ClassDiagram {
+                name: "detail".to_string(),
+                entities: vec![detail],
+                free_functions: Vec::new(),
+            },
+        ];
 
         let mut result = ValidationResult::default();
         let index = ClassEntityIndex::build_diagram_index(&diagrams, &mut result);
@@ -498,6 +512,8 @@ mod tests {
             result.failures
         );
         let merged = index.find_by_id("Unit.Sample").expect("merged entity");
+        assert_eq!(index.entities().count(), 1);
+        assert_eq!(merged.source_location.file.as_ref(), "detail.puml");
         assert_eq!(merged.methods.len(), 1);
         let targets: Vec<&str> = merged
             .relationships

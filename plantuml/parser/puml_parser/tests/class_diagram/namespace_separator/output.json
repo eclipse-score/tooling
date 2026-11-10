@@ -1,0 +1,98 @@
+{
+  "namespace_separator.puml": {
+    "name": "",
+    "namespace_separators": [
+      {
+        "value": "none",
+        "line": 15
+      },
+      {
+        "value": "none",
+        "line": 19
+      },
+      {
+        "value": "none",
+        "line": 20
+      },
+      {
+        "value": ".",
+        "line": 21
+      },
+      {
+        "value": "::",
+        "line": 22
+      },
+      {
+        "value": "noneXYZ",
+        "line": 23
+      },
+      {
+        "value": "none",
+        "line": 24
+      },
+      {
+        "value": "none",
+        "line": 25
+      },
+      {
+        "value": "none",
+        "line": 26
+      },
+      {
+        "value": ".",
+        "line": 27
+      },
+      {
+        "value": "::",
+        "line": 28
+      },
+      {
+        "value": "noneXYZ",
+        "line": 29
+      }
+    ],
+    "elements": [
+      {
+        "Namespace": {
+          "name": {
+            "internal": "A.B",
+            "alias": null
+          },
+          "source_location": {
+            "file": "",
+            "line": 16
+          },
+          "types": [
+            {
+              "ClassLikeDef": {
+                "name": {
+                  "internal": "C",
+                  "alias": null
+                },
+                "namespace": "A.B",
+                "package": "",
+                "source_location": {
+                  "file": "",
+                  "line": 17
+                },
+                "type_aliases": [],
+                "attributes": [],
+                "methods": [],
+                "kind": {
+                  "Class": {
+                    "is_abstract": false,
+                    "extends": [],
+                    "implements": []
+                  }
+                }
+              }
+            }
+          ],
+          "relationships": [],
+          "namespaces": []
+        }
+      }
+    ],
+    "relationships": []
+  }
+}

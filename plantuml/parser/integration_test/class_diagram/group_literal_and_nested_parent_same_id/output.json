@@ -1,0 +1,72 @@
+{
+  "detail.puml": {
+    "name": "detail",
+    "entities": [
+      {
+        "id": "pkg.scope.C",
+        "name": "C",
+        "enclosing_namespace_id": "pkg.scope",
+        "stereotypes": [],
+        "entity_type": "Class",
+        "type_aliases": [],
+        "variables": [],
+        "methods": [
+          {
+            "name": "run",
+            "return_type": null,
+            "visibility": "public",
+            "parameters": [],
+            "template_parameters": null,
+            "modifiers": [],
+            "source_location": { "file": "", "line": 16 }
+          }
+        ],
+        "template_parameters": null,
+        "enum_literals": [],
+        "relationships": [],
+        "source_location": { "file": "", "line": 15 }
+      }
+    ],
+    "free_functions": []
+  },
+  "overview_literal.puml": {
+    "name": "overview_literal",
+    "entities": [
+      {
+        "id": "pkg.scope.C",
+        "name": "C",
+        "enclosing_namespace_id": "pkg.scope",
+        "stereotypes": [],
+        "entity_type": "Class",
+        "type_aliases": [],
+        "variables": [],
+        "methods": [],
+        "template_parameters": null,
+        "enum_literals": [],
+        "relationships": [],
+        "source_location": { "file": "", "line": 17 }
+      }
+    ],
+    "free_functions": []
+  },
+  "overview_nested.puml": {
+    "name": "overview_nested",
+    "entities": [
+      {
+        "id": "pkg.scope.C",
+        "name": "C",
+        "enclosing_namespace_id": "pkg.scope",
+        "stereotypes": [],
+        "entity_type": "Class",
+        "type_aliases": [],
+        "variables": [],
+        "methods": [],
+        "template_parameters": null,
+        "enum_literals": [],
+        "relationships": [],
+        "source_location": { "file": "", "line": 17 }
+      }
+    ],
+    "free_functions": []
+  }
+}

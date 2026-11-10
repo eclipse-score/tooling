@@ -1,0 +1,75 @@
+{
+  "overview.puml": {
+    "name": "",
+    "entities": [
+      {
+        "id": "a.b.Foo",
+        "name": "Foo",
+        "enclosing_namespace_id": "a.b",
+        "stereotypes": [],
+        "entity_type": "Class",
+        "type_aliases": [],
+        "variables": [],
+        "methods": [],
+        "template_parameters": null,
+        "enum_literals": [],
+        "relationships": [],
+        "source_location": { "file": "", "line": 18 }
+      }
+    ],
+    "free_functions": []
+  },
+  "detail.puml": {
+    "name": "",
+    "entities": [
+      {
+        "id": "a.b.Foo",
+        "name": "Foo",
+        "enclosing_namespace_id": "a.b",
+        "stereotypes": [],
+        "entity_type": "Class",
+        "type_aliases": [],
+        "variables": [],
+        "methods": [
+          {
+            "name": "run",
+            "return_type": null,
+            "visibility": "public",
+            "parameters": [],
+            "template_parameters": null,
+            "modifiers": [],
+            "source_location": { "file": "", "line": 20 }
+          }
+        ],
+        "template_parameters": null,
+        "enum_literals": [],
+        "relationships": [],
+        "source_location": { "file": "", "line": 19 }
+      },
+      {
+        "id": "User",
+        "name": "User",
+        "enclosing_namespace_id": null,
+        "stereotypes": [],
+        "entity_type": "Class",
+        "type_aliases": [],
+        "variables": [],
+        "methods": [],
+        "template_parameters": null,
+        "enum_literals": [],
+        "relationships": [
+          {
+            "source": "User",
+            "target": "a.b.Foo",
+            "relation_type": "Association",
+            "source_multiplicity": null,
+            "target_multiplicity": null,
+            "source_location": { "file": "", "line": 24 }
+          }
+        ],
+        "source_location": { "file": "", "line": 23 }
+      }
+    ],
+    "free_functions": []
+  }
+}

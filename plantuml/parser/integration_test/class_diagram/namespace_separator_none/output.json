@@ -1,0 +1,62 @@
+{
+  "namespace_separator_none.puml": {
+    "name": "sample_model",
+    "entities": [
+      {
+        "id": "module_a.project.service.internal.Handle",
+        "name": "source",
+        "enclosing_namespace_id": "module_a.project.service.internal",
+        "stereotypes": [],
+        "entity_type": "Class",
+        "type_aliases": [],
+        "variables": [],
+        "methods": [
+          {
+            "name": "Process",
+            "return_type": null,
+            "visibility": "public",
+            "parameters": [],
+            "template_parameters": null,
+            "modifiers": [],
+            "source_location": { "file": "", "line": 21 }
+          }
+        ],
+        "template_parameters": [
+          {
+            "Type": {
+              "name": "ValueType",
+              "is_pack": false
+            }
+          }
+        ],
+        "enum_literals": [],
+        "relationships": [
+          {
+            "source": "module_a.project.service.internal.Handle",
+            "target": "module_a.project.service.internal.backend.Handle",
+            "relation_type": "Dependency",
+            "source_multiplicity": null,
+            "target_multiplicity": null,
+            "source_location": { "file": "", "line": 30 }
+          }
+        ],
+        "source_location": { "file": "", "line": 20 }
+      },
+      {
+        "id": "module_a.project.service.internal.backend.Handle",
+        "name": "target",
+        "enclosing_namespace_id": "module_a.project.service.internal.backend",
+        "stereotypes": [],
+        "entity_type": "Class",
+        "type_aliases": [],
+        "variables": [],
+        "methods": [],
+        "template_parameters": null,
+        "enum_literals": [],
+        "relationships": [],
+        "source_location": { "file": "", "line": 26 }
+      }
+    ],
+    "free_functions": []
+  }
+}
