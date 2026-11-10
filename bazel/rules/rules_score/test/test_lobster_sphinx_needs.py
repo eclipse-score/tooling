@@ -124,6 +124,13 @@ class ConvertTest(unittest.TestCase):
         with self.assertRaises(ConfigError):
             load_config(path)
 
+    def test_id_pattern_selects_needs(self):
+        needs = dict(NEEDS)
+        needs["comp_req__other__get"] = dict(NEEDS["comp_req__bits__set"], id="comp_req__other__get")
+        path = _write(self.tmp.name, "needs.json", _needs_json(needs))
+        config = load_config(_write(self.tmp.name, "pattern.yaml", CONFIG + "    id-pattern: ^comp_req__bits__\n"))
+        self.assertEqual([item.name for _, item in convert([path], config)], ["comp_req__bits__set"])
+
 
 class MainTest(unittest.TestCase):
     def test_writes_lobster_file_and_rst_page(self):

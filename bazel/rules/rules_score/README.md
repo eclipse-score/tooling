@@ -125,7 +125,9 @@ same LOBSTER requirement items (kind `AssumedSystemReq`, `FeatReq`, `CompReq`,
 The needs are listed on a plain RST page; TRLC rendering and `<name>_test` only
 apply to `srcs`, which can be combined with `needs`. Tests trace to these
 requirements by need id (`RecordProperty("lobster-tracing", "comp_req__...")`).
-Override `needs_lobster_config` to change the need types or link fields.
+Override `needs_lobster_config` to change the need types or link fields, or to
+select a subset of a larger export with `id-pattern` (e.g. the feature
+requirements of one module in a platform-wide `needs.json`).
 
 ---
 

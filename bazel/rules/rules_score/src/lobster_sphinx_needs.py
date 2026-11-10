@@ -26,6 +26,7 @@ YAML::
         description-fields: content  # optional, default "content", falls back to the title
         status-field: status         # optional, copied to the LOBSTER status
         exclude-status: [invalid]    # optional, needs with these statuses are skipped
+        id-pattern: ^comp_req__x__   # optional, only needs whose ID matches are converted
         tags:                        # link fields that become tracing targets
           - derived_from
           - field: covers
@@ -74,6 +75,7 @@ _RULE_KEYS = {
     "description-fields",
     "status-field",
     "exclude-status",
+    "id-pattern",
     "tags",
     "justification-up-fields",
     "justification-down-fields",
@@ -104,6 +106,7 @@ class ConversionRule:
     description_fields: list[str] = field(default_factory=lambda: ["content"])
     status_field: str | None = None
     exclude_status: list[str] = field(default_factory=list)
+    id_pattern: re.Pattern[str] | None = None
     tags: list[TagEntry] = field(default_factory=list)
     justification_up_fields: list[str] = field(default_factory=list)
     justification_down_fields: list[str] = field(default_factory=list)
@@ -154,6 +157,11 @@ def _parse_rule(raw: Any) -> ConversionRule:
     )
     if "description-fields" in raw:
         rule.description_fields = _as_list(raw["description-fields"], "description-fields")
+    if "id-pattern" in raw:
+        try:
+            rule.id_pattern = re.compile(raw["id-pattern"])
+        except (re.error, TypeError) as e:
+            raise ConfigError(f"invalid id-pattern {raw['id-pattern']!r}: {e}") from e
     return rule
 
 
@@ -260,6 +268,8 @@ def convert(needs_files: list[str], rules: list[ConversionRule]) -> list[tuple[d
         for need_id, need in load_needs(path).items():
             rule = by_type.get(need.get("type", ""))
             if rule is None:
+                continue
+            if rule.id_pattern and not rule.id_pattern.search(need_id):
                 continue
             if rule.status_field and need.get(rule.status_field) in rule.exclude_status:
                 logger.info("Skipping %s with status %s", need_id, need.get(rule.status_field))
