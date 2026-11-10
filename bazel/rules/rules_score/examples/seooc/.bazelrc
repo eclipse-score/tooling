@@ -5,6 +5,13 @@
 common --registry=https://raw.githubusercontent.com/eclipse-score/bazel_registry/main/
 common --registry=https://bcr.bazel.build
 
+# Tolerate flaky downloads (e.g. snapshot.ubuntu.com)
+common --experimental_repository_downloader_retries=10
+common --experimental_scale_timeouts=2.0
+common --http_connector_attempts=10
+common --http_connector_retry_max_timeout=1s
+common --http_timeout_scaling=2.0
+
 common --extra_toolchains=//bazel/toolchains:seooc_libclang_toolchain
 
 try-import %workspace%/user.bazelrc

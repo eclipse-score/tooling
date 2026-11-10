@@ -1,0 +1,60 @@
+# *******************************************************************************
+# Copyright (c) 2026 Contributors to the Eclipse Foundation
+#
+# See the NOTICE file(s) distributed with this work for additional
+# information regarding copyright ownership.
+#
+# This program and the accompanying materials are made available under the
+# terms of the Apache License Version 2.0 which is available at
+# https://www.apache.org/licenses/LICENSE-2.0
+#
+# SPDX-License-Identifier: Apache-2.0
+# *******************************************************************************
+name: "Configure Ubuntu snapshot mirror"
+description: >
+  Makes the Bazel downloader try a private Ubuntu snapshot mirror before snapshot.ubuntu.com, which is sometimes unreliable. The public URL stays as fallback. The config is referenced from the user.bazelrc of the root and of every nested Bazel module (examples, integration tests). No-op if the mirror secret is empty (e.g. fork PRs).
+
+inputs:
+  ubuntu-snapshot-mirror-url:
+    description: "Secret tag of the StableBuild debmirror (the <tag> in <tag>.debmirror.stablebuild.com)."
+    required: false
+    default: ""
+runs:
+  using: "composite"
+  steps:
+    - name: Configure Bazel downloader rewrite
+      shell: bash
+      env:
+        UBUNTU_SNAPSHOT_MIRROR_URL: ${{ inputs.ubuntu-snapshot-mirror-url }}
+      run: |
+        if [[ -z "${UBUNTU_SNAPSHOT_MIRROR_URL}" ]]; then
+          echo "No Ubuntu snapshot mirror configured; using snapshot.ubuntu.com."
+          exit 0
+        fi
+
+        echo "::add-mask::${UBUNTU_SNAPSHOT_MIRROR_URL}"
+        DOWNLOADER_CONFIG="${GITHUB_WORKSPACE}/user.downloader_config"
+
+        # The date must match the snapshot timestamp in the apt manifests under third_party/.
+        DOWNLOADER_CONFIG="${DOWNLOADER_CONFIG}" python3 - <<'PY'
+        import os
+        from pathlib import Path
+
+        mirror = os.environ["UBUNTU_SNAPSHOT_MIRROR_URL"]
+        base = f"{mirror}.debmirror.stablebuild.com/2026-04-01T10:40:01Z"
+        Path(os.environ["DOWNLOADER_CONFIG"]).write_text(
+            "\n".join([
+                f"rewrite snapshot.ubuntu.com/ubuntu/[^/]*/(.*) {base}/archive.ubuntu.com/ubuntu/$1",
+                f"rewrite snapshot.ubuntu.com/ubuntu/[^/]*/(.*) {base}/ports.ubuntu.com/$1",
+                # Public mirror as fallback if the private mirror quota is exhausted.
+                "rewrite snapshot.ubuntu.com/ubuntu/(.*) snapshot.ubuntu.com/ubuntu/$1",
+            ]) + "\n",
+            encoding="utf-8",
+        )
+        PY
+
+        # Nested modules are separate Bazel roots; each needs its own user.bazelrc.
+        while IFS= read -r module_file; do
+          echo "common --downloader_config=${DOWNLOADER_CONFIG}" >> "${GITHUB_WORKSPACE}/$(dirname "${module_file}")/user.bazelrc"
+        done < <(git -C "${GITHUB_WORKSPACE}" ls-files '*MODULE.bazel')
+        echo "Configured Bazel downloader mirror with fallback for Ubuntu snapshot URLs."

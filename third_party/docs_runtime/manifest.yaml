@@ -11,6 +11,7 @@
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
 version: 1
+# Keep the snapshot timestamp in sync with .github/actions/configure_ubuntu_snapshot_mirror.
 sources:
   - channel: noble main universe
     url: https://snapshot.ubuntu.com/ubuntu/20260401T104001Z
