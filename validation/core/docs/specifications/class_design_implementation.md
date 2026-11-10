@@ -232,7 +232,8 @@ applies to constructors and destructors too, which typically have no return
 type on either side). Method modifiers include `const`, `static`, `virtual`,
 `abstract`, `override`, constructor, destructor, and `noexcept`. Parameters
 match when they have the same count, with matching parameter name, normalized
-type, and pack-expansion (`...`) marker at each position.
+type, and pack-expansion (`...`) marker at each position. Top-level `const` on
+a parameter is ignored; see [Top-level `const` on parameters](#top-level-const-on-parameters).
 *(Requirement: {requirement:downstream-ref}`Tools.ClassDesignImplementationMethodConsistency`)*
 
 `static`, `abstract`, `virtual`, and `override` may each be written either as a
@@ -392,6 +393,7 @@ Before comparing types, the validator applies limited normalization.
 | `std::uint8_t` | `uint8_t` |
 | `uint8_t *` | `uint8_t*` |
 | `Payload &` | `Payload&` |
+| `uint8_t* const` | `uint8_t*const` |
 | `vehicle.Engine` | `vehicle::Engine` |
 
 The last row accounts for a difference between the class diagram and
@@ -399,7 +401,28 @@ implementation parser UIDs: dots used as namespace separators are converted to
 `::` before comparison. This applies to type names, class/entity IDs, and
 relationship source/target identifiers alike. cv-qualifiers such as `const`
 and `volatile`, and the pointer/reference decorators `*`/`&`, are preserved
-(only the spacing around them is normalized).
+(only the spacing around them is normalized). The `uint8_t* const` row
+accounts for the implementation parser printing a const pointer as
+`uint8_t *const`, which is compared against the design form `uint8_t* const`.
+
+#### Top-level `const` on parameters
+
+Top-level `const` on a by-value parameter is not part of the C++ signature, so
+it is ignored when comparing method and free function parameter types. Low-level
+`const` is part of the type and must match.
+*(Requirement: {requirement:downstream-ref}`Tools.ClassDesignImplementationTopLevelConstParameters`)*
+
+| Design parameter type | Implementation parameter type | Result |
+|---|---|---|
+| `const int` | `int` | match |
+| `int* const` | `int*` | match |
+| `const Box<int*>` | `Box<int*>` | match |
+| `const int*` | `int*` | mismatch |
+| `const int&` | `int&` | mismatch |
+
+Top-level `const` is not ignored for return types, variable data types, or
+type alias original types; those are compared as written. `volatile` is not
+supported by this rule.
 
 The class diagram reader already rewrites `::` to `.` in class/entity IDs,
 enclosing namespace IDs, and relationship endpoints of both inputs, so
