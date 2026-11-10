@@ -30,6 +30,19 @@ section "Tool Requirements" {
                 satisfied_by = Verifier
             }
 
+            ToolQualification.ToolRequirement BazelComponentSingleRoot {
+                description = '''The validator shall report an error before
+                design matching when the architecture JSON contains other
+                than exactly one root target entry, where a root is an entry
+                whose full Bazel label is not referenced by any entry's
+                `components` list. Empty input has zero roots. Distinct root
+                labels count separately even when their design names are
+                identical; for multiple roots, the error lists all root
+                labels.'''
+                derived_from = [UseCases.Validate_Architecture_Specification_Documents]
+                satisfied_by = Verifier
+            }
+
             ToolQualification.ToolRequirement BazelComponentComponentConsistency {
                 description = '''The validator shall report an error when a
                 Bazel `component` target exists under a dependable element
@@ -56,7 +69,10 @@ section "Tool Requirements" {
                 description = '''The validator shall match element names
                 between Bazel and PlantUML case-insensitively, using the
                 PlantUML name (the last segment of the entity id), and
-                the Bazel target name on the Bazel side.'''
+                the effective `design_name` for Bazel `unit` and `component`
+                targets, defaulting to the target's short name, or the
+                `dependable_element` target name for the root. PlantUML
+                aliases do not participate in matching.'''
                 derived_from = [UseCases.Validate_Architecture_Specification_Documents]
                 satisfied_by = Verifier
             }
@@ -64,10 +80,13 @@ section "Tool Requirements" {
             ToolQualification.ToolRequirement BazelComponentParentContext {
                 description = '''The validator shall verify that each Bazel
                 element and its PlantUML counterpart share the same parent
-                context: components directly under a dependable element use
-                the dependable element as parent; more deeply nested
-                components use their immediate enclosing component as
-                parent.'''
+                context, identified by the full case-insensitive design path
+                from the dependable element through all enclosing components
+                to the immediate parent, rather than only the immediate
+                parent's name. Bazel path segments use the dependable-element
+                target name and each enclosing component's effective
+                `design_name`. A shared Bazel component target is matched
+                separately under every containing parent design path.'''
                 derived_from = [UseCases.Validate_Architecture_Specification_Documents]
                 satisfied_by = Verifier
             }

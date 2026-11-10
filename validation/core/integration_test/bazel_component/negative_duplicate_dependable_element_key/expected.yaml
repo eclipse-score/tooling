@@ -12,8 +12,8 @@
 # *******************************************************************************
 should_pass: false
 error_contains: |
-  [Design] Dependable element "safety_software_seooc_example" is defined more than once in Bazel.
-    Name               : "safety_software_seooc_example"
-    First bazel label  : @//bazel/rules/rules_score/examples/seooc/pkg1:safety_software_seooc_example
-    Second bazel label : @//bazel/rules/rules_score/examples/seooc/pkg2:safety_software_seooc_example
-    Fix                : Keep only one Bazel dependable element definition for "safety_software_seooc_example", or rename one of the duplicate Bazel targets.
+  [Design] Bazel architecture must have exactly one top-level dependable element.
+    Root count    : 2
+    Bazel label 1 : @//bazel/rules/rules_score/examples/seooc/pkg1:safety_software_seooc_example
+    Bazel label 2 : @//bazel/rules/rules_score/examples/seooc/pkg2:safety_software_seooc_example
+    Fix           : Keep exactly one top-level dependable element in the Bazel architecture input.

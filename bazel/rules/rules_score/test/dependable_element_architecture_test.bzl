@@ -45,7 +45,7 @@ def _label_keys_test_impl(ctx):
         component = {CurrentArchitectureProviderInfo: CurrentArchitectureProviderInfo(components = existing)}
         actual = dependable_element_test_helpers.collect_architecture_components(_context(index_label, [component]))
 
-        asserts.equals(env, {other_label: existing_entry, expected_label: {}}, actual)
+        asserts.equals(env, {other_label: existing_entry, expected_label: {"design_name": "engine"}}, actual)
         asserts.false(env, "engine" in actual)
         asserts.false(env, str(index_label) in actual)
         asserts.equals(env, {other_label: existing_entry}, existing)
@@ -72,13 +72,16 @@ def _architecture_json_test_impl(ctx):
         parent_label = str(target.label.same_package_label("test_parent_component"))
         nested_label = str(target.label.same_package_label("test_nested_component"))
         asserts.equals(env, {
+            "design_name": ctx.attr.module_name,
             "components": [{"label": parent_label, "design_name": "test_parent_component"}],
         }, architecture.get(expected_label))
         asserts.equals(env, {
+            "design_name": "test_parent_component",
             "components": [{"label": nested_label, "design_name": "test_nested_component"}],
             "units": [{"label": str(target.label.same_package_label("test_unit")), "design_name": "test_unit"}],
         }, architecture.get(parent_label))
         asserts.equals(env, {
+            "design_name": "test_nested_component",
             "units": [{"label": str(target.label.same_package_label("test_unit2")), "design_name": "test_unit2"}],
         }, architecture.get(nested_label))
     return analysistest.end(env)

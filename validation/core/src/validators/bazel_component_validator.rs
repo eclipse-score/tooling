@@ -57,6 +57,7 @@ impl BazelComponentValidator {
     ) -> ValidationResult {
         append_debug_log(&mut self.result.diagnostics, bazel, diagram);
         self.check_entity_set(
+            bazel,
             &bazel.seooc_set,
             &diagram.seooc_set,
             "package",
@@ -64,6 +65,7 @@ impl BazelComponentValidator {
             "(top-level)",
         );
         self.check_entity_set(
+            bazel,
             &bazel.comp_set,
             &diagram.comp_set,
             "component",
@@ -71,6 +73,7 @@ impl BazelComponentValidator {
             "(top-level)",
         );
         self.check_entity_set(
+            bazel,
             &bazel.unit_set,
             &diagram.unit_set,
             "unit",
@@ -83,6 +86,7 @@ impl BazelComponentValidator {
 
     fn check_entity_set(
         &mut self,
+        bazel: &BazelArchitecture,
         bazel_set: &BTreeMap<(String, Option<String>), String>,
         diagram_set: &BTreeMap<(String, Option<String>), LogicComponent>,
         display_type: &str,
@@ -91,7 +95,7 @@ impl BazelComponentValidator {
     ) {
         // In Bazel but not in PlantUML -> MISSING.
         for (key, label) in bazel_set {
-            if !diagram_set.contains_key(key) {
+            if !bazel.is_unmatchable(key) && !diagram_set.contains_key(key) {
                 let (name, parent) = key;
                 let parent_str = Self::parent_display(parent, default_parent);
                 let suggested_name = best_string_suggestion(
@@ -114,7 +118,7 @@ impl BazelComponentValidator {
 
         // In PlantUML but not in Bazel -> EXTRA.
         for (key, entity) in diagram_set {
-            if !bazel_set.contains_key(key) {
+            if !bazel.is_unmatchable(key) && !bazel_set.contains_key(key) {
                 let (name, parent) = key;
                 let parent_str = Self::parent_display(parent, default_parent);
                 let suggested_name = best_string_suggestion(
@@ -164,14 +168,17 @@ impl BazelComponentValidator {
 
         for (key, label) in &bazel.seooc_set {
             let (name, _) = key;
-            if !parents_with_children.contains(name) {
+            if !bazel.is_unmatchable(key) && !parents_with_children.contains(name) {
                 self.result
                     .add_failure(Self::format_empty("dependable element", name, label));
             }
         }
         for (key, label) in &bazel.comp_set {
-            let (name, _) = key;
-            if !parents_with_children.contains(name) {
+            let (name, parent) = key;
+            let path = parent
+                .as_ref()
+                .map_or_else(|| name.clone(), |parent| format!("{parent}.{name}"));
+            if !bazel.is_unmatchable(key) && !parents_with_children.contains(&path) {
                 self.result
                     .add_failure(Self::format_empty("component", name, label));
             }
@@ -321,6 +328,7 @@ mod tests {
             components.insert(
                 label.to_string(),
                 BazelInputEntry {
+                    design_name: entity_ref(label).design_name,
                     units: units.into_iter().map(entity_ref).collect(),
                     components: nested.into_iter().map(entity_ref).collect(),
                 },
@@ -478,8 +486,16 @@ mod tests {
         }
     }
 
-    fn entry(units: Vec<BazelEntityRef>, components: Vec<BazelEntityRef>) -> BazelInputEntry {
-        BazelInputEntry { units, components }
+    fn entry(
+        design_name: &str,
+        units: Vec<BazelEntityRef>,
+        components: Vec<BazelEntityRef>,
+    ) -> BazelInputEntry {
+        BazelInputEntry {
+            design_name: design_name.to_string(),
+            units,
+            components,
+        }
     }
 
     #[test]
@@ -488,6 +504,7 @@ mod tests {
         components.insert(
             "my_de".to_string(),
             entry(
+                "my_de",
                 vec![],
                 vec![
                     named_ref("@//a:dup", "dup_a"),
@@ -497,11 +514,11 @@ mod tests {
         );
         components.insert(
             "@//a:dup".to_string(),
-            entry(vec![named_ref("@//a/u:unit_1", "unit_1")], vec![]),
+            entry("dup_a", vec![named_ref("@//a/u:unit_1", "unit_1")], vec![]),
         );
         components.insert(
             "@//b:dup".to_string(),
-            entry(vec![named_ref("@//b/u:unit_1", "unit_1")], vec![]),
+            entry("dup_b", vec![named_ref("@//b/u:unit_1", "unit_1")], vec![]),
         );
         let diagram = diagram(vec![
             entity("my_de", None, Some("SEooC")),
@@ -515,22 +532,23 @@ mod tests {
     }
 
     #[test]
-    fn test_same_named_components_without_design_name_collide() {
+    fn test_same_named_components_with_identical_design_names_collide() {
         let mut components = BTreeMap::new();
         components.insert(
             "my_de".to_string(),
             entry(
+                "my_de",
                 vec![],
                 vec![named_ref("@//a:dup", "dup"), named_ref("@//b:dup", "dup")],
             ),
         );
         components.insert(
             "@//a:dup".to_string(),
-            entry(vec![named_ref("@//a/u:unit_1", "unit_1")], vec![]),
+            entry("dup", vec![named_ref("@//a/u:unit_1", "unit_1")], vec![]),
         );
         components.insert(
             "@//b:dup".to_string(),
-            entry(vec![named_ref("@//b/u:unit_2", "unit_2")], vec![]),
+            entry("dup", vec![named_ref("@//b/u:unit_2", "unit_2")], vec![]),
         );
         let mut result = ValidationResult::default();
         let _ = BazelInput { components }.to_bazel_architecture(&mut result);
@@ -545,15 +563,146 @@ mod tests {
     }
 
     #[test]
+    fn test_nested_same_names_match_full_paths_with_distinct_or_shared_targets() {
+        for shared in [false, true] {
+            let mut components = BTreeMap::new();
+            components.insert(
+                "@//:seooc".to_string(),
+                entry(
+                    "seooc",
+                    vec![],
+                    vec![named_ref("@//:a", "a"), named_ref("@//:b", "b")],
+                ),
+            );
+            let mut entities = vec![entity("seooc", None, Some("SEooC"))];
+            for (name, parent_label, own_x_label) in
+                [("a", "@//:a", "@//:x_for_A"), ("b", "@//:b", "@//:x_for_B")]
+            {
+                let x_label = if shared { "@//:shared_x" } else { own_x_label };
+                components.insert(
+                    parent_label.to_string(),
+                    entry(name, vec![], vec![named_ref(x_label, "component_x")]),
+                );
+                components.insert(
+                    x_label.to_string(),
+                    entry(
+                        "component_x",
+                        vec![named_ref("@//:unit_target", "unit_1")],
+                        vec![],
+                    ),
+                );
+                let parent_path = format!("seooc.{name}");
+                let x_path = format!("{parent_path}.component_x");
+                entities.push(entity(&parent_path, Some("seooc"), Some("component")));
+                entities.push(entity(&x_path, Some(&parent_path), Some("component")));
+                entities.push(entity(
+                    &format!("{x_path}.unit_1"),
+                    Some(&x_path),
+                    Some("unit"),
+                ));
+            }
+            let arch = BazelInput { components };
+            let errs = run_arch_validation(&arch, &diagram(entities));
+            assert!(errs.is_empty(), "shared={shared}: {:?}", errs.failures);
+            let indexed = arch.to_bazel_architecture(&mut ValidationResult::default());
+            assert_eq!(indexed.unit_set.len(), 2);
+            assert!(indexed.unit_set.contains_key(&(
+                "unit_1".to_string(),
+                Some("seooc.a.component_x".to_string()),
+            )));
+            assert!(indexed.unit_set.contains_key(&(
+                "unit_1".to_string(),
+                Some("seooc.b.component_x".to_string()),
+            )));
+        }
+    }
+
+    #[test]
+    fn test_duplicate_components_do_not_cascade_into_descendant_mismatches() {
+        let components = BTreeMap::from([
+            (
+                "@//:seooc".to_string(),
+                entry(
+                    "seooc",
+                    vec![],
+                    vec![
+                        named_ref("@//:x_for_A", "component_x"),
+                        named_ref("@//:x_for_B", "component_x"),
+                    ],
+                ),
+            ),
+            (
+                "@//:x_for_A".to_string(),
+                entry(
+                    "component_x",
+                    vec![named_ref("@//:unit_target", "unit_1")],
+                    vec![],
+                ),
+            ),
+            (
+                "@//:x_for_B".to_string(),
+                entry(
+                    "component_x",
+                    vec![named_ref("@//:other_unit", "unit_2")],
+                    vec![],
+                ),
+            ),
+        ]);
+        let diagram = diagram(vec![
+            entity("seooc", None, Some("SEooC")),
+            entity("seooc.component_x", Some("seooc"), Some("component")),
+            entity(
+                "seooc.component_x.unit_1",
+                Some("seooc.component_x"),
+                Some("unit"),
+            ),
+        ]);
+        let errs = run_arch_validation(&BazelInput { components }, &diagram);
+        assert_eq!(errs.failures.len(), 1, "{:?}", errs.failures);
+        assert!(errs.failures[0].contains("Component \"component_x\""));
+    }
+
+    #[test]
+    fn test_empty_component_is_not_hidden_by_same_name_in_another_branch() {
+        let arch = make_arch(vec![
+            ("@//:seooc", vec![], vec!["@//:a", "@//:b"]),
+            ("@//:a", vec![], vec!["@//a:x"]),
+            ("@//:b", vec![], vec!["@//b:x"]),
+            ("@//a:x", vec!["@//:unit_1"], vec![]),
+            ("@//b:x", vec![], vec![]),
+        ]);
+        let diagram = diagram(vec![
+            entity("seooc", None, Some("SEooC")),
+            entity("seooc.a", Some("seooc"), Some("component")),
+            entity("seooc.b", Some("seooc"), Some("component")),
+            entity("seooc.a.x", Some("seooc.a"), Some("component")),
+            entity("seooc.b.x", Some("seooc.b"), Some("component")),
+            entity("seooc.a.x.unit_1", Some("seooc.a.x"), Some("unit")),
+        ]);
+        let errs = run_arch_validation(&arch, &diagram);
+        assert_eq!(errs.failures.len(), 1, "{:?}", errs.failures);
+        assert!(errs.failures[0].contains("Empty component"));
+        assert!(errs.failures[0].contains("@//b:x"));
+    }
+
+    #[test]
     fn test_units_keyed_by_parent_design_name() {
         let mut components = BTreeMap::new();
         components.insert(
             "my_de".to_string(),
-            entry(vec![], vec![named_ref("@//pkg:comp_a", "renamed_comp")]),
+            entry(
+                "my_de",
+                vec![],
+                vec![named_ref("@//pkg:comp_a", "renamed_comp")],
+            ),
         );
         components.insert(
             "@//pkg:comp_a".to_string(),
-            entry(vec![named_ref("@//pkg/u1:unit_1", "unit_1")], vec![]),
+            entry(
+                "renamed_comp",
+                vec![named_ref("@//pkg/u1:unit_1", "unit_1")],
+                vec![],
+            ),
         );
         let diagram = diagram(vec![
             entity("my_de", None, Some("SEooC")),
