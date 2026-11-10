@@ -163,8 +163,8 @@ These are too broad to be assigned to a single component.
      - Target name
    * - ``srcs``
      - label list
-     - yes
-     - ``.trlc`` files containing ``AssumedSystemReq`` records
+     - no
+     - ``.trlc`` files containing ``AssumedSystemReq`` records; ``srcs`` or ``needs`` (see :ref:`rule-requirements-needs`) is required
    * - ``deps``
      - label list
      - no
@@ -210,8 +210,8 @@ integration level; can only be satisfied by multiple components working together
      - Target name
    * - ``srcs``
      - label list
-     - yes
-     - ``.trlc`` files containing ``FeatReq`` records
+     - no
+     - ``.trlc`` files containing ``FeatReq`` records; ``srcs`` or ``needs`` (see :ref:`rule-requirements-needs`) is required
    * - ``deps``
      - label list
      - no
@@ -257,8 +257,8 @@ testable within that component.
      - Target name
    * - ``srcs``
      - label list
-     - yes
-     - ``.trlc`` files containing ``CompReq`` records
+     - no
+     - ``.trlc`` files containing ``CompReq`` records; ``srcs`` or ``needs`` (see :ref:`rule-requirements-needs`) is required
    * - ``deps``
      - label list
      - no
@@ -310,8 +310,8 @@ Conditions that the *integrating project* must fulfil when using this SEooC.
      - Target name
    * - ``srcs``
      - label list
-     - yes
-     - ``.trlc`` files (containing ``AoU`` records), targets generating them (e.g. :ref:`rst_to_trlc <rule-rst-to-trlc>`), or labels to existing ``TrlcProviderInfo``-providing targets
+     - no
+     - ``.trlc`` files (containing ``AoU`` records), targets generating them (e.g. :ref:`rst_to_trlc <rule-rst-to-trlc>`), or labels to existing ``TrlcProviderInfo``-providing targets; ``srcs`` or ``needs`` (see :ref:`rule-requirements-needs`) is required
    * - ``deps``
      - label list
      - no
@@ -378,6 +378,49 @@ authored in RST can feed the requirement rules above.
 Reference fields hold plain requirement ids; ``version==N`` filters pin the
 referenced version (default ``1``). Sphinx-needs-only filters without an id are
 rejected.
+
+.. _rule-requirements-needs:
+
+Requirements from Sphinx-Needs
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+``assumed_system_requirements``, ``feature_requirements``,
+``component_requirements`` and ``assumptions_of_use`` accept Sphinx-Needs
+requirements in addition to (or instead of) TRLC ``srcs``. The
+``lobster_sphinx_needs`` tool converts them into the same LOBSTER requirement
+items as ``lobster-trlc``, so ``component``, ``dependable_element`` and the
+traceability reports treat both sources alike.
+
+.. code-block:: python
+
+   component_requirements(
+       name = "comp_reqs",
+       needs = ["//my/component:docs"],
+   )
+
+.. list-table::
+   :header-rows: 1
+   :widths: 18 12 10 60
+
+   * - Attribute
+     - Type
+     - Required
+     - Description
+   * - ``needs``
+     - label list
+     - no
+     - score_docs_as_code ``docs_bundle`` targets (their ``needs.json`` export is used) or ``needs.json`` files
+   * - ``needs_lobster_config``
+     - label
+     - no
+     - ``lobster_sphinx_needs`` YAML configuration. Defaults per macro: ``stkh_req`` → ``AssumedSystemReq``, ``feat_req`` → ``FeatReq``, ``comp_req`` → ``CompReq`` (tracing ``derived_from`` and ``covers``), ``aou_req`` → ``AoU``
+
+Each converted need becomes ``req <need id>@<version>``; link values become
+tracing targets, a ``[version==N]`` filter becomes ``@N``. Needs with status
+``invalid`` are skipped. The needs are listed on a plain RST page. TRLC
+rendering and the ``<name>_test`` validation only apply to ``srcs``; the
+Sphinx-Needs build of the bundle validates the needs against the
+score_docs_as_code metamodel.
 
 **Provides:** ``DefaultInfo`` with the generated ``.trlc`` files; pass the target in ``srcs`` of ``assumed_system_requirements``, ``feature_requirements``, ``component_requirements`` or ``assumptions_of_use``.
 

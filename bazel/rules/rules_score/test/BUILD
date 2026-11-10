@@ -106,6 +106,13 @@ load(
     "requirements_multi_spec_test_suite",
 )
 load(
+    ":requirements_needs_test.bzl",
+    "needs_and_trlc_test",
+    "needs_only_test",
+    "needs_provider_test",
+    "requirement_lobster_files",
+)
+load(
     ":requirements_rst_test.bzl",
     "aous_rst_provider_test",
     "aous_rst_sphinx_test",
@@ -2870,6 +2877,82 @@ provider_srcs_routed_to_deps_test(
 rst_to_trlc_test_suite(name = "rst_to_trlc_rule_tests")
 
 # ============================================================================
+# Sphinx-Needs (needs.json) Requirements Tests
+# ============================================================================
+
+assumed_system_requirements(
+    name = "asr_needs",
+    needs = ["fixtures/sphinx_needs/needs.json"],
+)
+
+feature_requirements(
+    name = "feat_req_needs",
+    needs = ["fixtures/sphinx_needs/needs.json"],
+)
+
+component_requirements(
+    name = "comp_req_needs",
+    needs = ["fixtures/sphinx_needs/needs.json"],
+)
+
+assumptions_of_use(
+    name = "aous_needs",
+    needs = ["fixtures/sphinx_needs/needs.json"],
+)
+
+# TRLC and Sphinx-Needs requirements in one target.
+component_requirements(
+    name = "comp_req_mixed_needs",
+    srcs = [":comp_req_rst_trlc"],
+    needs = ["fixtures/sphinx_needs/needs.json"],
+    deps = [
+        ":asr_rst",
+        ":feat_req_rst",
+    ],
+)
+
+needs_only_test(
+    name = "comp_req_needs_only_test",
+    target_under_test = ":comp_req_needs",
+)
+
+needs_and_trlc_test(
+    name = "comp_req_needs_and_trlc_test",
+    target_under_test = ":comp_req_mixed_needs",
+)
+
+[
+    needs_provider_test(
+        name = target + "_provider_test",
+        target_under_test = ":" + target,
+    )
+    for target in [
+        "asr_needs",
+        "feat_req_needs",
+        "aous_needs",
+    ]
+]
+
+requirement_lobster_files(
+    name = "needs_lobster_files",
+    requirements = [
+        ":asr_needs",
+        ":feat_req_needs",
+        ":comp_req_needs",
+        ":aous_needs",
+    ],
+)
+
+py_test(
+    name = "test_requirements_needs_output",
+    size = "small",
+    srcs = ["test_requirements_needs_output.py"],
+    data = [":needs_lobster_files"],
+    env = {"LOBSTER_FILES": "$(rootpaths :needs_lobster_files)"},
+    deps = ["@lobster//lobster/common"],
+)
+
+# ============================================================================
 # Multi-spec Requirements Tests
 # ============================================================================
 
@@ -2985,6 +3068,16 @@ py_test(
     deps = [
         "@lobster//lobster/common",
         "@score_tooling//bazel/rules/rules_score:aou_forwarding_to_lobster",
+    ],
+)
+
+py_test(
+    name = "test_lobster_sphinx_needs",
+    size = "small",
+    srcs = ["test_lobster_sphinx_needs.py"],
+    deps = [
+        "@lobster//lobster/common",
+        "@score_tooling//bazel/rules/rules_score:lobster_sphinx_needs",
     ],
 )
 

@@ -114,6 +114,19 @@ py_binary(
     ],
 )
 
+# Counterpart of lobster-trlc for requirements exported by Sphinx-Needs (needs.json)
+py_binary(
+    name = "lobster_sphinx_needs",
+    srcs = ["src/lobster_sphinx_needs.py"],
+    imports = ["src"],
+    main = "src/lobster_sphinx_needs.py",
+    visibility = ["//visibility:public"],
+    deps = [
+        "@lobster//lobster/common",
+        requirement("pyyaml"),
+    ],
+)
+
 # Merges lobster files, collapsing the same item arriving via several paths
 py_binary(
     name = "merge_lobster_items",

@@ -105,6 +105,30 @@ that `:satisfies:` / `:derived_from:` resolve in.
 
 ---
 
+## Requirements from Sphinx-Needs (`needs`)
+
+```starlark
+component_requirements(
+    name = "my_comp_reqs",
+    needs = ["//my/component:docs"],  # score_docs_as_code docs_bundle or needs.json file
+)
+```
+
+**`bazel build`** — `assumed_system_requirements`, `feature_requirements`,
+`component_requirements` and `assumptions_of_use` also accept the `needs.json`
+export of a score_docs_as_code `docs_bundle` (or any `needs.json` file).
+`lobster_sphinx_needs`, the counterpart of `lobster-trlc`, converts the needs of
+the kind's need type (`stkh_req`, `feat_req`, `comp_req`, `aou_req`) into the
+same LOBSTER requirement items (kind `AssumedSystemReq`, `FeatReq`, `CompReq`,
+`AoU`; tag `req <need id>@<version>`; link fields as tracing targets, a
+`[version==N]` filter becomes `@N`). Needs with status `invalid` are skipped.
+The needs are listed on a plain RST page; TRLC rendering and `<name>_test` only
+apply to `srcs`, which can be combined with `needs`. Tests trace to these
+requirements by need id (`RecordProperty("lobster-tracing", "comp_req__...")`).
+Override `needs_lobster_config` to change the need types or link fields.
+
+---
+
 ## `architectural_design`
 
 ```starlark

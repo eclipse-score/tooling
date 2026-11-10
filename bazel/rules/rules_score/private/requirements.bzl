@@ -22,6 +22,7 @@ public-facing macros.
 load("@lobster//:lobster.bzl", "subrule_lobster_trlc")
 load("@trlc//:trlc.bzl", "TrlcProviderInfo", "subrule_trlc_image_stage")
 load("//bazel/rules/rules_score:providers.bzl", "AssumedSystemRequirementsInfo", "AssumptionsOfUseInfo", "ComponentRequirementsInfo", "FailureModesInfo", "FeatureRequirementsInfo", "SphinxSourcesInfo")
+load("//bazel/rules/rules_score/private:lobster_sphinx_needs.bzl", "needs_json_labels", "subrule_lobster_sphinx_needs")
 
 _DEFAULT_SPEC = Label("//bazel/rules/rules_score/trlc/config:score_requirements_model")
 
@@ -85,66 +86,91 @@ def _requirements_impl(ctx):
     # that trlc_requirements_test(reqs=[":this_target"]) works out of the box.
     all_trlc_files = depset(own_srcs, transitive = [spec_depset, deps_depset])
 
-    # -------------------------------------------------------------------------
-    # Render TRLC → RST for Sphinx documentation.
-    # --source-files: own .trlc/.trlc.md files — rendered AND registered for parsing.
-    # --dep-files:    spec .rsl + transitive .trlc deps — parsed but not rendered.
-    # -------------------------------------------------------------------------
-    rendered_file = ctx.actions.declare_file("{}.rst".format(ctx.attr.name))
-    dep_files_depset = depset(transitive = [spec_depset, deps_depset])
+    # A target fed only with needs.json files has no TRLC records to render or trace.
+    use_trlc = bool(own_srcs) or not ctx.files.needs
+    lobster_files = []
+    rendered_files = []
 
-    render_args = ctx.actions.args()
-    render_args.add("--output", rendered_file.path)
-    render_args.add("--title", _REQ_KIND_TITLES[ctx.attr.req_kind])
-    render_args.add_all("--source-files", own_srcs)
-    render_args.add_all("--dep-files", dep_files_depset)
+    if use_trlc:
+        # ---------------------------------------------------------------------
+        # Render TRLC → RST for Sphinx documentation.
+        # --source-files: own .trlc/.trlc.md files — rendered AND registered for parsing.
+        # --dep-files:    spec .rsl + transitive .trlc deps — parsed but not rendered.
+        # ---------------------------------------------------------------------
+        rendered_file = ctx.actions.declare_file("{}.rst".format(ctx.attr.name))
+        dep_files_depset = depset(transitive = [spec_depset, deps_depset])
 
-    ctx.actions.run(
-        inputs = all_trlc_files,
-        outputs = [rendered_file],
-        executable = ctx.executable._renderer,
-        arguments = [render_args],
-        progress_message = "Rendering TRLC to RST for %s" % ctx.label,
-        mnemonic = "TrlcToRst",
-    )
+        render_args = ctx.actions.args()
+        render_args.add("--output", rendered_file.path)
+        render_args.add("--title", _REQ_KIND_TITLES[ctx.attr.req_kind])
+        render_args.add_all("--source-files", own_srcs)
+        render_args.add_all("--dep-files", dep_files_depset)
+
+        ctx.actions.run(
+            inputs = all_trlc_files,
+            outputs = [rendered_file],
+            executable = ctx.executable._renderer,
+            arguments = [render_args],
+            progress_message = "Rendering TRLC to RST for %s" % ctx.label,
+            mnemonic = "TrlcToRst",
+        )
+        rendered_files.append(rendered_file)
+
+        # ---------------------------------------------------------------------
+        # Lobster traceability extraction.
+        # ---------------------------------------------------------------------
+        lobster_file, _ = subrule_lobster_trlc(all_trlc_files.to_list(), ctx.file.lobster_config)
+        lobster_files.append(lobster_file)
 
     # -------------------------------------------------------------------------
-    # Lobster traceability extraction.
+    # Sphinx-Needs requirements: the same LOBSTER items as for TRLC records.
     # -------------------------------------------------------------------------
-    lobster_file, _ = subrule_lobster_trlc(all_trlc_files.to_list(), ctx.file.lobster_config)
+    if ctx.files.needs:
+        if not ctx.file.needs_lobster_config:
+            fail("{}: needs requires needs_lobster_config".format(ctx.label))
+        needs_lobster, needs_rst = subrule_lobster_sphinx_needs(
+            ctx.files.needs,
+            ctx.file.needs_lobster_config,
+            "{}{}.rst".format(ctx.attr.name, "_needs" if use_trlc else ""),
+            _REQ_KIND_TITLES[ctx.attr.req_kind],
+        )
+        lobster_files.append(needs_lobster)
+        rendered_files.append(needs_rst)
+
+    lobster_depset = depset(lobster_files)
 
     # -------------------------------------------------------------------------
     # Build the kind-specific domain provider.
     # -------------------------------------------------------------------------
     if ctx.attr.req_kind == "feature":
         req_provider = FeatureRequirementsInfo(
-            srcs = depset([lobster_file]),
+            srcs = lobster_depset,
             name = ctx.label.name,
         )
     elif ctx.attr.req_kind == "component":
         req_provider = ComponentRequirementsInfo(
-            srcs = depset([lobster_file]),
+            srcs = lobster_depset,
             name = ctx.label.name,
         )
     elif ctx.attr.req_kind == "aou":
         req_provider = AssumptionsOfUseInfo(
-            aou_lobster = depset([lobster_file]),
+            aou_lobster = lobster_depset,
             name = ctx.label.name,
         )
     elif ctx.attr.req_kind == "failure_mode":
         req_provider = FailureModesInfo(
-            srcs = depset([lobster_file]),
+            srcs = lobster_depset,
             name = ctx.label.name,
         )
     else:  # assumed_system
         req_provider = AssumedSystemRequirementsInfo(
-            srcs = depset([lobster_file]),
+            srcs = lobster_depset,
             name = ctx.label.name,
         )
 
     image_outputs = subrule_trlc_image_stage(ctx.files.image_srcs)
 
-    sphinx_srcs = depset([rendered_file] + image_outputs)
+    sphinx_srcs = depset(rendered_files + image_outputs)
 
     transitive_sphinx = [sphinx_srcs]
     for dep in deps:
@@ -178,12 +204,24 @@ _score_requirements_rule = rule(
     emits TrlcProviderInfo so that downstream requirement targets can list this
     target in their deps directly, without needing an intermediate
     trlc_requirements wrapper.
+
+    Sphinx-Needs requirements are accepted as ``needs.json`` files in ``needs``;
+    they are converted by ``lobster_sphinx_needs`` into the same LOBSTER items.
     """,
     attrs = {
         "srcs": attr.label_list(
             allow_files = [".trlc", ".trlc.md"],
-            mandatory = True,
+            default = [],
             doc = "TRLC source files containing requirement records, or targets generating them. Targets providing TrlcProviderInfo are treated as deps.",
+        ),
+        "needs": attr.label_list(
+            allow_files = [".json"],
+            default = [],
+            doc = "Sphinx-Needs needs.json files whose requirements are converted with needs_lobster_config.",
+        ),
+        "needs_lobster_config": attr.label(
+            allow_single_file = True,
+            doc = "lobster_sphinx_needs YAML configuration selecting the need types of this requirement kind.",
         ),
         "deps": attr.label_list(
             providers = [TrlcProviderInfo],
@@ -216,7 +254,7 @@ _score_requirements_rule = rule(
             doc = "TRLC-to-RST renderer tool.",
         ),
     },
-    subrules = [subrule_lobster_trlc, subrule_trlc_image_stage],
+    subrules = [subrule_lobster_trlc, subrule_lobster_sphinx_needs, subrule_trlc_image_stage],
 )
 
 def score_requirements_rule(
@@ -226,6 +264,8 @@ def score_requirements_rule(
         lobster_config,
         deps = [],
         spec = [],
+        needs = [],
+        needs_lobster_config = None,
         **kwargs):
     """Macro wrapper around _score_requirements_rule that merges the spec.
 
@@ -235,7 +275,12 @@ def score_requirements_rule(
         spec: Additional TRLC specification target(s) (single label or list)
             to merge in on top of the S-CORE requirements model, which is
             always included automatically -- do not re-list it here.
+        needs: score_docs_as_code ``docs_bundle`` targets or ``needs.json``
+            files with Sphinx-Needs requirements.
+        needs_lobster_config: lobster_sphinx_needs configuration for ``needs``.
     """
+    if srcs == [] and not needs:
+        fail("{}: srcs or needs must be given".format(name))
     extra_spec = spec if type(spec) == type([]) else [spec]
     merged_spec = [_DEFAULT_SPEC] + [s for s in extra_spec if s != _DEFAULT_SPEC]
 
@@ -246,5 +291,7 @@ def score_requirements_rule(
         req_kind = req_kind,
         lobster_config = lobster_config,
         spec = merged_spec,
+        needs = needs_json_labels(needs),
+        needs_lobster_config = needs_lobster_config,
         **kwargs
     )
