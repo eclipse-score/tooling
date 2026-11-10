@@ -422,6 +422,36 @@ dependable_element_test_case_coverage_lock_check_action_test = analysistest.make
 
 # ============================================================================
 # Test Suite Definition
+def _component_shared_test_target_test_impl(ctx):
+    """
+    Given two units of one component that share a single test target,
+    When the component is analyzed,
+    Then lobster-gtest receives the shared test's report exactly once.
+    """
+    env = analysistest.begin(ctx)
+
+    gtest_action = None
+    for action in analysistest.target_actions(env):
+        if action.argv and action.argv[0].endswith("lobster-gtest"):
+            gtest_action = action
+            break
+
+    asserts.true(env, gtest_action != None, "Expected a lobster-gtest action to be registered")
+    if gtest_action == None:
+        return analysistest.end(env)
+
+    reports = [f for f in gtest_action.inputs.to_list() if f.basename.endswith(".xml")]
+    asserts.equals(
+        env,
+        1,
+        len(reports),
+        "shared test target must be reported once; inputs were: %s" % reports,
+    )
+
+    return analysistest.end(env)
+
+component_shared_test_target_test = analysistest.make(_component_shared_test_target_test_impl)
+
 # ============================================================================
 
 def unit_component_test_suite(name):
@@ -442,6 +472,7 @@ def unit_component_test_suite(name):
             ":component_test_case_coverage_lock_test",
             ":component_gwt_derivation_wiring_test",
             ":component_requirements_transitive_test",
+            ":component_shared_test_target_test",
             ":test_case_coverage_lock_check_action_release_test",
             ":test_case_coverage_lock_check_action_development_test",
         ],

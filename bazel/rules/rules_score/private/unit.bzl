@@ -117,6 +117,7 @@ def _unit_impl(ctx):
 
     # Run each test executable via subrule_gtest_report and collect the XML outputs
     xml_files = []
+    test_results = []
     for test_target in ctx.attr.tests:
         unique_name = "{}_gtest_report".format(
             _target_output_prefix(ctx, test_target),
@@ -127,6 +128,7 @@ def _unit_impl(ctx):
             test_target.default_runfiles.files,
         )
         xml_files.append(xml)
+        test_results.append(struct(test_label = test_target.label, xml = xml))
 
     tests_depset = depset(xml_files)
 
@@ -157,6 +159,7 @@ def _unit_impl(ctx):
             implementation_sequence_fbs = depset(),
             implementation = depset(ctx.attr.implementation),
             tests = tests_depset,
+            test_results = depset(test_results),
             test_specs = depset([
                 struct(reference = reference, spec_json = spec[TestSpecificationInfo].spec_json)
                 for spec, reference in ctx.attr.test_specs.items()
@@ -201,7 +204,7 @@ _unit_attrs = {
     "tests": attr.label_list(
         default = [],
         cfg = "exec",
-        doc = "Test targets that verify the unit (cc_test, py_test, rust_test, etc.)",
+        doc = "Test targets that verify the unit (cc_test, py_test, rust_test, etc.). A target may be shared by several units of a component; the component reports it only once.",
     ),
     "test_specs": attr.label_keyed_string_dict(
         default = {},

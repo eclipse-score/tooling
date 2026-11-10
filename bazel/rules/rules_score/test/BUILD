@@ -178,6 +178,7 @@ load(
     "component_gwt_derivation_wiring_test",
     "component_provider_test",
     "component_requirements_transitive_test",
+    "component_shared_test_target_test",
     "component_sphinx_sources_test",
     "component_test_case_coverage_lock_test",
     "dependable_element_test_case_coverage_lock_check_action_test",
@@ -1735,6 +1736,40 @@ component(
     tests = [],  # Empty for testing
 )
 
+# Two units sharing one test target inside a single component. The shared
+# target must be reported once (see component_shared_test_target_test).
+unit(
+    name = "shared_test_unit_a",
+    testonly = True,
+    maturity = "development",
+    tests = [":test_unit_tests"],
+    unit_design = [":test_unit_design"],
+    implementation = [":mock_lib1"],
+)
+
+unit(
+    name = "shared_test_unit_b",
+    testonly = True,
+    maturity = "development",
+    tests = [":test_unit_tests"],
+    unit_design = [":test_unit_design"],
+    implementation = [":mock_lib2"],
+)
+
+component(
+    name = "shared_test_component",
+    testonly = True,
+    components = [
+        ":shared_test_unit_a",
+        ":shared_test_unit_b",
+    ],
+    requirements = [
+        ":comp_req",
+        ":feat_req",
+    ],
+    tests = [],
+)
+
 # Test Component tracing straight to Assumed System Requirements, i.e. with no
 # feature_requirements layer in between (see
 # fixtures/seooc_test/component_requirements_direct_asr.trlc). The
@@ -2525,6 +2560,12 @@ component_test_case_coverage_lock_test(
 component_gwt_derivation_wiring_test(
     name = "component_gwt_derivation_wiring_test",
     target_under_test = ":test_component",
+)
+
+# Verifies a test target attached to several units is converted only once.
+component_shared_test_target_test(
+    name = "component_shared_test_target_test",
+    target_under_test = ":shared_test_component",
 )
 
 # Verifies ComponentInfo.requirements_transitive rolls up both the parent's
