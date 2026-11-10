@@ -185,6 +185,24 @@ section "Tool Requirements" {
 
     }
 
+    section "Report Provenance" {
+
+        ToolQualification.ToolRequirement Report_Tooling_Version {
+            description = '''
+                The dependable_element rule shall state the resolved
+                score_tooling module version on the landing page of the
+                generated documentation without requiring configuration by the
+                consuming module. When the resolved module has no version, the
+                page shall state that the version is unavailable.
+            '''
+            mitigates = [Wrong_Tooling_Version_In_Report]
+            note = "Versions are only available for score_tooling releases consumed through a Bazel registry."
+            derived_from = [Identify_Report_Tooling_Version]
+            satisfied_by = Tools.Bazel
+        }
+
+    }
+
     section "Architecture Parsing" {
 
         ToolQualification.ToolRequirement Reject_Invalid_PlantUML {

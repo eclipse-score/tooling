@@ -15,6 +15,8 @@
 Dependable element: {title}
 ===================={underline}
 
+Generated with ``score_tooling`` version ``{tooling_version}``.
+
 .. toctree::
 
    {sections}

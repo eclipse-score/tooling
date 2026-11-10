@@ -27,6 +27,7 @@ load(
     "subrule_lobster_report",
 )
 load("@rules_python//sphinxdocs:sphinx_docs_library.bzl", "sphinx_docs_library")
+load("@tooling_provenance//:provenance.bzl", "TOOLING_VERSION")
 load(
     "//bazel/rules/rules_score:providers.bzl",
     "ArchitecturalDesignInfo",
@@ -1870,6 +1871,7 @@ def _dependable_element_index_impl(ctx):
             "{underline}": underline,
             "{sections}": "\n   ".join(section_refs),
             "{submodules}": deps_links,
+            "{tooling_version}": TOOLING_VERSION,
         },
     )
 
