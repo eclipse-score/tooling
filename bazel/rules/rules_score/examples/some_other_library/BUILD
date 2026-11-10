@@ -11,6 +11,7 @@
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
 
+load("@bazel_skylib//rules:common_settings.bzl", "bool_flag")
 load(
     "@score_tooling//bazel/rules/rules_score:rules_score.bzl",
     "architectural_design",
@@ -68,6 +69,22 @@ dependability_analysis(
     safety_analysis = [":other_library_safety_analysis"],
 )
 
+# Selects the implementation variant; consumers pass --@some_other_library//:use_variant_2=true.
+bool_flag(
+    name = "use_variant_2",
+    build_setting_default = False,
+)
+
+config_setting(
+    name = "is_variant_2",
+    flag_values = {":use_variant_2": "True"},
+)
+
+_VARIANT = select({
+    ":is_variant_2": ["//variants/variant_2:variant"],
+    "//conditions:default": ["//variants/variant_1:variant"],
+})
+
 unit(
     name = "abc",
     scope = ["//:__pkg__"],
@@ -75,7 +92,7 @@ unit(
     unit_design = [],
     implementation = [
         ":some_other_library",
-    ],
+    ] + _VARIANT,
 )
 
 component(
@@ -103,5 +120,5 @@ cc_library(
     name = "some_other_library",
     srcs = [],
     visibility = ["//visibility:public"],
-    deps = [],
+    deps = _VARIANT,
 )
