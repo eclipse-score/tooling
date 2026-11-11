@@ -24,25 +24,31 @@ certified.
 Declaring scope
 ----------------
 
-Each ``unit`` declares the scope it certifies via its ``scope`` attribute —
-labels, packages (``//some/package:__pkg__``), or packages-and-subpackages
-(``//some/package:__subpackages__``), following normal Bazel visibility
-patterns:
+Each ``unit`` declares the scope it certifies via ``scope_targets`` (exact
+targets) and ``scope_packages`` (package selectors):
 
 .. code-block:: starlark
 
    unit(
        name           = "MyUnit",
        implementation = [":my_unit_lib"],
-       scope          = ["//third_party/foo:__subpackages__"],
+       scope_targets  = ["//third_party/foo:library"],
+       scope_packages = ["//third_party/vendor/..."],
        unit_design    = [":MyUnit_design"],
        tests          = [],
    )
 
-``scope`` is for dependencies that are *not* explicitly named as
+Both are for dependencies that are *not* explicitly named as
 ``implementation`` targets themselves (e.g. third-party libraries pulled in
-transitively) but are still known and accepted as part of the unit. Every
-``unit`` also implicitly certifies its own ``implementation`` targets.
+transitively) but are still known and accepted as part of the unit.
+``scope_targets`` are resolved as dependencies of the unit, so they must exist
+and be visible to it. ``scope_packages`` accepts ``//package`` for one package
+and ``//package/...`` for that package and all subpackages; ``//`` is the root
+package and ``//...`` the whole repository. Prefix any form with ``@repo`` for
+an external repository. Every ``unit`` also implicitly certifies its own
+``implementation`` targets. The legacy ``scope`` attribute (label strings,
+including ``//pkg:__pkg__`` and ``//pkg:__subpackages__``) is deprecated and
+will be removed in the next major release.
 Components aggregate the scopes of their units and nested components.
 
 Scopes are collected transitively: a ``component``'s certified scope is the
@@ -62,9 +68,9 @@ combined certified scopes, including the units' own ``implementation``
 targets. A dependency is covered if any of the following applies:
 
 * Its exact target label is included.
-* Its package is covered by a ``__pkg__`` declaration.
-* Its package or an ancestor package is covered by a
-   ``__subpackages__`` declaration.
+* Its package is covered by a package scope (``//pkg:__pkg__`` or ``//pkg``).
+* Its package or an ancestor package is covered by a subtree scope
+  (``//pkg:__subpackages__`` or ``//pkg/...``).
 
 All matches require the scope declaration and dependency to belong to
 the same repository.
@@ -77,13 +83,6 @@ fail the build. Each message identifies the originating unit and dependency:
 
    Unit <unit label> depends on <dependency label>, but the dependency
    is not in any certified scope (<reason>).
-
-A certified scope that is declared more than once (e.g. by two units) is
-also rejected:
-
-.. code-block:: text
-
-   The same scope is covered twice: <label>
 
 Implementation
 ---------------

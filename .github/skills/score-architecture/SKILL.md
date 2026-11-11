@@ -531,7 +531,6 @@ unit(
     name           = "unit_1",
     unit_design    = ["//unit_1/docs:unit_design"],
     implementation = [":unit_1_lib"],            # cc_library/cc_binary/rust_library/...
-    scope          = ["//unit_1:unit_1_lib"],    # extra targets in the certified package tree
     tests          = [":unit_1_test"],
     visibility     = ["//visibility:public"],
 )
@@ -549,6 +548,10 @@ cc_test(
     deps = [":unit_1_lib", "@googletest//:gtest_main"],
 )
 ```
+
+`implementation` targets are certified implicitly. Declare other targets in their transitive closure with
+`scope_targets = ["//pkg:lib"]` (exact targets, resolved as deps) or `scope_packages = ["//pkg/..."]`
+(`//pkg` = one package, `//pkg/...` = package tree, optional `@repo` prefix). `scope` is deprecated.
 
 ### `component`
 

@@ -42,6 +42,7 @@ load(
     ":certified_scope_test.bzl",
     "certified_scope_index_test_suite",
     "certified_scope_matching_test_suite",
+    "certified_scope_selector_test_suite",
 )
 load(
     ":dependable_element_aou_test.bzl",
@@ -1515,7 +1516,7 @@ dependable_element(
 unit(
     name = "dep_unit",
     testonly = True,
-    scope = ["//:mock_lib1"],
+    scope_targets = ["//:mock_lib1"],
     tests = [],
     unit_design = [":test_unit_design"],
     implementation = [":mock_lib1"],
@@ -1557,7 +1558,7 @@ unit(
     name = "design_name_unit_bazel_target",
     testonly = True,
     design_name = "design_name_unit",
-    scope = ["//:mock_lib1"],
+    scope_targets = ["//:mock_lib1"],
     tests = [],
     unit_design = [":test_unit_design"],
     implementation = [":mock_lib1"],
@@ -1590,7 +1591,7 @@ dependable_element(
 unit(
     name = "seooc_test_unit",
     testonly = True,
-    scope = ["//:mock_lib1"],
+    scope_targets = ["//:mock_lib1"],
     tests = [],
     unit_design = [":test_unit_design"],
     implementation = [":mock_lib1"],
@@ -1690,7 +1691,7 @@ test_specification_test_suite(name = "test_specification_test_suite")
 unit(
     name = "test_unit",
     testonly = True,
-    scope = ["//:mock_lib1"],
+    scope_targets = ["//:mock_lib1"],
     test_specs = [":test_spec_sample"],
     tests = [":test_unit_tests"],
     unit_design = [":test_unit_design"],
@@ -2444,6 +2445,7 @@ test_suite(
 # ============================================================================
 
 # Unit tests
+# Legacy ``scope``: strings are certified verbatim, never resolved as dependencies.
 unit(
     name = "caller_scope_unit",
     scope = [
@@ -2470,6 +2472,84 @@ unit_certified_scope_test(
         ]
     ],
     target_under_test = ":caller_scope_unit",
+)
+
+unit(
+    name = "scope_packages_unit",
+    scope_packages = [
+        "//",
+        "//child/...",
+        "//...",
+        "@score_docs_as_code//x",
+        "@score_docs_as_code//...",
+    ],
+    scope_targets = [":mock_lib1"],
+    tests = [],
+    unit_design = [],
+    implementation = [":mock_lib2"],
+)
+
+unit_certified_scope_test(
+    name = "unit_scope_packages_test",
+    expected_scopes = [
+        str(package_relative_label(scope_entry))
+        for scope_entry in [
+            ":mock_lib2",
+            ":mock_lib1",
+            "//:__pkg__",
+            "//child:__subpackages__",
+            "//:__subpackages__",
+            "@score_docs_as_code//x:__pkg__",
+            "@score_docs_as_code//:__subpackages__",
+        ]
+    ],
+    target_under_test = ":scope_packages_unit",
+)
+
+alias(
+    name = "mock_lib1_alias",
+    actual = ":mock_lib1",
+)
+
+unit(
+    name = "scope_targets_alias_unit",
+    scope_targets = [":mock_lib1_alias"],
+    tests = [],
+    unit_design = [],
+    implementation = [":mock_lib2"],
+)
+
+unit_certified_scope_test(
+    name = "unit_scope_targets_alias_test",
+    expected_scopes = [
+        str(package_relative_label(scope_entry))
+        for scope_entry in [
+            ":mock_lib2",
+            ":mock_lib1",
+        ]
+    ],
+    target_under_test = ":scope_targets_alias_unit",
+)
+
+# Legacy ``scope`` must keep accepting targets that do not exist.
+unit(
+    name = "legacy_scope_unresolved_unit",
+    scope = ["//nonexistent:lib"],
+    tests = [],
+    unit_design = [],
+    implementation = [":mock_lib2"],
+)
+
+unit_certified_scope_test(
+    name = "unit_legacy_scope_unresolved_test",
+    expected_scopes = [
+        str(package_relative_label(scope_entry))
+        for scope_entry in [
+            ":mock_lib2",
+            "//nonexistent:lib",
+        ]
+    ],
+    target_under_test = ":legacy_scope_unresolved_unit",
 )
 
 unit_provider_test(
@@ -2937,6 +3017,8 @@ lobster_config_test_suite(name = "lobster_config")
 certified_scope_matching_test_suite(name = "certified_scope_matching")
 
 certified_scope_index_test_suite(name = "certified_scope_index")
+
+certified_scope_selector_test_suite(name = "certified_scope_selector")
 
 # ============================================================================
 # puml_utils.bzl unit tests (plan_view_layout)

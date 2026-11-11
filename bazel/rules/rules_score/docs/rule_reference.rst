@@ -945,10 +945,18 @@ diagram.
      - label list
      - no
      - ``test_specification`` targets that test cases of this unit reference with ``RecordProperty("test-spec", "<label>")``, spelling the label as written here (``":name"`` as ``"//<package>:name"``) (default ``[]``)
+   * - ``scope_targets``
+     - label list
+     - no
+     - Exact targets, not listed in ``implementation``, that this unit is allowed to depend on. They are resolved as dependencies of the unit, so they must exist, be visible to it and provide ``CcInfo`` or a Rust crate; aliases resolve to their actual target. Any transitive implementation dependency not covered by ``implementation``, ``scope_targets`` or ``scope_packages`` triggers a scope violation at ``dependable_element`` build time. (default ``[]``)
+   * - ``scope_packages``
+     - string list
+     - no
+     - Package scopes. Use ``//pkg`` for one package or ``//pkg/...`` for that package and all subpackages; ``//`` is the root package, ``//...`` the whole repository; prefix with ``@repo`` for external repositories. (default ``[]``)
    * - ``scope``
      - string list
      - no
-     - Additional Bazel label strings, not already reachable through ``implementation``, that this unit is allowed to depend on. Each entry is either a specific target label (``//pkg:target``, allowlisting just that target) or a package wildcard (``//pkg:__pkg__`` for everything directly in that package, ``//pkg:__subpackages__`` for the whole package tree). Any transitive implementation dependency not covered by ``implementation`` or ``scope`` triggers a scope violation at ``dependable_element`` build time. (default ``[]``)
+     - Deprecated, removed in the next major release; use ``scope_targets`` / ``scope_packages``. Label strings (exact targets or ``//pkg:__pkg__`` / ``//pkg:__subpackages__``) that are certified without being resolved, so they are neither checked for existence nor for visibility. (default ``[]``)
    * - ``maturity``
      - string
      - no

@@ -135,7 +135,6 @@ unit_design(
 
 unit(
     name = "MyUnit",
-    scope = ["//:my_unit_lib"],
     tests = [":my_unit_test"],
     unit_design = [":MyUnit_design"],
     implementation = [":my_unit_lib"],

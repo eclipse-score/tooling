@@ -16,6 +16,32 @@
 _PACKAGE_SCOPE = "__pkg__"
 _SUBPACKAGES_SCOPE = "__subpackages__"
 
+def package_scope_label(selector):
+    """Translate a package selector into a package-scope label string.
+
+    Args:
+        selector: ``//pkg``, ``//pkg/...``, ``//``, ``//...`` or the same
+            prefixed with ``@repo``.
+
+    Returns:
+        Unresolved label string ending in ``:__pkg__`` or ``:__subpackages__``.
+    """
+    subtree = selector.endswith("/...")
+    base = selector.removesuffix("...") if subtree else selector
+    if subtree and not base.endswith("//"):
+        base = base.removesuffix("/")
+
+    if (
+        not (base.startswith("//") or base.startswith("@")) or
+        base.count("//") != 1 or
+        ":" in base or
+        "..." in base or
+        (base.endswith("/") and not base.endswith("//"))
+    ):
+        fail("Invalid package scope '{}': expected //pkg, //pkg/..., @repo//pkg or @repo//pkg/...; list exact targets in 'scope_targets'.".format(selector))
+
+    return base + ":" + (_SUBPACKAGES_SCOPE if subtree else _PACKAGE_SCOPE)
+
 def build_scope_index(certified_scopes):
     """Index certified scopes by repository and full package path.
 
