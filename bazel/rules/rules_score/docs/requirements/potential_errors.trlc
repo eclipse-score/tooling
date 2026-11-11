@@ -10,7 +10,7 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  ********************************************************************************/
-package UseCases
+package rules_score
 import ToolQualification
 
 section "Potential Errors" {

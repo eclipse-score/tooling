@@ -566,6 +566,26 @@ mod cli_input_tests {
     }
 
     #[test]
+    fn syntax_error_fails_the_run() {
+        let dir = unique_dir("syntax_error");
+        write(
+            &dir.join("a.puml"),
+            "@startuml\ncomponent A <<component>> {\n@enduml",
+        );
+        let file = dir.join("a.puml");
+
+        let result = execute_with(&[
+            "--file",
+            file.to_str().unwrap(),
+            "--diagram-type",
+            "component",
+        ]);
+
+        fs::remove_dir_all(&dir).ok();
+        assert!(result.is_err());
+    }
+
+    #[test]
     fn other_diagram_kind_is_named_when_component_is_expected() {
         for (content, kind) in [
             (

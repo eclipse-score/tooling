@@ -14,7 +14,7 @@
 load("@bazel_skylib//rules:build_test.bzl", "build_test")
 load("@pip_tooling_test//:requirements.bzl", "requirement")
 load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_library", "cc_test")
-load("@rules_python//python:defs.bzl", "py_test")
+load("@rules_python//python:defs.bzl", "py_binary", "py_test")
 load("@rules_shell//shell:sh_test.bzl", "sh_test")
 load(
     "@score_tooling//bazel/rules/rules_score:rules_score.bzl",
@@ -171,6 +171,7 @@ load(
     "test_specification_test_suite",
     "unit_test_specs_test",
 )
+load(":tool_traceability.bzl", "tool_traceability")
 load(":tooling_provenance_test.bzl", "tooling_provenance_test_suite")
 load(
     ":unit_component_test.bzl",
@@ -834,6 +835,7 @@ assumptions_of_use(
 
 aou_in_aou_deps_fails_test(
     name = "aou_in_aou_deps_fails_test",
+    tags = ["lobster-tracing=rules_score.Derive_Own_AoUs_From_Safety_Analysis"],
     target_under_test = ":aou_in_aou_deps_repro",
 )
 
@@ -1671,6 +1673,7 @@ test_specification(
 
 test_specification_action_test(
     name = "test_specification_action_test",
+    tags = ["lobster-tracing=rules_score.Validate_Test_Specification"],
     target_under_test = ":test_spec_sample",
 )
 
@@ -1818,6 +1821,7 @@ dependable_element(
 
 aou_derived_test(
     name = "aou_derived_test",
+    tags = ["lobster-tracing=rules_score.Derive_Own_AoUs_From_Safety_Analysis"],
     target_under_test = ":aou_derived_example_lib_index",
 )
 
@@ -1854,6 +1858,7 @@ dependable_element(
 
 aou_derived_test(
     name = "aou_deduplicated_test",
+    tags = ["lobster-tracing=rules_score.Derive_Own_AoUs_From_Safety_Analysis"],
     target_under_test = ":aou_deduplicated_example_lib_index",
 )
 
@@ -1865,6 +1870,7 @@ build_test(
 # A dependable_element whose safety analyses have no AoU measure has no AoUs.
 aou_none_test(
     name = "aou_none_test",
+    tags = ["lobster-tracing=rules_score.Derive_Own_AoUs_From_Safety_Analysis"],
     target_under_test = ":public_api_example_lib_index",
 )
 
@@ -1902,6 +1908,7 @@ dependable_element(
 
 aou_merged_test(
     name = "aou_merged_test",
+    tags = ["lobster-tracing=rules_score.Receive_Duplicate_AoU_Once"],
     target_under_test = ":aou_diamond_top_index",
 )
 
@@ -2527,6 +2534,7 @@ component_test_case_coverage_lock_test(
 # the resolved lobster version supports it.
 component_gwt_derivation_wiring_test(
     name = "component_gwt_derivation_wiring_test",
+    tags = ["lobster-tracing=rules_score.Enable_GWT_Derivation"],
     target_under_test = ":test_component",
 )
 
@@ -2574,6 +2582,7 @@ dependable_element(
 assessment_config_test(
     name = "assessment_config_own_aou_test",
     expect_own_aou = True,
+    tags = ["lobster-tracing=rules_score.Cover_Root_Causes_And_AoUs_By_Assessment"],
     target_under_test = ":assessment_release_example_lib_index",
 )
 
@@ -2582,6 +2591,7 @@ assessment_config_test(
 assessment_config_test(
     name = "assessment_config_no_aou_test",
     expect_own_aou = False,
+    tags = ["lobster-tracing=rules_score.Cover_Root_Causes_And_AoUs_By_Assessment"],
     target_under_test = ":test_dependable_element_coverage_release_index",
 )
 
@@ -2591,6 +2601,7 @@ lobster_ci_report_test(
     name = "assessed_root_cause_ci_report_test",
     index = ":assessment_release_example_lib_index",
     lacks = ["missing reference to Root Cause Assessments"],
+    tags = ["lobster-tracing=rules_score.Cover_Root_Causes_And_AoUs_By_Assessment"],
 )
 
 safety_analysis(
@@ -2626,6 +2637,7 @@ lobster_ci_report_test(
     ],
     expect_ci_failure = True,
     index = ":unassessed_root_cause_example_lib_index",
+    tags = ["lobster-tracing=rules_score.Cover_Root_Causes_And_AoUs_By_Assessment"],
 )
 
 safety_analysis(
@@ -2663,6 +2675,7 @@ lobster_ci_report_test(
     ],
     expect_ci_failure = True,
     index = ":unused_aou_example_lib_index",
+    tags = ["lobster-tracing=rules_score.Cover_Root_Causes_And_AoUs_By_Assessment"],
 )
 
 safety_analysis(
@@ -2700,6 +2713,7 @@ lobster_ci_report_test(
     ],
     expect_ci_failure = True,
     index = ":stale_measure_version_example_lib_index",
+    tags = ["lobster-tracing=rules_score.Pin_Assessed_Measure_Version"],
 )
 
 # Unit, Component, and Dependable Element test suite
@@ -3090,4 +3104,19 @@ test_suite(
         "//fixtures/image_srcs:requirements_image_tests",
         "//fixtures/spec_extras:requirements_spec_extras_tests",
     ],
+)
+
+# =========================================================================
+# Tool qualification traceability
+# =========================================================================
+
+py_binary(
+    name = "tool_tests_xml",
+    srcs = ["tool_tests_xml.py"],
+)
+
+# Manual until every tool requirement is covered by a traced test.
+tool_traceability(
+    tags = ["manual"],
+    tests = ["@score_tooling//plantuml/parser/puml_cli:puml_cli_test"],
 )

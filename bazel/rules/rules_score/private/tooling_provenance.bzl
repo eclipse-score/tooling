@@ -12,7 +12,7 @@
 # *******************************************************************************
 """Expose the resolved score_tooling module version to report generation."""
 
-# lobster-trace: UseCases.Report_Tooling_Version
+# lobster-trace: rules_score.Report_Tooling_Version
 def resolved_tooling_version(modules):
     """Return the tooling version, not the consuming module's version."""
     for module in modules:
