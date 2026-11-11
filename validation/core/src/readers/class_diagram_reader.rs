@@ -22,10 +22,42 @@ use crate::readers::{to_source_location, Reader};
 use class_diagram::{
     ClassDiagram, ClassTemplateKind, EntityType, EnumLiteral, FreeFunctionDecl, FunctionArgument,
     MemberVariable, Method, MethodModifier, RelationType, Relationship, SimpleEntity,
-    TemplateParameter, TypeAlias, Visibility,
+    TemplateInstantiation, TemplateParameter, TypeAlias, Visibility,
 };
 
 pub struct ClassDiagramReader;
+
+/// Ignore blank names but preserve every argument spelling and position.
+fn read_template_instantiation(
+    metadata: fb_class::TemplateInstantiation<'_>,
+) -> Option<TemplateInstantiation> {
+    let name = metadata.name();
+    if name.trim().is_empty() {
+        return None;
+    }
+    let outer_decorators = metadata.outer_decorators().and_then(|values| {
+        values
+            .iter()
+            .map(|value| match value {
+                fb_class::TypeDecorator::Const => Some(class_diagram::TypeDecorator::Const),
+                fb_class::TypeDecorator::Volatile => Some(class_diagram::TypeDecorator::Volatile),
+                fb_class::TypeDecorator::Pointer => Some(class_diagram::TypeDecorator::Pointer),
+                fb_class::TypeDecorator::LValueReference => {
+                    Some(class_diagram::TypeDecorator::LValueReference)
+                }
+                fb_class::TypeDecorator::RValueReference => {
+                    Some(class_diagram::TypeDecorator::RValueReference)
+                }
+                _ => None,
+            })
+            .collect::<Option<Vec<_>>>()
+    });
+    Some(TemplateInstantiation {
+        name: name.to_string(),
+        arguments: metadata.arguments().iter().map(str::to_string).collect(),
+        outer_decorators,
+    })
+}
 
 fn read_template_parameters(
     values: Option<
@@ -89,6 +121,9 @@ fn read_type_aliases(entity: fb_class::SimpleEntity<'_>) -> Vec<TypeAlias> {
                 .map(|value| TypeAlias {
                     alias: value.alias().to_string(),
                     original_type: value.original_type().to_string(),
+                    template_instantiation: value
+                        .template_instantiation()
+                        .and_then(read_template_instantiation),
                     source_location: to_source_location(
                         value.source_location().file(),
                         value.source_location().line(),
@@ -112,6 +147,9 @@ fn read_variables(
                     Ok(MemberVariable {
                         name: value.name().to_string(),
                         data_type: value.data_type().map(|s| s.to_string()),
+                        template_instantiation: value
+                            .template_instantiation()
+                            .and_then(read_template_instantiation),
                         visibility: map_visibility(
                             value.visibility(),
                             &format!("{path}:entity:{}:variable:{}", entity.id(), value.name()),
@@ -159,6 +197,9 @@ fn read_method(
     Ok(Method {
         name: method.name().to_string(),
         return_type: method.return_type().map(|s| s.to_string()),
+        return_template_instantiation: method
+            .return_template_instantiation()
+            .and_then(read_template_instantiation),
         visibility: map_visibility(
             method.visibility(),
             &format!("{path}:entity:{}:method:{}", entity.id(), method.name()),
@@ -185,6 +226,9 @@ fn read_function_arguments(
                 .map(|parameter| FunctionArgument {
                     name: parameter.name().to_string(),
                     param_type: parameter.param_type().map(|value| value.to_string()),
+                    template_instantiation: parameter
+                        .template_instantiation()
+                        .and_then(read_template_instantiation),
                     is_variadic: parameter.is_variadic(),
                     is_pack_expansion: parameter.is_pack_expansion(),
                 })
@@ -305,6 +349,9 @@ fn read_free_functions(
                             .enclosing_namespace_id()
                             .map(uid_utils::normalize),
                         return_type: function.return_type().map(|value| value.to_string()),
+                        return_template_instantiation: function
+                            .return_template_instantiation()
+                            .and_then(read_template_instantiation),
                         parameters: read_function_arguments(function.parameters()),
                         template_parameters: read_template_parameters(
                             function.template_parameters(),

@@ -14,7 +14,7 @@
 use class_diagram::{
     ClassDiagram, ClassTemplateKind, EntityType, EnumLiteral, FreeFunctionDecl, FunctionArgument,
     MemberVariable, Method, MethodModifier, RelationType, Relationship, SimpleEntity,
-    SourceLocation, TemplateParameter, TypeAlias, Visibility,
+    SourceLocation, TemplateInstantiation, TemplateParameter, TypeAlias, Visibility,
 };
 use class_fbs::class_metamodel as fb;
 use flatbuffers::FlatBufferBuilder;
@@ -157,6 +157,10 @@ impl ClassSerializer {
     ) -> flatbuffers::WIPOffset<fb::TypeAlias<'a>> {
         let alias_offset = builder.create_string(&type_alias.alias);
         let original_type_offset = builder.create_string(&type_alias.original_type);
+        let template_instantiation = type_alias
+            .template_instantiation
+            .as_ref()
+            .map(|metadata| Self::serialize_template_instantiation(builder, metadata));
         let source_location_offset =
             Self::serialize_source_location(builder, &type_alias.source_location);
 
@@ -165,6 +169,7 @@ impl ClassSerializer {
             &fb::TypeAliasArgs {
                 alias: Some(alias_offset),
                 original_type: Some(original_type_offset),
+                template_instantiation,
                 source_location: Some(source_location_offset),
             },
         )
@@ -175,6 +180,10 @@ impl ClassSerializer {
         variable: &MemberVariable,
     ) -> flatbuffers::WIPOffset<fb::MemberVariable<'a>> {
         let name_offset = builder.create_string(&variable.name);
+        let template_instantiation = variable
+            .template_instantiation
+            .as_ref()
+            .map(|metadata| Self::serialize_template_instantiation(builder, metadata));
         let data_type_offset = variable
             .data_type
             .as_ref()
@@ -187,6 +196,7 @@ impl ClassSerializer {
             &fb::MemberVariableArgs {
                 name: Some(name_offset),
                 data_type: data_type_offset,
+                template_instantiation,
                 visibility: Self::map_visibility(variable.visibility),
                 is_static: variable.is_static,
                 source_location: Some(source_location_offset),
@@ -199,6 +209,10 @@ impl ClassSerializer {
         method: &Method,
     ) -> flatbuffers::WIPOffset<fb::Method<'a>> {
         let name_offset = builder.create_string(&method.name);
+        let return_template_instantiation = method
+            .return_template_instantiation
+            .as_ref()
+            .map(|metadata| Self::serialize_template_instantiation(builder, metadata));
         let return_type_offset = method
             .return_type
             .as_ref()
@@ -233,6 +247,7 @@ impl ClassSerializer {
             &fb::MethodArgs {
                 name: Some(name_offset),
                 return_type: return_type_offset,
+                return_template_instantiation,
                 visibility: Self::map_visibility(method.visibility),
                 parameters: Some(parameters_offset),
                 template_parameters: template_parameters_offset,
@@ -247,6 +262,10 @@ impl ClassSerializer {
         function: &FreeFunctionDecl,
     ) -> flatbuffers::WIPOffset<fb::FreeFunctionDecl<'a>> {
         let name_offset = builder.create_string(&function.name);
+        let return_template_instantiation = function
+            .return_template_instantiation
+            .as_ref()
+            .map(|metadata| Self::serialize_template_instantiation(builder, metadata));
         let enclosing_namespace_id_offset = function
             .enclosing_namespace_id
             .as_ref()
@@ -279,6 +298,7 @@ impl ClassSerializer {
                 name: Some(name_offset),
                 enclosing_namespace_id: enclosing_namespace_id_offset,
                 return_type: return_type_offset,
+                return_template_instantiation,
                 parameters: Some(parameters_offset),
                 template_parameters: template_parameters_offset,
                 source_location: Some(source_location_offset),
@@ -291,6 +311,10 @@ impl ClassSerializer {
         param: &FunctionArgument,
     ) -> flatbuffers::WIPOffset<fb::FunctionArgument<'a>> {
         let name_offset = builder.create_string(&param.name);
+        let template_instantiation = param
+            .template_instantiation
+            .as_ref()
+            .map(|metadata| Self::serialize_template_instantiation(builder, metadata));
         let param_type_offset = param
             .param_type
             .as_ref()
@@ -301,8 +325,47 @@ impl ClassSerializer {
             &fb::FunctionArgumentArgs {
                 name: Some(name_offset),
                 param_type: param_type_offset,
+                template_instantiation,
                 is_variadic: param.is_variadic,
                 is_pack_expansion: param.is_pack_expansion,
+            },
+        )
+    }
+
+    fn serialize_template_instantiation<'a>(
+        builder: &mut FlatBufferBuilder<'a>,
+        metadata: &TemplateInstantiation,
+    ) -> flatbuffers::WIPOffset<fb::TemplateInstantiation<'a>> {
+        let name = builder.create_string(&metadata.name);
+        let arguments: Vec<_> = metadata
+            .arguments
+            .iter()
+            .map(|argument| builder.create_string(argument))
+            .collect();
+        let arguments = builder.create_vector(&arguments);
+        let outer_decorators = metadata.outer_decorators.as_ref().map(|decorators| {
+            let values: Vec<_> = decorators
+                .iter()
+                .map(|decorator| match decorator {
+                    class_diagram::TypeDecorator::Const => fb::TypeDecorator::Const,
+                    class_diagram::TypeDecorator::Volatile => fb::TypeDecorator::Volatile,
+                    class_diagram::TypeDecorator::Pointer => fb::TypeDecorator::Pointer,
+                    class_diagram::TypeDecorator::LValueReference => {
+                        fb::TypeDecorator::LValueReference
+                    }
+                    class_diagram::TypeDecorator::RValueReference => {
+                        fb::TypeDecorator::RValueReference
+                    }
+                })
+                .collect();
+            builder.create_vector(&values)
+        });
+        fb::TemplateInstantiation::create(
+            builder,
+            &fb::TemplateInstantiationArgs {
+                name: Some(name),
+                arguments: Some(arguments),
+                outer_decorators,
             },
         )
     }

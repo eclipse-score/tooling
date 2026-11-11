@@ -46,6 +46,7 @@ fn method(name: &str) -> Method {
     Method {
         name: name.to_string(),
         return_type: None,
+        return_template_instantiation: None,
         source_location: SourceLocation::new("test.puml", 1),
         visibility: Visibility::Public,
         parameters: Vec::new(),
@@ -68,6 +69,7 @@ fn method_with_parameter_types(name: &str, parameter_types: &[&str]) -> Method {
             .map(|parameter_type| FunctionArgument {
                 name: String::new(),
                 param_type: Some((*parameter_type).to_string()),
+                template_instantiation: None,
                 is_variadic: false,
                 is_pack_expansion: false,
             })
@@ -80,6 +82,7 @@ fn parameter(name: &str, param_type: &str, is_pack_expansion: bool) -> FunctionA
     FunctionArgument {
         name: name.to_string(),
         param_type: Some(param_type.to_string()),
+        template_instantiation: None,
         is_variadic: false,
         is_pack_expansion,
     }
@@ -93,6 +96,7 @@ fn variable(name: &str, data_type: &str) -> MemberVariable {
     MemberVariable {
         name: name.to_string(),
         data_type: Some(data_type.to_string()),
+        template_instantiation: None,
         visibility: Visibility::Private,
         is_static: false,
         source_location: SourceLocation::new("test.puml", 1),
@@ -155,6 +159,7 @@ fn free_function(name: &str, parameter_types: &[&str]) -> FreeFunctionDecl {
         name: name.to_string(),
         enclosing_namespace_id: None,
         return_type: Some("void".to_string()),
+        return_template_instantiation: None,
         parameters: parameter_types
             .iter()
             .map(|parameter_type| parameter("", parameter_type, false))
@@ -246,6 +251,7 @@ fn free_function_key_normalizes_qualified_name_and_parameters() {
         name: "Dispatch".to_string(),
         enclosing_namespace_id: Some("vehicle.core".to_string()),
         return_type: Some("void".to_string()),
+        return_template_instantiation: None,
         parameters: vec![
             parameter("mode", "std::uint8_t", false),
             parameter("args", "vehicle.Payload", true),
@@ -580,6 +586,173 @@ fn relationship_helpers_normalize_namespace_separators() {
         relationship_display_name(&relationship),
         "vehicle::Engine -> Composition -> vehicle::Manufacturer"
     );
+}
+
+#[test]
+fn parameter_const_normalization_composes_with_unique_prefix_matching() {
+    let design = index(vec![SimpleEntity {
+        methods: vec![
+            method_with_parameter_types("run", &["const int"]),
+            method_with_parameter_types("run", &["int", "bool"]),
+        ],
+        ..entity("Sample", vec![])
+    }]);
+    let implementation = index(vec![SimpleEntity {
+        methods: vec![
+            method_with_parameter_types("run", &["int"]),
+            method_with_parameter_types("run", &["const int", "bool"]),
+        ],
+        ..entity("Sample", vec![])
+    }]);
+    let result = validate_class_design_implementation(&design, &implementation);
+    assert!(result.is_empty(), "{:?}", result.failures);
+
+    let design = index_with_free_functions(vec![free_function("run", &["int* const"])]);
+    let implementation = index_with_free_functions(vec![free_function("run", &["int*", "bool"])]);
+    let result = validate_class_design_implementation(&design, &implementation);
+    assert!(result.is_empty(), "{:?}", result.failures);
+}
+
+#[test]
+fn parameter_metadata_prefix_matching_composes_with_const_fallback() {
+    let mut design = parameter("value", "const Map<const K>", false);
+    design.template_instantiation = Some(TemplateInstantiation {
+        name: "Map".into(),
+        arguments: vec!["const K".into()],
+        outer_decorators: Some(vec![class_diagram::TypeDecorator::Const]),
+    });
+    let mut implementation = parameter("value", "Map<const K, V>", false);
+    implementation.template_instantiation = Some(TemplateInstantiation {
+        name: "Map".into(),
+        arguments: vec!["const K".into(), "V".into()],
+        outer_decorators: Some(vec![]),
+    });
+    assert!(parameter_types_match(
+        &[design.clone()],
+        &[implementation.clone()],
+    ));
+    assert!(parameter_differences(&[design.clone()], &[implementation.clone()]).is_empty());
+
+    implementation
+        .template_instantiation
+        .as_mut()
+        .unwrap()
+        .arguments[0] = "K".into();
+    assert!(!parameter_types_match(
+        &[design.clone()],
+        &[implementation.clone()],
+    ));
+    assert_eq!(
+        parameter_differences(&[design.clone()], &[implementation.clone()]).len(),
+        1
+    );
+
+    implementation.template_instantiation = None;
+    assert!(!parameter_types_match(&[design], &[implementation]));
+    assert!(parameter_types_match(
+        &[parameter("value", "const Map<K>", false)],
+        &[parameter("value", "Map<K>", false)],
+    ));
+}
+
+#[test]
+fn parameter_matching_keeps_template_actuals_and_literals_strict() {
+    for (design, implementation) in [
+        ("Map<K, V>", "Map<K, V, Allocator>"),
+        ("const int*", "int*"),
+        ("Tag<\"a  b\">", "Tag<\"a b\">"),
+        ("Tag<\"a * b\">", "Tag<\"a* b\">"),
+    ] {
+        assert!(!parameter_types_match(
+            &[parameter("", design, false)],
+            &[parameter("", implementation, false)],
+        ));
+        assert_eq!(
+            parameter_differences(
+                &[parameter("", design, false)],
+                &[parameter("", implementation, false)],
+            )
+            .len(),
+            1,
+        );
+    }
+    assert!(!optional_types_match(
+        &Some("const int".into()),
+        &Some("int".into()),
+    ));
+    assert!(!parameter_types_match(&[], &[parameter("", "int", false)]));
+}
+
+#[test]
+fn parameter_type_normalization_ignores_top_level_const() {
+    // Top-level const on a by-value parameter is not part of the signature.
+    for (type_name, expected) in [
+        ("void* const", "void*"),
+        ("void *const", "void*"),
+        ("void*const", "void*"),
+        ("int* const", "int*"),
+        ("const int", "int"),
+        ("const std::vector<int>", "vector<int>"),
+        ("const std::vector<int*>", "vector<int*>"),
+        ("const std::function<void(int&)>", "function<void(int&)>"),
+    ] {
+        assert_eq!(
+            normalize_parameter_type(type_name),
+            expected,
+            "type_name: {type_name:?}",
+        );
+    }
+}
+
+#[test]
+fn parameter_type_normalization_preserves_low_level_const() {
+    // Const that qualifies the pointee/referent is significant and kept.
+    for (type_name, expected) in [
+        ("const int*", "const int*"),
+        ("const void*", "const void*"),
+        ("const int&", "const int&"),
+        ("const int* const", "const int*"),
+        ("const int[]", "const int[]"),
+        ("const char[8]", "const char[8]"),
+        ("int* const*", "int*const*"),
+        ("int* const&", "int*const&"),
+    ] {
+        assert_eq!(
+            normalize_parameter_type(type_name),
+            expected,
+            "type_name: {type_name:?}",
+        );
+    }
+}
+
+#[test]
+fn parameter_type_normalization_keeps_const_within_identifiers() {
+    for type_name in ["Constant", "WidgetConst", "const_iterator"] {
+        assert_eq!(
+            normalize_parameter_type(type_name),
+            normalize_type_name(type_name),
+            "type_name: {type_name:?}",
+        );
+    }
+}
+
+#[test]
+fn type_name_normalization_tightens_whitespace_before_pointer_const() {
+    for (type_name, expected) in [
+        ("int* const", "int*const"),
+        ("int *const", "int*const"),
+        ("int*  const", "int*const"),
+        ("int*\tconst", "int*const"),
+        ("const int* const", "const int*const"),
+        ("Foo* constant", "Foo* constant"),
+        ("Foo* const_iterator", "Foo* const_iterator"),
+    ] {
+        assert_eq!(
+            normalize_type_name(type_name),
+            expected,
+            "type_name: {type_name:?}",
+        );
+    }
 }
 
 #[test]
@@ -1086,6 +1259,7 @@ fn validate_callable_pair(
                 name: method.name.clone(),
                 enclosing_namespace_id: Some("vehicle::core".to_string()),
                 return_type: method.return_type.clone(),
+                return_template_instantiation: method.return_template_instantiation.clone(),
                 parameters: method.parameters.clone(),
                 template_parameters: method.template_parameters.clone(),
                 source_location: method.source_location.clone(),
@@ -1377,8 +1551,464 @@ fn parameter_flags_are_candidate_constraints_for_both_callable_kinds() {
     }
 }
 
+fn template_metadata(name: &str, arguments: &[&str]) -> TemplateInstantiation {
+    TemplateInstantiation {
+        name: name.to_string(),
+        arguments: arguments
+            .iter()
+            .map(|argument| argument.to_string())
+            .collect(),
+        outer_decorators: Some(vec![]),
+    }
+}
+
+fn map_metadata(arguments: &[&str]) -> TemplateInstantiation {
+    template_metadata("Map", arguments)
+}
+
+fn metadata_method(arguments: &[&str]) -> Method {
+    let type_name = format!("Map<{}>", arguments.join(", "));
+    let mut method = method_with_parameter_types("run", &[&type_name]);
+    method.parameters[0].template_instantiation = Some(map_metadata(arguments));
+    method.return_type = Some(type_name);
+    method.return_template_instantiation = Some(map_metadata(arguments));
+    method
+}
+
 #[test]
-fn complete_types_are_required_in_all_seven_type_mismatch_scenarios() {
+fn template_metadata_allows_only_nonempty_directional_prefixes() {
+    let cases: &[(&[&str], &[&str], bool)] = &[
+        (&["K", "V"], &["K", "V", "Allocator"], true),
+        (&["K", "V"], &["K", "V"], true),
+        (&["K", "V", "Allocator"], &["K", "V"], false),
+        (&["K", "V"], &["K", "Other", "Allocator"], false),
+        (&[], &["K"], false),
+        (&[], &[], true),
+    ];
+    for (design, implementation, expected) in cases {
+        assert_eq!(
+            template_instantiations_match(&map_metadata(design), &map_metadata(implementation)),
+            *expected,
+            "{design:?} vs {implementation:?}"
+        );
+    }
+    assert!(!template_instantiations_match(
+        &map_metadata(&["K"]),
+        &template_metadata("OtherMap", &["K", "V"]),
+    ));
+    assert!(template_instantiations_match(
+        &template_metadata("::std::vehicle.Map", &["std::uint8_t"]),
+        &template_metadata("vehicle::Map", &["uint8_t", "V"]),
+    ));
+}
+
+#[test]
+fn known_template_metadata_keeps_outer_decorators_strict() {
+    use class_diagram::TypeDecorator::{
+        Const, LValueReference as Ref, Pointer, RValueReference as RRef, Volatile,
+    };
+    // Decorators are ordered inner-to-outer and agree with each type spelling.
+    for (design_type, implementation_type, left, right, expected, parameter_expected) in [
+        (
+            "Outer<int>",
+            "const Outer<int, float>&",
+            vec![],
+            vec![Const, Ref],
+            false,
+            false,
+        ),
+        (
+            "Outer<int>&",
+            "Outer<int, float>&",
+            vec![Ref],
+            vec![Ref],
+            true,
+            true,
+        ),
+        (
+            "Outer<int>&",
+            "Outer<int, float>*",
+            vec![Ref],
+            vec![Pointer],
+            false,
+            false,
+        ),
+        (
+            "Outer<int>&",
+            "Outer<int, float>&&",
+            vec![Ref],
+            vec![RRef],
+            false,
+            false,
+        ),
+        (
+            "Outer<int>*",
+            "Outer<int, float>**",
+            vec![Pointer],
+            vec![Pointer, Pointer],
+            false,
+            false,
+        ),
+        (
+            "const Outer<int>*",
+            "Outer<int, float>* const",
+            vec![Const, Pointer],
+            vec![Pointer, Const],
+            false,
+            false,
+        ),
+        (
+            "const volatile Outer<int>*",
+            "volatile const Outer<int, float>*",
+            vec![Const, Volatile, Pointer],
+            vec![Volatile, Const, Pointer],
+            true,
+            true,
+        ),
+        (
+            "const Outer<int>",
+            "Outer<int, float>",
+            vec![Const],
+            vec![],
+            false,
+            true,
+        ),
+        (
+            "Outer<int>* const",
+            "Outer<int, float>*",
+            vec![Pointer, Const],
+            vec![Pointer],
+            false,
+            true,
+        ),
+        (
+            "const Outer<int>&",
+            "Outer<int, float>&",
+            vec![Const, Ref],
+            vec![Ref],
+            false,
+            false,
+        ),
+        (
+            "volatile Outer<int>",
+            "Outer<int, float>",
+            vec![Volatile],
+            vec![],
+            false,
+            false,
+        ),
+    ] {
+        let mut design = template_metadata("Outer", &["int"]);
+        let mut implementation = template_metadata("Outer", &["int", "float"]);
+        design.outer_decorators = Some(left);
+        implementation.outer_decorators = Some(right);
+        assert_eq!(
+            template_instantiations_match(&design, &implementation),
+            expected
+        );
+        assert_eq!(
+            types_with_metadata_match(
+                design_type,
+                implementation_type,
+                &Some(design.clone()),
+                &Some(implementation.clone()),
+            ),
+            expected,
+            "{design_type} vs {implementation_type}",
+        );
+        assert_eq!(
+            outer_decorators_match(&design, &implementation, true)
+                && template_actuals_match(&design, &implementation),
+            parameter_expected
+        );
+        // Exercise public validation paths for both methods and free functions.
+        let mut design_method = metadata_method(&["K"]);
+        let mut implementation_method = metadata_method(&["K", "V"]);
+        design_method.parameters[0].param_type = Some(design_type.into());
+        implementation_method.parameters[0].param_type = Some(implementation_type.into());
+        design_method.parameters[0].template_instantiation = Some(design.clone());
+        implementation_method.parameters[0].template_instantiation = Some(implementation.clone());
+        assert_eq!(
+            parameters_match(&design_method.parameters, &implementation_method.parameters),
+            parameter_expected
+        );
+        design_method.return_type = Some(design_type.into());
+        implementation_method.return_type = Some(implementation_type.into());
+        design_method.return_template_instantiation = Some(design);
+        implementation_method.return_template_instantiation = Some(implementation);
+        for result in validate_callable_pair(vec![design_method], vec![implementation_method]) {
+            assert_eq!(result.is_empty(), expected, "{:?}", result.failures);
+            if !expected {
+                let field = if parameter_expected {
+                    "return type"
+                } else {
+                    "parameter type"
+                };
+                assert!(
+                    result
+                        .failures
+                        .iter()
+                        .any(|message| message.contains(field)),
+                    "{design_type} vs {implementation_type}: {:?}",
+                    result.failures,
+                );
+            }
+        }
+    }
+    for (design, implementation) in [("const K&", "K&"), ("K*", "K&"), ("K&", "K&&")] {
+        assert!(!types_with_metadata_match(
+            design,
+            implementation,
+            &None,
+            &None,
+        ));
+    }
+}
+
+#[test]
+fn explicit_argument_strings_keep_inner_qualifiers_and_nested_lists_strict() {
+    for (design, implementation, expected) in [
+        ("const K", "K", false),
+        ("const K*", "K*", false),
+        ("K&", "K&&", false),
+        ("Map<K>", "Map<K, V>", false),
+        ("Outer<Map<K>>", "Outer<Map<K, V>>", false),
+        ("Map<K, V>", "Map<K,V>", false),
+        ("const std::vehicle.Key *", "const vehicle::Key*", true),
+        ("std::Map<vehicle.Key>", "Map<vehicle::Key>", true),
+    ] {
+        assert_eq!(
+            template_instantiations_match(
+                &template_metadata("Outer", &[design]),
+                &template_metadata("Outer", &[implementation, "Policy"]),
+            ),
+            expected,
+            "{design} vs {implementation}",
+        );
+    }
+}
+
+#[test]
+fn missing_metadata_and_literal_strings_keep_strict_comparison() {
+    let design = Some(map_metadata(&["K"]));
+    let implementation = Some(map_metadata(&["K", "V"]));
+    let mut unknown = design.clone();
+    unknown.as_mut().unwrap().outer_decorators = None;
+    assert!(!types_with_metadata_match(
+        "Map<K>",
+        "Map<K, V>",
+        &unknown,
+        &implementation
+    ));
+    assert!(types_with_metadata_match(
+        "Map<K>", "Map<K>", &unknown, &design
+    ));
+    for (left, right) in [(&None, &None), (&design, &None), (&None, &implementation)] {
+        assert!(!types_with_metadata_match(
+            "Map<K>",
+            "Map<K, V>",
+            left,
+            right
+        ));
+        assert!(!types_with_metadata_match(
+            "const Map<K>&",
+            "Map<K>&",
+            left,
+            right
+        ));
+        assert!(types_with_metadata_match(
+            "std::Map<K>",
+            "Map<K>",
+            left,
+            right
+        ));
+    }
+    // Representative unsupported strings must never be reparsed into prefixes.
+    for (left, right) in [
+        ("Array<int, 3>", "Array<int, 3, Policy>"),
+        ("Map<K>[3]", "Map<K, V>[3]"),
+        ("Map<K> (*)(int)", "Map<K, V> (*)(int)"),
+        ("Outer<K>::Inner<V>", "Outer<K>::Inner<V, Policy>"),
+    ] {
+        assert!(!types_with_metadata_match(left, right, &None, &None));
+        assert!(types_with_metadata_match(left, left, &None, &None));
+    }
+    // Even supplied metadata cannot override the literal-bearing string guard.
+    for (left, right) in [
+        ("Tag<\"std::x\">", "Tag<\"x\", Policy>"),
+        ("Tag<' '>", "Tag<' ', Policy>"),
+        ("Tag<R\"(a  b)\">", "Tag<R\"(a b)\">"),
+    ] {
+        assert!(!types_with_metadata_match(
+            left,
+            right,
+            &design,
+            &implementation
+        ));
+        assert!(types_with_metadata_match(
+            left,
+            left,
+            &design,
+            &implementation
+        ));
+    }
+    assert!(!optional_types_with_metadata_match(
+        &None,
+        &Some("Map<K>".into()),
+        &design,
+        &design,
+    ));
+    assert!(optional_types_with_metadata_match(
+        &None,
+        &None,
+        &design,
+        &implementation,
+    ));
+}
+
+#[test]
+fn metadata_prefixes_apply_to_aliases_fields_parameters_and_both_callable_returns() {
+    let mut design = entity("Consumer", vec![]);
+    design.type_aliases = vec![TypeAlias {
+        alias: "Storage".into(),
+        original_type: "Map<K>".into(),
+        template_instantiation: Some(map_metadata(&["K"])),
+        source_location: SourceLocation::new("design.puml", 7),
+    }];
+    design.variables = vec![variable("values", "Map<K>")];
+    design.variables[0].template_instantiation = Some(map_metadata(&["K"]));
+    let mut implementation = design.clone();
+    implementation.type_aliases[0].original_type = "Map<K, V>".into();
+    implementation.type_aliases[0].template_instantiation = Some(map_metadata(&["K", "V"]));
+    implementation.variables[0].data_type = Some("Map<K, V>".into());
+    implementation.variables[0].template_instantiation = Some(map_metadata(&["K", "V"]));
+    let result = validate_class_design_implementation(
+        &index(vec![design.clone()]),
+        &index(vec![implementation.clone()]),
+    );
+    assert!(result.is_empty(), "{:?}", result.failures);
+    implementation.type_aliases[0].template_instantiation = Some(map_metadata(&["Other", "V"]));
+    implementation.variables[0].template_instantiation = Some(map_metadata(&["Other", "V"]));
+    let result =
+        validate_class_design_implementation(&index(vec![design]), &index(vec![implementation]));
+    assert_eq!(result.failures.len(), 2, "{:?}", result.failures);
+
+    let design = metadata_method(&["K"]);
+    let implementation = metadata_method(&["K", "V"]);
+    assert!(parameters_match(
+        &design.parameters,
+        &implementation.parameters,
+    ));
+    assert!(parameter_differences(&design.parameters, &implementation.parameters).is_empty());
+    for result in validate_callable_pair(vec![design.clone()], vec![implementation.clone()]) {
+        assert!(result.is_empty(), "{:?}", result.failures);
+    }
+    let mut bad_return = implementation.clone();
+    bad_return.return_template_instantiation = Some(map_metadata(&["Other", "V"]));
+    for result in validate_callable_pair(vec![design.clone()], vec![bad_return]) {
+        assert_eq!(result.failures.len(), 1, "{:?}", result.failures);
+        assert!(result.failures[0].contains("return type"));
+    }
+    let mut bad_parameter = implementation;
+    bad_parameter.parameters[0].template_instantiation = Some(map_metadata(&["Other", "V"]));
+    assert!(!parameters_match(
+        &design.parameters,
+        &bad_parameter.parameters,
+    ));
+    for result in validate_callable_pair(vec![design], vec![bad_parameter]) {
+        assert_eq!(result.failures.len(), 1, "{:?}", result.failures);
+        assert!(result.failures[0].contains("parameter type"));
+    }
+}
+
+#[test]
+fn actual_prefix_candidates_are_ambiguous_without_exact_first_or_return_tiebreaks() {
+    let design = metadata_method(&["K"]);
+    let exact = design.clone();
+    let mut extended = metadata_method(&["K", "V"]);
+    extended.return_template_instantiation = Some(template_metadata("DifferentReturn", &["K"]));
+    for result in validate_callable_pair(vec![design], vec![exact, extended]) {
+        assert_eq!(result.failures.len(), 1, "{:?}", result.failures);
+        assert!(result.failures[0]
+            .to_lowercase()
+            .contains("ambiguous overload matching"));
+    }
+}
+
+#[test]
+fn actual_prefix_overloads_require_a_unique_injective_assignment() {
+    let short = metadata_method(&["K"]);
+    let long = metadata_method(&["K", "V"]);
+    // Both designs must survive grouping; only the long implementation can
+    // serve the long design, leaving the short implementation for the short one.
+    for result in validate_callable_pair(
+        vec![short.clone(), long.clone()],
+        vec![short.clone(), long.clone()],
+    ) {
+        assert!(result.is_empty(), "{:?}", result.failures);
+    }
+    for result in validate_callable_pair(vec![short, long.clone()], vec![long]) {
+        assert_eq!(result.failures.len(), 1, "{:?}", result.failures);
+        assert!(result.failures[0]
+            .to_lowercase()
+            .contains("no injective overload matching"));
+    }
+}
+
+#[test]
+fn strict_nested_actuals_reject_overload_candidates_despite_an_outer_prefix() {
+    let mut design = method_with_parameter_types("run", &["Outer<Map<K>>"]);
+    design.parameters[0].template_instantiation = Some(template_metadata("Outer", &["Map<K>"]));
+    let mut nested_mismatch = method_with_parameter_types("run", &["Outer<Map<K, V>, Policy>"]);
+    nested_mismatch.parameters[0].template_instantiation =
+        Some(template_metadata("Outer", &["Map<K, V>", "Policy"]));
+    let other = method_with_parameter_types("run", &["int"]);
+    for result in validate_callable_pair(vec![design], vec![nested_mismatch, other]) {
+        assert_eq!(result.failures.len(), 1, "{:?}", result.failures);
+        assert!(result.failures[0].contains("not found"));
+    }
+}
+
+#[test]
+fn callable_dedup_preserves_metadata_presence_and_exact_metadata_differences() {
+    let original = metadata_method(&["K"]);
+    let mut no_parameter_metadata = original.clone();
+    no_parameter_metadata.parameters[0].template_instantiation = None;
+    let mut no_return_metadata = original.clone();
+    no_return_metadata.return_template_instantiation = None;
+    let mut other_return_metadata = original.clone();
+    other_return_metadata.return_template_instantiation = Some(map_metadata(&["K", "V"]));
+    let mut normalized_parameter_metadata = original.clone();
+    normalized_parameter_metadata.parameters[0].template_instantiation =
+        Some(template_metadata("std::Map", &["K"]));
+    for distinct in [
+        no_parameter_metadata,
+        no_return_metadata,
+        other_return_metadata,
+        normalized_parameter_metadata,
+    ] {
+        // Same display signature, different metadata: neither may be discarded.
+        for result in
+            validate_callable_pair(vec![original.clone()], vec![original.clone(), distinct])
+        {
+            assert_eq!(result.failures.len(), 1, "{:?}", result.failures);
+            assert!(result.failures[0]
+                .to_lowercase()
+                .contains("ambiguous overload matching"));
+        }
+    }
+    let mut same_at_other_location = original.clone();
+    same_at_other_location.source_location = SourceLocation::new("other.hpp", 42);
+    for result in validate_callable_pair(
+        vec![original.clone()],
+        vec![original, same_at_other_location],
+    ) {
+        assert!(result.is_empty(), "{:?}", result.failures);
+    }
+}
+
+#[test]
+fn absent_metadata_requires_complete_types_in_all_seven_type_mismatch_scenarios() {
     let assert_single_type_mismatch = |result: &ValidationResult, field: &str| {
         assert_eq!(result.failures.len(), 1, "{field}: {:?}", result.failures);
         let message = &result.failures[0];
@@ -1401,6 +2031,7 @@ fn complete_types_are_required_in_all_seven_type_mismatch_scenarios() {
             let alias = |data_type: &str| TypeAlias {
                 alias: "Storage".to_string(),
                 original_type: data_type.to_string(),
+                template_instantiation: None,
                 source_location: SourceLocation::new("design.puml", 7),
             };
             design.type_aliases = vec![alias(design_type)];
@@ -1521,6 +2152,7 @@ fn literal_types_are_preserved_in_signatures_and_validation_diagnostics() {
     design_entity.type_aliases = vec![TypeAlias {
         alias: "Value".to_string(),
         original_type: design.to_string(),
+        template_instantiation: None,
         source_location: SourceLocation::new("design.puml", 7),
     }];
     design_entity.variables = vec![variable("value", design)];

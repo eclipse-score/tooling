@@ -444,7 +444,7 @@ substitution.
 | `template<template<typename> class C> Owner` | `template<template<typename U> class C> Owner` | Inner template-template lists also allow trailing omission |
 | `template<template<typename T> class C> Owner` | `template<template<int N> class C> Owner` | Nested template parameter kind mismatch |
 | `template<template<typename> class C> Owner` | `template<typename C> Owner` | Template-template and type parameters do not match |
-| `Map<K, V>` | `Map<K, V, Compare>` | Type mismatch: declaration-list omission does not omit template actual arguments |
+| `Map<K, V>` | `Map<K, V, Compare>` | Compatible type prefix only with known template metadata on both sides; otherwise type mismatch |
 
 The `template<...> f(...)` notation above describes declaration metadata, not
 template call arguments; return types and parameter names are omitted for brevity.
@@ -505,11 +505,13 @@ Before comparing types, the validator applies limited normalization.
 The last row accounts for a difference between the class diagram and
 implementation parser UIDs: dots used as namespace separators are converted to
 `::` before comparison. This applies to type names, class/entity IDs, and
-relationship source/target identifiers alike. cv-qualifiers such as `const`
+relationship source/target identifiers alike. For full-string comparisons,
+cv-qualifiers such as `const`
 and `volatile`, and the pointer/reference decorators `*`/`&`, are preserved
 (only the spacing around them is normalized). The `uint8_t* const` row
 accounts for the implementation parser printing a const pointer as
 `uint8_t *const`, which is compared against the design form `uint8_t* const`.
+Known template metadata preserves the same outer cv/pointer/reference structure.
 
 #### Top-level `const` on parameters
 
@@ -526,22 +528,59 @@ it is ignored when comparing method and free function parameter types. Low-level
 | `const int*` | `int*` | mismatch |
 | `const int&` | `int&` | mismatch |
 
-Top-level `const` is not ignored for return types, variable data types, or
-type alias original types; those are compared as written. `volatile` is not
-supported by this rule.
+In full-string comparisons, top-level `const` is not ignored for return types,
+variable data types, or type alias original types; those are compared as written.
+`volatile` is not supported by this parameter-normalization rule. When both types
+have known template metadata, the same parameter-normalization rule applies.
 
 The class diagram reader already rewrites `::` to `.` in class/entity IDs,
 enclosing namespace IDs, and relationship endpoints of both inputs, so
 sequence validators and this validator compare IDs in the same form. Type
 names are read as written and normalized only here.
 
-All recorded types require **complete normalized equality**, including nested
-template arguments and qualified owner segments. Declaration-list omission does
-not permit omission inside types: `Map<K, V>` does not match `Map<K, V, C>`, even
-with defaults; bare `Map` and `Map<>` are not wildcards. Missing types match only
-missing types. No alias expansion, default-argument insertion, or template
-substitution is performed; **Specialization Interface Matching** does not relax
-member type checks.
+When **both inputs provide known template-instantiation metadata**, the outermost template
+actual-argument list may be a **nonempty positional prefix** of the implementation
+list: `Map<K, V>` matches `Map<K, V, C>`. Defaults are neither required nor inferred.
+No proof that omitted arguments originated from defaults is needed. Metadata stores
+the template name, complete argument strings, and optional flat outer decorators.
+The template name must match strictly after the normalization above. Outer
+`const`, `volatile`, pointer levels, lvalue-reference and rvalue-reference
+decorators **must match**, including cv attachment at each layer (cv order within
+a layer is canonicalized). `Map<K>&` matches `Map<K, V>&`, but bare `Map<K>`
+does not match `const Map<K, V>&`; neither `&` versus `*` nor `&` versus `&&`
+matches. Only parameter by-value top-level `const` and top-level pointer `const`
+are ignored, as above. Return types, fields and aliases retain all outer cv.
+
+> **WARNING: NESTED TEMPLATE ACTUAL OMISSION IS NOT SUPPORTED.**
+> Explicit nested actuals are full strings, never recursively prefix-matched.
+
+Every explicitly listed argument is compared as a **complete normalized string**,
+without splitting or parsing nested lists. Inner qualifiers and pointer/reference
+modifiers remain strict: `Map<const K>` does not match `Map<K, V>`.
+There is no nested prefix relaxation: `Outer<Map<K>>` matches
+`Outer<Map<K>, Policy>`, but not `Outer<Map<K, V>, Policy>`. Bare `Map` and `Map<>`
+are not wildcards, and the design cannot contain more actuals than the
+implementation. Empty lists match only empty lists.
+
+This policy applies uniformly to alias original types, member-variable types,
+method/free-function return types, and parameter types, including overload
+candidate selection and final field checks. It is directional (design to
+implementation), not an equality relation. Callable deduplication therefore uses
+exact field and metadata equality (ignoring source location), never prefix matching;
+declarations with different or absent metadata remain distinct. An exact type
+signature has no priority over another compatible prefix candidate, and return
+types do not disambiguate overloads.
+
+If either metadata value or its outer-decorator metadata is absent (including
+legacy serialized inputs and unsupported type syntax), types require
+**complete normalized string equality**; the validator does not parse display
+strings to recover a prefix. Parameter comparisons still ignore top-level `const`
+as described above. Otherwise, this retains outer modifiers and full equality for
+non-template types: `const K&` does not match `K&`. Literal-bearing strings always
+require exact string equality, even if metadata is present. Missing type strings match only missing
+type strings. No alias expansion, default-argument insertion, or template
+substitution is performed. Declaration template-parameter rules are unchanged;
+**Specialization Interface Matching** does not otherwise relax member type checks.
 
 ## Failure Cases
 
@@ -561,7 +600,7 @@ member type checks.
 | Method template parameter mismatch | Template Parameter Consistency |
 | Ambiguous member/free-function overload assignment | Overload Group Matching |
 | Multiple designs contend for too few compatible implementations | Overload Group Matching |
-| Complete normalized type differs, including missing or different template actual arguments | Type Normalization |
+| Incompatible template metadata, strict argument-string mismatch, or unequal complete types when metadata is absent | Type Normalization |
 | Missing enum literal | Enum Literal Consistency |
 | Enum literal data mismatch | Enum Literal Consistency |
 | Missing relationship | Relationship Consistency |

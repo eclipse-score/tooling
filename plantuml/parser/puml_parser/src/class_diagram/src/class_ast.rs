@@ -10,7 +10,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 // *******************************************************************************
-pub use class_diagram::TemplateParameter;
+pub use class_diagram::{TemplateInstantiation, TemplateParameter};
 pub use parser_core::common_ast::Arrow;
 use serde::{Deserialize, Serialize};
 use source_location::SourceLocation;
@@ -80,6 +80,8 @@ pub struct Relationship {
 pub struct Param {
     pub name: Option<String>,
     pub param_type: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub template_instantiation: Option<TemplateInstantiation>,
     /// C-style variadic parameter represented by a standalone `...`.
     #[serde(default, skip_serializing_if = "is_false")]
     pub is_c_variadic: bool,
@@ -93,6 +95,8 @@ pub struct Attribute {
     pub visibility: Visibility,
     pub name: String,
     pub r#type: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub template_instantiation: Option<TemplateInstantiation>,
     pub modifiers: Vec<String>,
     pub source_location: SourceLocation,
 }
@@ -102,6 +106,7 @@ impl Default for Attribute {
             visibility: Visibility::Public,
             name: String::new(),
             r#type: None,
+            template_instantiation: None,
             modifiers: Vec::new(),
             source_location: SourceLocation::default(),
         }
@@ -112,6 +117,8 @@ impl Default for Attribute {
 pub struct TypeAlias {
     pub alias: String,
     pub original_type: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub template_instantiation: Option<TemplateInstantiation>,
     pub source_location: SourceLocation,
 }
 
@@ -122,6 +129,8 @@ pub struct Method {
     pub template_parameters: Option<Vec<TemplateParameter>>,
     pub params: Vec<Param>,
     pub r#type: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub return_template_instantiation: Option<TemplateInstantiation>,
     pub modifiers: Vec<String>,
     #[serde(default, skip_serializing_if = "is_false")]
     pub is_friend: bool,
@@ -140,6 +149,7 @@ impl Default for Method {
             template_parameters: None,
             params: Vec::new(),
             r#type: None,
+            return_template_instantiation: None,
             modifiers: Vec::new(),
             is_friend: false,
             source_location: SourceLocation::default(),

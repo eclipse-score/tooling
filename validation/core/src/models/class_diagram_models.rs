@@ -371,6 +371,7 @@ mod tests {
         Method {
             name: name.to_string(),
             return_type: None,
+            return_template_instantiation: None,
             source_location: SourceLocation::new("test.puml", 1),
             visibility: Visibility::Public,
             parameters: Vec::new(),

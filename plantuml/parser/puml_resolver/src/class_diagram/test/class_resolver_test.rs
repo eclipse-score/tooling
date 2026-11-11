@@ -25,6 +25,47 @@ use resolver_traits::DiagramResolver;
 use test_framework::{run_case, DefaultExpectationChecker, DiagramProcessor, ResolverGroupRunner};
 
 // ===== Class Resolver adapter DiagramProcessor =====
+#[test]
+fn outer_decorator_layers_survive_resolution_with_canonical_cv_order() {
+    use class_diagram::TypeDecorator::{
+        Const, LValueReference, Pointer, RValueReference, Volatile,
+    };
+    let input = "@startuml decorators\nclass Consumer {\n\
+        +a: volatile const Map<int>* volatile const*\n\
+        +b: const volatile Map<int>* const volatile*\n\
+        +c: Map<int>&\n\
+        +d: Map<int>&&\n}\n@enduml";
+    let parsed = PumlClassParser
+        .parse_file(
+            &Rc::new(PathBuf::from("decorators.puml")),
+            input,
+            LogLevel::Error,
+        )
+        .unwrap();
+    let resolved = ClassResolver::new().resolve(&parsed).unwrap();
+    let actual: Vec<_> = resolved.entities[0]
+        .variables
+        .iter()
+        .map(|field| {
+            field
+                .template_instantiation
+                .as_ref()
+                .unwrap()
+                .outer_decorators
+                .clone()
+        })
+        .collect();
+    assert_eq!(
+        actual,
+        vec![
+            Some(vec![Const, Volatile, Pointer, Const, Volatile, Pointer]),
+            Some(vec![Const, Volatile, Pointer, Const, Volatile, Pointer]),
+            Some(vec![LValueReference]),
+            Some(vec![RValueReference]),
+        ]
+    );
+}
+
 struct ClassResolverRunner;
 impl DiagramProcessor for ClassResolverRunner {
     type Output = ClassDiagram;

@@ -67,6 +67,14 @@
                 {
                     "name": "store_",
                     "data_type": "std::unordered_map<std::string, std::string>",
+                    "template_instantiation": {
+                        "name": "std::unordered_map",
+                        "arguments": [
+                            "std::string",
+                            "std::string"
+                        ],
+                        "outer_decorators": []
+                    },
                     "is_static": false,
                     "visibility": "public",
                     "source_location": {

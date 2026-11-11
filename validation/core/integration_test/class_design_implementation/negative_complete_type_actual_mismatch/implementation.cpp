@@ -16,7 +16,7 @@ template <typename K, typename V, typename C, typename A>
 struct Map {};
 
 struct Consumer {
-    // The extra function parameter is allowed; the extra return-type actuals are not.
-    const complete::Map<int, float, char, long>& Read(int mode, int attempts);
+    // The extra function parameter and outer actuals are allowed; nested actuals must match.
+    const complete::Map<complete::Map<int, float, char, long>, float, char, long>& Read(int mode, int attempts);
 };
 }  // namespace complete

@@ -14,10 +14,10 @@
 @startuml negative_complete_type_actual_mismatch
 
 namespace complete {
-    ' Omitting trailing function parameters must not relax the complete return type.
+    ' Omitting trailing function parameters must not relax explicit nested actuals.
     ' Other type-mismatch scenarios are covered by focused validator unit tests.
     struct Consumer {
-        + Read(mode: int) : const complete::Map<int, float>&
+        + Read(mode: int) : const complete::Map<complete::Map<int, float>, float>&
     }
 }
 

@@ -84,7 +84,9 @@ fn extend_unique<T: PartialEq>(existing: &mut Vec<T>, incoming: Vec<T>) {
 #[cfg(test)]
 mod tests {
     use super::EntityMapExt;
-    use class_diagram::{EntityType, Method, SimpleEntity, SourceLocation, Visibility};
+    use class_diagram::{
+        EntityType, Method, SimpleEntity, SourceLocation, TemplateInstantiation, Visibility,
+    };
     use std::collections::BTreeMap;
 
     #[test]
@@ -99,7 +101,12 @@ mod tests {
                 entity_type: EntityType::Class,
                 methods: vec![Method {
                     name: "compute".to_string(),
-                    return_type: Some("int".to_string()),
+                    return_type: Some("Box<int>".to_string()),
+                    return_template_instantiation: Some(TemplateInstantiation {
+                        name: "Box".to_string(),
+                        arguments: vec!["int".to_string()],
+                        outer_decorators: Some(vec![]),
+                    }),
                     visibility: Visibility::Public,
                     source_location: SourceLocation::new("first.h", 10),
                     ..Default::default()
@@ -126,6 +133,14 @@ mod tests {
 
         assert_eq!(widget.methods.len(), 1);
         assert_eq!(widget.methods[0].name, "compute");
+        assert_eq!(
+            widget.methods[0].return_template_instantiation,
+            Some(TemplateInstantiation {
+                name: "Box".to_string(),
+                arguments: vec!["int".to_string()],
+                outer_decorators: Some(vec![]),
+            })
+        );
         assert_eq!(
             widget.methods[0].source_location,
             SourceLocation::new("first.h", 10)
@@ -158,7 +173,12 @@ mod tests {
                 entity_type: EntityType::Class,
                 methods: vec![Method {
                     name: "compute".to_string(),
-                    return_type: Some("int".to_string()),
+                    return_type: Some("Box<int>".to_string()),
+                    return_template_instantiation: Some(TemplateInstantiation {
+                        name: "Box".to_string(),
+                        arguments: vec!["int".to_string()],
+                        outer_decorators: Some(vec![]),
+                    }),
                     visibility: Visibility::Public,
                     source_location: SourceLocation::new("second.h", 10),
                     ..Default::default()
@@ -173,6 +193,14 @@ mod tests {
 
         assert_eq!(widget.methods.len(), 1);
         assert_eq!(widget.methods[0].name, "compute");
+        assert_eq!(
+            widget.methods[0].return_template_instantiation,
+            Some(TemplateInstantiation {
+                name: "Box".to_string(),
+                arguments: vec!["int".to_string()],
+                outer_decorators: Some(vec![]),
+            })
+        );
         assert_eq!(
             widget.methods[0].source_location,
             SourceLocation::new("second.h", 10)

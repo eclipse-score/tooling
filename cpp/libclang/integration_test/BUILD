@@ -28,6 +28,11 @@ rust_library(
     ],
 )
 
+rust_test(
+    name = "test_framework_unit_tests",
+    crate = ":libclang_test_framework",
+)
+
 cc_binary(
     name = "simple_sequence",
     srcs = ["simple_sequence.cpp"],

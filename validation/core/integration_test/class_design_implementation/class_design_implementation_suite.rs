@@ -78,6 +78,21 @@ fn negative_complete_type_actual_mismatch() {
 }
 
 #[test]
+fn positive_default_template_actual_omission() {
+    assert_case("positive_default_template_actual_omission");
+}
+
+#[test]
+fn positive_structured_template_actual_omission() {
+    assert_case("positive_structured_template_actual_omission");
+}
+
+#[test]
+fn negative_unsupported_template_actual_mismatch() {
+    assert_case("negative_unsupported_template_actual_mismatch");
+}
+
+#[test]
 fn negative_parameter_prefix_matches_multiple_implementation_overloads() {
     assert_case("negative_parameter_prefix_matches_multiple_implementation_overloads");
 }
