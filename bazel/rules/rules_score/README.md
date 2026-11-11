@@ -133,6 +133,12 @@ passed as is. `stkh_req` and `aou_req` belong to the platform and are not
 filtered. All kinds share one conversion configuration
 (`lobster/config/lobster_sphinx_needs.yaml`).
 
+The way back: `dependable_element` writes `<name>_needs.json` with one
+`testcase` Need per test case of its LOBSTER report (`lobster_report_to_needs`,
+format of the score_docs_as_code test.xml parser), for
+`docs(dependable_elements = [...])` of score_docs_as_code. With `docs = False`
+the element builds no own Sphinx HTML documentation.
+
 ---
 
 ## `architectural_design`

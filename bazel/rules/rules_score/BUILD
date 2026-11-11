@@ -127,6 +127,15 @@ py_binary(
     ],
 )
 
+# Exports the test cases of a dependable element's LOBSTER report as Sphinx-Needs testcase Needs
+py_binary(
+    name = "lobster_report_to_needs",
+    srcs = ["src/lobster_report_to_needs.py"],
+    imports = ["src"],
+    main = "src/lobster_report_to_needs.py",
+    visibility = ["//visibility:public"],
+)
+
 # Merges lobster files, collapsing the same item arriving via several paths
 py_binary(
     name = "merge_lobster_items",
