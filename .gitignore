@@ -3,7 +3,8 @@
 # SPDX-License-Identifier: Apache-2.0
 
 bazel-*
-MODULE.bazel.lock
+# Only the root lock file is tracked; nested example/test modules are not.
+/*/**/MODULE.bazel.lock
 external
 .vscode/
 .clwb/
