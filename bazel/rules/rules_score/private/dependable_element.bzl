@@ -1820,13 +1820,18 @@ def _dependable_element_index_impl(ctx):
         rst_args.add(lobster_report_file.path)
         rst_args.add_all(["--out-dir", lobster_rst_dir.path])
         rst_args.add_all(["--source-root", source_root])
+        graphviz_env = {}
+        graphviz_tools = []
+        if ctx.attr.graphviz:
+            graphviz_env = {"GRAPHVIZ_DOT": ctx.executable.graphviz.path}
+            graphviz_tools = [ctx.attr.graphviz.files_to_run]
         ctx.actions.run(
             executable = ctx.executable._lobster_rst_report,
             inputs = [lobster_report_file],
             outputs = [lobster_rst_dir],
             arguments = [rst_args],
-            env = {"GRAPHVIZ_DOT": ctx.executable._graphviz.path},
-            tools = [ctx.attr._graphviz.files_to_run],
+            env = graphviz_env,
+            tools = graphviz_tools,
             progress_message = "lobster-rst-report (pages) {}".format(ctx.label.name),
         )
 
@@ -1980,11 +1985,10 @@ def _dependable_element_index_attrs():
             cfg = "exec",
             doc = "Lobster RST report tool for generating the multi-page Sphinx traceability report.",
         ),
-        "_graphviz": attr.label(
-            default = Label("//third_party/docs_runtime:dot"),
+        "graphviz": attr.label(
             executable = True,
             cfg = "exec",
-            doc = "Hermetic Graphviz dot passed as GRAPHVIZ_DOT to lobster_rst_report so the tracing-policy diagram is rendered without a host-installed dot.",
+            doc = "Hermetic Graphviz dot passed as GRAPHVIZ_DOT to lobster_rst_report so the tracing-policy diagram is rendered without a host-installed dot. Unset with docs = False, which avoids fetching the docs_runtime sysroot.",
         ),
         "_aou_forwarding_tool": attr.label(
             default = Label("//bazel/rules/rules_score:aou_forwarding_to_lobster"),
@@ -2264,9 +2268,10 @@ def dependable_element(
             land outside the embedding build's source directory and be
             unreachable.
         docs: If False, no Sphinx HTML documentation (``<name>_doc``,
-            ``<name>.serve``) is built; the element is documented by another
-            Sphinx build, which imports ``<name>_needs.json``. Elements with
-            ``docs = False`` cannot be ``deps`` of an element with docs.
+            ``<name>.serve``) is built and Graphviz (docs_runtime) is not
+            fetched; the element is documented by another Sphinx build, which
+            imports ``<name>_needs.json``. Elements with ``docs = False``
+            cannot be ``deps`` of an element with docs.
 
     Generated Targets:
         <name>_index: Generates index.rst and copies artifacts. Also the actual
@@ -2309,6 +2314,7 @@ def dependable_element(
         integrity_level = integrity_level,
         maturity = maturity,
         generate_html_report = generate_html_report,
+        graphviz = Label("//third_party/docs_runtime:dot") if docs else None,
         testonly = testonly,
         **kwargs
     )
