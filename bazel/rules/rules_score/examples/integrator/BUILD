@@ -54,7 +54,7 @@ architectural_design(
 
 unit(
     name = "integrator_unit",
-    scope = ["@seooc//:sample_library"],
+    scope_targets = ["@seooc//:sample_library"],
     tests = [],
     unit_design = [],
     implementation = [":integrator_lib"],

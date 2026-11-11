@@ -26,6 +26,7 @@ load("@rules_rust//rust:defs.bzl", "rust_common")
 load("//bazel/rules/rules_score:providers.bzl", "CcDependencyInfo", "CertifiedScope", "SphinxSourcesInfo", "TestSpecificationInfo", "UnitDesignInfo", "UnitInfo")
 load("//cpp/libclang:cpp_parser.bzl", "cpp_parser_action_internal_attrs", "cpp_parser_action_toolchains", "cpp_parser_target_aspects", "has_cpp_parser_inputs", "run_cpp_parser_action")
 load(":cc_dependency_aspect.bzl", "cc_dependencies_aspect")
+load(":certified_scope.bzl", "package_scope_label")
 load(":validation.bzl", "PROFILES", "VALIDATION_ATTRS", "run_validation")
 load(":verbosity.bzl", "VERBOSITY_ATTR", "get_log_level")
 
@@ -142,7 +143,8 @@ def _unit_impl(ctx):
         transitive = [design_depset],
     )
     certified_scopes = [impl.label for impl in ctx.attr.implementation]
-    certified_scopes.extend([Label(scope) for scope in ctx.attr.scope])
+    certified_scopes.extend([target.label for target in ctx.attr.scope_targets])
+    certified_scopes.extend([Label(scope) for scope in ctx.attr.scope_labels])
 
     return [
         DefaultInfo(files = all_files),
@@ -194,9 +196,14 @@ _unit_attrs = {
         aspects = [cc_dependencies_aspect] + cpp_parser_target_aspects(),
         doc = "Implementation targets (cc_library, cc_binary, rust_library, rust_binary, etc.).",
     ),
-    "scope": attr.string_list(
+    "scope_targets": attr.label_list(
         default = [],
-        doc = "Additional not explicitly named targets which are needed for the unit implementation",
+        providers = [[CcInfo], [rust_common.crate_info]],
+        doc = "Exact targets not named in implementation but needed by the unit.",
+    ),
+    "scope_labels": attr.string_list(
+        default = [],
+        doc = "Canonical label strings (targets or :__pkg__ / :__subpackages__) certified without becoming dependencies, set by the unit macro.",
     ),
     "tests": attr.label_list(
         default = [],
@@ -259,6 +266,8 @@ def unit(
         tests,
         test_specs = [],
         scope = [],
+        scope_targets = [],
+        scope_packages = [],
         design_name = None,
         testonly = True,
         **kwargs):
@@ -276,8 +285,17 @@ def unit(
             unit's internal structure and behavior.
         implementation: List of labels to Bazel targets representing the actual
             implementation (cc_library, cc_binary, rust_library, rust_binary, etc.).
-        scope: Optional list of additional targets needed for the unit implementation
-            but not explicitly named in the implementation list. Default is empty list.
+        scope: Deprecated; use ``scope_targets`` / ``scope_packages``. Label
+            strings (exact targets or ``//pkg:__pkg__`` / ``//pkg:__subpackages__``)
+            that are certified without being resolved as dependencies. Will be
+            removed in the next major release.
+        scope_targets: Optional list of exact targets needed for the unit
+            implementation but not named in ``implementation``. They are resolved
+            as dependencies of the unit (must exist, be visible to it and provide
+            CcInfo or a Rust crate); aliases resolve to their actual target.
+        scope_packages: Optional package selectors: ``//pkg`` (one package) or
+            ``//pkg/...`` (package and subpackages), optionally prefixed with
+            ``@repo``; ``//`` is the root package, ``//...`` the whole repository.
         tests: List of labels to Bazel test targets (cc_test, rust_test, etc.)
             that verify the unit implementation.
         test_specs: Optional list of labels to test_specification targets. A test
@@ -312,14 +330,26 @@ def unit(
         )
         ```
     """
+    scope_labels = (
+        [_canonical_scope_label(entry, "scope", name) for entry in scope] +
+        [_canonical_scope_label(package_scope_label(selector), "scope_packages", name) for selector in scope_packages]
+    )
     _unit(
         name = name,
         unit_design = unit_design,
         implementation = implementation,
-        scope = [str(native.package_relative_label(scope_entry)) for scope_entry in scope],
+        scope_targets = scope_targets,
+        scope_labels = scope_labels,
         tests = tests,
         test_specs = {spec: _test_spec_reference(spec) for spec in test_specs},
         design_name = design_name or "",
         testonly = testonly,
         **kwargs
     )
+
+def _canonical_scope_label(entry, attribute, unit_name):
+    """Resolve a scope entry in the calling repository's context to a canonical label string."""
+    canonical = str(native.package_relative_label(entry))
+    if "[unknown repo" in canonical:
+        fail("unit '{}': '{}' entry '{}' refers to a repository that is not visible from this module.".format(unit_name, attribute, entry))
+    return canonical

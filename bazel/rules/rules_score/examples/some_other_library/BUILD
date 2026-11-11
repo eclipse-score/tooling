@@ -87,7 +87,7 @@ _VARIANT = select({
 
 unit(
     name = "abc",
-    scope = ["//:__pkg__"],
+    scope_packages = ["//"],
     tests = [],
     unit_design = [],
     implementation = [

@@ -17,9 +17,7 @@ load(
 
 unit(
     name = "unit_2",
-    #    scope = ["//bazel/rules/rules_score/examples/seooc/unit_2:__pkg__"],
-    #    scope = ["//bazel/rules/rules_score/examples/seooc:__subpackages__"],
-    scope = ["//unit_2:__subpackages__"],
+    scope_packages = ["//unit_2/..."],
     tests = [
         ":unit_2_test",
     ],
