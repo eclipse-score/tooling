@@ -738,6 +738,7 @@ impl ClassResolver {
                 name: method.name.clone(),
                 enclosing_namespace_id: enclosing_namespace_id.clone(),
                 return_type: method.r#type.clone(),
+                return_template_instantiation: method.return_template_instantiation.clone(),
                 parameters: method.params.iter().map(Self::convert_param).collect(),
                 template_parameters: Self::convert_template_parameters_with_pack_expansions(
                     &method.template_parameters,
@@ -805,6 +806,7 @@ impl ClassResolver {
         TypeAlias {
             alias: type_alias.alias.clone(),
             original_type: type_alias.original_type.clone(),
+            template_instantiation: type_alias.template_instantiation.clone(),
             source_location: type_alias.source_location.clone(),
         }
     }
@@ -819,6 +821,7 @@ impl ClassResolver {
         MemberVariable {
             name: attr.name.clone(),
             data_type: attr.r#type.clone(),
+            template_instantiation: attr.template_instantiation.clone(),
             visibility: Self::map_visibility(attr.visibility.clone()),
             is_static: has_modifier(&attr.modifiers, "static"),
             source_location: attr.source_location.clone(),
@@ -845,6 +848,7 @@ impl ClassResolver {
         Method {
             name: m.name.clone(),
             return_type: m.r#type.clone(),
+            return_template_instantiation: m.return_template_instantiation.clone(),
             visibility: Self::map_visibility(m.visibility.clone()),
             parameters: m.params.iter().map(Self::convert_param).collect(),
             template_parameters: Self::convert_template_parameters_with_pack_expansions(
@@ -937,6 +941,7 @@ impl ClassResolver {
         FunctionArgument {
             name: param.name.clone().unwrap_or_default(),
             param_type: param.param_type.clone(),
+            template_instantiation: param.template_instantiation.clone(),
             is_variadic: param.is_c_variadic,
             is_pack_expansion: param.is_pack_expansion,
         }

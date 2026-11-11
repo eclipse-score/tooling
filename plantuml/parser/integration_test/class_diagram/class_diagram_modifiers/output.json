@@ -99,6 +99,13 @@
           {
             "name": "Func",
             "return_type": "std::Result<Uptr>",
+            "return_template_instantiation": {
+              "name": "std::Result",
+              "arguments": [
+                "Uptr"
+              ],
+              "outer_decorators": []
+            },
             "visibility": "public",
             "parameters": [
               {
@@ -109,6 +116,13 @@
               {
                 "name": "json_parser",
                 "param_type": "std::shared_ptr<std::uint32_t>",
+                "template_instantiation": {
+                  "name": "std::shared_ptr",
+                  "arguments": [
+                    "std::uint32_t"
+                  ],
+                  "outer_decorators": []
+                },
                 "is_variadic": false
               }
             ],

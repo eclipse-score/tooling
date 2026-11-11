@@ -13,7 +13,8 @@
 use crate::class_ast::{
     Arrow, Attribute, ClassLikeDef, ClassLikeKind, ClassUmlFile, ClassUmlTopLevel,
     DeclarationCommon, EntityDef, EnumDef, EnumItem, EnumValue, Method, Name, Namespace, Package,
-    Param, Relationship, TemplateParameter, TypeAlias, TypeDefinition, Visibility,
+    Param, Relationship, TemplateInstantiation, TemplateParameter, TypeAlias, TypeDefinition,
+    Visibility,
 };
 use crate::source_map::{
     normalize_multiline_member_signatures, remap_syntax_error_to_original_source, NormalizedContent,
@@ -127,6 +128,90 @@ struct ClassParseSession<'a> {
     ignored_objects: IgnoredObjectRegistry,
     ignored_notes: IgnoredNoteRegistry,
     relationships: Vec<Relationship>,
+}
+
+/// Extract only the outer template and complete explicit argument spans.
+/// Syntactic names are not proof of C++ types; Clang must confirm all arguments.
+fn parse_template_instantiation(raw: &str) -> Option<TemplateInstantiation> {
+    use class_diagram::TypeDecorator;
+    // Check every nested argument: unsupported pairs invalidate the whole tree.
+    // qualified_type is atomic, and the permissive UML identifier accepts digits.
+    fn supported_type(pair: pest::iterators::Pair<Rule>) -> bool {
+        match pair.as_rule() {
+            Rule::qualified_type => pair
+                .as_str()
+                .split([':', '.'])
+                .filter(|name| !name.is_empty())
+                .all(|name| {
+                    name.starts_with(|c: char| c.is_ascii_alphabetic() || c == '_')
+                        && !matches!(
+                            name,
+                            "true" | "false" | "nullptr" | "auto" | "typename" | "template"
+                        )
+                }),
+            Rule::builtin_type
+            | Rule::const_qualifier
+            | Rule::volatile_prefix
+            | Rule::pointer_suffix
+            | Rule::reference_suffix => true,
+            Rule::type_expr | Rule::generic_type_args | Rule::type_arg | Rule::type_suffix => {
+                pair.into_inner().all(supported_type)
+            }
+            _ => false,
+        }
+    }
+
+    let root = PlantUmlCommonParser::parse(Rule::type_metadata_exact, raw)
+        .ok()?
+        .next()?
+        .into_inner()
+        .next()?;
+    if !supported_type(root.clone()) {
+        return None;
+    }
+    // Only direct children describe the outer template; nested templates do not.
+    let name = root
+        .clone()
+        .into_inner()
+        .find(|part| part.as_rule() == Rule::qualified_type)?
+        .as_str()
+        .to_string();
+    let arguments = root
+        .clone()
+        .into_inner()
+        .find(|part| part.as_rule() == Rule::generic_type_args)?
+        .into_inner()
+        .map(|argument| argument.as_span().as_str().trim().to_string())
+        .collect();
+    let mut decorators = Vec::new();
+    // Prefix cv attaches to the template itself; suffix cv attaches to the
+    // preceding pointer layer. Inspect direct Pest children, never actual text.
+    for part in root.into_inner() {
+        let parts = if part.as_rule() == Rule::type_suffix {
+            part.into_inner().collect::<Vec<_>>()
+        } else {
+            vec![part]
+        };
+        for part in parts {
+            match part.as_rule() {
+                Rule::const_qualifier => decorators.push(TypeDecorator::Const),
+                Rule::volatile_prefix => decorators.push(TypeDecorator::Volatile),
+                Rule::pointer_suffix => decorators.push(TypeDecorator::Pointer),
+                Rule::reference_suffix => decorators.push(if part.as_str() == "&&" {
+                    TypeDecorator::RValueReference
+                } else {
+                    TypeDecorator::LValueReference
+                }),
+                _ => {}
+            }
+        }
+    }
+    TypeDecorator::canonicalize(&mut decorators);
+    Some(TemplateInstantiation {
+        name,
+        arguments,
+        outer_decorators: Some(decorators),
+    })
 }
 
 impl ClassParseSession<'_> {
@@ -345,6 +430,7 @@ impl ClassParseSession<'_> {
 
         attr.visibility = Self::parse_visibility(vis);
         attr.name = name.unwrap_or_default();
+        attr.template_instantiation = typ.as_deref().and_then(parse_template_instantiation);
         attr.r#type = typ;
         Ok(attr)
     }
@@ -370,6 +456,9 @@ impl ClassParseSession<'_> {
 
         TypeAlias {
             alias: alias.unwrap_or_default(),
+            template_instantiation: original_type
+                .as_deref()
+                .and_then(parse_template_instantiation),
             original_type: original_type.unwrap_or_default(),
             source_location,
         }
@@ -423,7 +512,18 @@ impl ClassParseSession<'_> {
                 return true;
             }
 
+            // Multiword builtin spellings are recognized by the grammar, not
+            // by tokenizing the string (e.g. `unsigned long long int`).
+            if PlantUmlCommonParser::parse(Rule::builtin_type, trimmed)
+                .ok()
+                .and_then(|mut pairs| pairs.next())
+                .is_some_and(|pair| pair.as_span().end() == trimmed.len())
+            {
+                return true;
+            }
+
             if trimmed.starts_with("const ")
+                || trimmed.starts_with("volatile ")
                 || trimmed.contains("::")
                 || trimmed.contains('.')
                 || trimmed.contains('<')
@@ -507,6 +607,7 @@ impl ClassParseSession<'_> {
 
         Param {
             name,
+            template_instantiation: ty.as_deref().and_then(parse_template_instantiation),
             param_type: ty,
             is_c_variadic: false,
             is_pack_expansion,
@@ -552,6 +653,7 @@ impl ClassParseSession<'_> {
                             Rule::c_variadic_param => method.params.push(Param {
                                 name: None,
                                 param_type: None,
+                                template_instantiation: None,
                                 is_c_variadic: true,
                                 is_pack_expansion: false,
                             }),
@@ -582,6 +684,10 @@ impl ClassParseSession<'_> {
         }
         method.visibility = Self::parse_visibility(vis);
         method.name = name.unwrap_or_default();
+        method.return_template_instantiation = method
+            .r#type
+            .as_deref()
+            .and_then(parse_template_instantiation);
 
         method
     }
@@ -1505,6 +1611,11 @@ mod tests {
             ("+ Get() const : Foo* const", "Foo* const", vec!["const"]),
             ("+ Get() const : Foo*", "Foo*", vec!["const"]),
             ("+ Get() : Foo* <<const>>", "Foo*", vec!["<<const>>"]),
+            (
+                "+ Get() : Box<ns::Value>* const",
+                "Box<ns::Value>* const",
+                vec![],
+            ),
         ] {
             let result = parse_single_class_member_file(member).expect(member);
             let ClassUmlTopLevel::Type(TypeDefinition::ClassLikeDef(class_def)) =
@@ -1516,6 +1627,22 @@ mod tests {
             let method = &class_def.members.methods[0];
             assert_eq!(method.r#type.as_deref(), Some(return_type), "{member}");
             assert_eq!(method.modifiers, modifiers, "{member}");
+            let expected_metadata = if return_type == "Box<ns::Value>* const" {
+                Some(TemplateInstantiation {
+                    name: "Box".into(),
+                    arguments: vec!["ns::Value".into()],
+                    outer_decorators: Some(vec![
+                        class_diagram::TypeDecorator::Pointer,
+                        class_diagram::TypeDecorator::Const,
+                    ]),
+                })
+            } else {
+                None
+            };
+            assert_eq!(
+                method.return_template_instantiation, expected_metadata,
+                "{member}"
+            );
         }
     }
 
@@ -1619,6 +1746,19 @@ mod tests {
             &input,
             LogLevel::Info,
         )
+    }
+
+    #[test]
+    fn template_metadata_rejects_unsupported_syntax_as_a_whole() {
+        for raw in [
+            "Box<int> trailing",
+            "Box<9>",
+            "Outer<int, Inner<2>>",
+            "Box<true>",
+            "Outer<Inner<int[3]>>",
+        ] {
+            assert_eq!(parse_template_instantiation(raw), None, "{raw}");
+        }
     }
 
     #[test]

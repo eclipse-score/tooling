@@ -11,6 +11,13 @@
         {
           "name": "values",
           "return_type": "Container<int>",
+          "return_template_instantiation": {
+            "name": "Container",
+            "arguments": [
+              "int"
+            ],
+            "outer_decorators": []
+          },
           "parameters": [],
           "modifiers": [],
           "template_parameters": null,

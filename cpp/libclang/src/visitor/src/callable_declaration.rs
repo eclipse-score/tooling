@@ -12,7 +12,7 @@
 // *******************************************************************************
 
 use clang::{Entity, EntityKind};
-use class_diagram::{FunctionArgument, TemplateParameter};
+use class_diagram::{FunctionArgument, TemplateInstantiation, TemplateParameter};
 use cpp_semantics::ResolvedType;
 
 use crate::context::CallableArgumentKey;
@@ -21,6 +21,7 @@ use crate::types::resolver::{
     declared_argument_display_name, resolve_declared_argument_type, resolve_declared_type,
     resolve_type,
 };
+use crate::types::template_instantiation;
 
 /// Parameter data extracted once from a callable cursor.
 ///
@@ -73,6 +74,7 @@ pub(crate) fn parse_callable_parameters(entity: &Entity) -> ParsedCallableParame
         parameters.push(FunctionArgument {
             name: argument.get_name().unwrap_or_default(),
             param_type: Some(normalize_pack_expansion_type(&raw_param_type)),
+            template_instantiation: resolved_type.as_ref().and_then(template_instantiation),
             is_variadic: false,
             is_pack_expansion,
         });
@@ -94,6 +96,7 @@ pub(crate) fn parse_callable_parameters(entity: &Entity) -> ParsedCallableParame
         parameters.push(FunctionArgument {
             name: String::new(),
             param_type: None,
+            template_instantiation: None,
             is_variadic: true,
             is_pack_expansion: false,
         });
@@ -111,11 +114,17 @@ pub(crate) fn parse_callable_parameters(entity: &Entity) -> ParsedCallableParame
     }
 }
 
-pub(crate) fn parse_callable_return_type(entity: &Entity) -> Option<String> {
-    entity.get_result_type().map(|return_type| {
-        let resolved_type = resolve_declared_type(entity, &return_type);
-        render_type_for_display(&return_type, &resolved_type)
-    })
+pub(crate) fn parse_callable_return(
+    entity: &Entity,
+) -> (Option<String>, Option<TemplateInstantiation>) {
+    let Some(return_type) = entity.get_result_type() else {
+        return (None, None);
+    };
+    let resolved_type = resolve_declared_type(entity, &return_type);
+    (
+        Some(render_type_for_display(&return_type, &resolved_type)),
+        template_instantiation(&resolved_type),
+    )
 }
 
 pub(crate) fn parse_template_parameters(entity: &Entity) -> Option<Vec<TemplateParameter>> {
