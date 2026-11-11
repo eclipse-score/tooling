@@ -53,9 +53,9 @@ ScoreReq.CompReq CompBFromAouD {
     derived_from = [AsilUpstream.AouD@1]
 }
 
-ScoreReq.CompReq CompBFromRootCauseAndFeatD {
-    description = "B from a root cause and feature D; the feature lowers the ASIL."
+ScoreReq.CompReq CompBFromAouBAndFeatD {
+    description = "B from AoU B and feature D; the feature lowers the ASIL."
     safety = ScoreReq.Asil.B
     version = 1
-    derived_from = [AsilUpstream.RootCauseB, AsilValid.FeatDFromD@1]
+    derived_from = [AsilUpstream.AouB@1, AsilValid.FeatDFromD@1]
 }

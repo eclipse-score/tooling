@@ -198,7 +198,6 @@ type CompReq "Component-level requirement allocated to a specific software compo
                 CompReqSourceId[1 .. *]
 }
 
-// RootCause has no ASIL, so a root-cause upstream imposes no constraint.
 checks CompReq {
     (forall upstream in derived_from =>
         not ((upstream.item.safety == Asil.B and safety == Asil.QM) or

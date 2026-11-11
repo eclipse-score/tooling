@@ -36,31 +36,14 @@ ScoreReq.AssumedSystemReq AsrD {
     version = 1
 }
 
-ScoreReq.FailureMode FailureModeB {
-    guidewords = [ScoreReq.Guideword.LossOfFunction]
-    description = "The function is lost."
-    failureeffect = "No response."
-    safety = ScoreReq.Asil.B
-    version = 1
-}
-
-ScoreReq.RootCause RootCauseB {
-    title = "Wrong configuration"
-    diagram = "fixture.puml"
-    line = 1
-    failure_modes = [FailureModeB]
-}
-
 ScoreReq.AoU AouB {
     description = "The user shall provide a correct configuration."
     safety = ScoreReq.Asil.B
     version = 1
-    root_causes = [RootCauseB]
 }
 
 ScoreReq.AoU AouD {
     description = "The user shall provide a correct configuration at ASIL D."
     safety = ScoreReq.Asil.D
     version = 1
-    root_causes = [RootCauseB]
 }

@@ -100,10 +100,3 @@ ScoreReq.CompReq CompBFromAouB {
     version = 1
     derived_from = [AsilUpstream.AouB@1]
 }
-
-ScoreReq.CompReq CompQmFromRootCause {
-    description = "A root cause has no ASIL and imposes no constraint."
-    safety = ScoreReq.Asil.QM
-    version = 1
-    derived_from = [AsilUpstream.RootCauseB]
-}
