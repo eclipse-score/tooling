@@ -125,12 +125,11 @@ lobster_trlc(
 
 lobster_test(
     name = "traceability_test",
-    config = "//bazel/rules/rules_score/lobster/config/qualification:lobster_conf",
+    config = "//bazel/rules/rules_score/lobster/config/qualification:lobster_requirements_conf",
     inputs = [
         ":use_cases_lobster",
         ":potential_errors_lobster",
         ":tool_requirements_lobster",
-        "//bazel/rules/rules_score:rules_score_impl",
     ],
     tags = ["manual"],
 )
@@ -141,12 +140,11 @@ lobster_test(
 
 lobster_report_rst(
     name = "traceability_rst",
-    config = "//bazel/rules/rules_score/lobster/config/qualification:lobster_conf",
+    config = "//bazel/rules/rules_score/lobster/config/qualification:lobster_requirements_conf",
     inputs = [
         ":use_cases_lobster",
         ":potential_errors_lobster",
         ":tool_requirements_lobster",
-        "//bazel/rules/rules_score:rules_score_impl",
     ],
     visibility = ["//bazel/rules/rules_score:__pkg__"],
 )

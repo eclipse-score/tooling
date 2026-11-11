@@ -20,13 +20,18 @@ ISO 26262 principles. The qualification chain is:
 
 .. code-block:: text
 
-   Use Cases → Potential Errors → Tool Requirements → Source Code / Tests
+   Use Cases → Potential Errors → Tool Requirements → Source Code / Tool Tests
 
 Use cases define the goals users achieve with the tool. Potential errors
 describe hypothetical bugs that could impact those use cases. Tool
 requirements specify what the tool shall do to mitigate potential errors,
-and are traced to source code (via lobster-trace tags) and test cases
-(via record properties).
+and are traced to source code (via lobster-trace tags) and tool tests.
+
+Tool tests are the Bazel tests of ``rules_score`` that carry a
+``lobster-tracing=rules_score.<Requirement>`` tag. The ``tool_traceability``
+macro in ``bazel/rules/rules_score/test`` collects them, reports each as a
+test case in ``tool_tests.lobster`` and runs the traceability check
+(``tool_traceability_test``) over the whole chain.
 
 Requirements
 ------------

@@ -20,3 +20,4 @@ conversion-rules:
       - description
     tags:
       - mitigates
+      - derived_from
