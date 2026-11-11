@@ -77,6 +77,9 @@ jobs:
       - name: Run Libclang Parser Tooling tests
         run: |
           bazel test //cpp/libclang/...
+      - name: Run rules_score tests
+        run: |
+          bazel test -- //bazel/rules/rules_score/... -//bazel/rules/rules_score/examples/...
   integration_tests:
     name: integration_tests (${{ matrix.name }})
     runs-on: ubuntu-24.04
@@ -135,6 +138,11 @@ jobs:
           - name: rules_score
             run: |
               cd bazel/rules/rules_score/test
+              bazel test //...
+          - name: minimal_example
+            run: |
+              cd bazel/rules/rules_score/examples/minimal
+              bazel build //...
               bazel test //...
           - name: seooc_example
             run: |
