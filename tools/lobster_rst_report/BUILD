@@ -11,7 +11,7 @@
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
 
-load("@rules_python//python:defs.bzl", "py_binary", "py_library")
+load("@rules_python//python:defs.bzl", "py_binary", "py_library", "py_test")
 
 py_library(
     name = "lobster_rst_report_lib",
@@ -31,4 +31,14 @@ py_binary(
     srcs = ["lobster-rst-report.py"],
     visibility = ["//visibility:public"],
     deps = [":lobster_rst_report_lib"],
+)
+
+py_test(
+    name = "test_rst_report",
+    size = "small",
+    srcs = ["test_rst_report.py"],
+    deps = [
+        ":lobster_rst_report_lib",
+        "@lobster//lobster/common",
+    ],
 )
