@@ -523,6 +523,7 @@ mod tests {
             conversion_target: None,
             return_type: None,
             return_multiplicity: None,
+            return_template_instantiation: None,
             source_location: SourceLocation::new("test.puml", 1),
             visibility: Visibility::Public,
             parameters: Vec::new(),
@@ -911,6 +912,7 @@ mod tests {
         let alias = |original: &str, file: &str| class_diagram::TypeAlias {
             alias: "Id".to_string(),
             original_type: original.to_string(),
+            template_instantiation: None,
             source_location: SourceLocation::new(file, 2),
         };
         let mut a = entity("Unit.Sample", "design_a.puml", 1);

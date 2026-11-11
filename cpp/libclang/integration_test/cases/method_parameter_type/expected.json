@@ -140,7 +140,14 @@
             {
               "is_variadic": false,
               "name": "history",
-              "param_type": "std::vector<int>"
+              "param_type": "std::vector<int>",
+              "template_instantiation": {
+                "name": "std::vector",
+                "arguments": [
+                  "int"
+                ],
+                "outer_decorators": []
+              }
             }
           ],
           "modifiers": [],
@@ -158,7 +165,14 @@
             {
               "is_variadic": false,
               "name": "names",
-              "param_type": "const std::vector<const char *> &"
+              "param_type": "const std::vector<const char *> &",
+              "template_instantiation": {
+                "name": "std::vector",
+                "arguments": [
+                  "const char *"
+                ],
+                "outer_decorators": ["const", "&"]
+              }
             }
           ],
           "modifiers": [],
@@ -176,7 +190,14 @@
             {
               "is_variadic": false,
               "name": "matrix",
-              "param_type": "std::vector<std::vector<int>>"
+              "param_type": "std::vector<std::vector<int>>",
+              "template_instantiation": {
+                "name": "std::vector",
+                "arguments": [
+                  "std::vector<int>"
+                ],
+                "outer_decorators": []
+              }
             }
           ],
           "modifiers": [],
@@ -194,7 +215,14 @@
             {
               "is_variadic": false,
               "name": "matrix",
-              "param_type": "std::vector<std::vector<const char *>>"
+              "param_type": "std::vector<std::vector<const char *>>",
+              "template_instantiation": {
+                "name": "std::vector",
+                "arguments": [
+                  "std::vector<const char *>"
+                ],
+                "outer_decorators": []
+              }
             }
           ],
           "modifiers": [],
@@ -212,7 +240,15 @@
             {
               "is_variadic": false,
               "name": "index",
-              "param_type": "std::map<int, std::vector<const char *>>"
+              "param_type": "std::map<int, std::vector<const char *>>",
+              "template_instantiation": {
+                "name": "std::map",
+                "arguments": [
+                  "int",
+                  "std::vector<const char *>"
+                ],
+                "outer_decorators": []
+              }
             }
           ],
           "modifiers": [],
@@ -230,7 +266,14 @@
             {
               "is_variadic": false,
               "name": "layers",
-              "param_type": "std::vector<const std::vector<int> *>"
+              "param_type": "std::vector<const std::vector<int> *>",
+              "template_instantiation": {
+                "name": "std::vector",
+                "arguments": [
+                  "const std::vector<int> *"
+                ],
+                "outer_decorators": []
+              }
             }
           ],
           "modifiers": [],
@@ -248,7 +291,14 @@
             {
               "is_variadic": false,
               "name": "matrix",
-              "param_type": "std::vector<std::vector<const int *>>"
+              "param_type": "std::vector<std::vector<const int *>>",
+              "template_instantiation": {
+                "name": "std::vector",
+                "arguments": [
+                  "std::vector<const int *>"
+                ],
+                "outer_decorators": []
+              }
             }
           ],
           "modifiers": [],

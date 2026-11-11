@@ -28,6 +28,7 @@ use crate::context::{
 };
 use crate::types::renderer::render_type_for_display;
 use crate::types::resolver::{resolve_declared_type, resolve_type};
+use crate::types::template_instantiation;
 use crate::visitor::AstVisitor;
 
 pub struct ClassVisitor;
@@ -244,10 +245,7 @@ fn parse_type_alias(entity: &Entity) -> Option<TypeAlias> {
         return None;
     };
 
-    let Some(original_type) = entity
-        .get_typedef_underlying_type()
-        .map(|t| render_type_for_display(&t, &resolve_type(&t)))
-    else {
+    let Some(underlying_type) = entity.get_typedef_underlying_type() else {
         log::debug!(
             "skipping type alias '{}': could not determine underlying type",
             alias
@@ -255,9 +253,11 @@ fn parse_type_alias(entity: &Entity) -> Option<TypeAlias> {
         return None;
     };
 
+    let resolved_type = resolve_type(&underlying_type);
     Some(TypeAlias {
         alias,
-        original_type,
+        original_type: render_type_for_display(&underlying_type, &resolved_type),
+        template_instantiation: template_instantiation(&resolved_type),
         source_location: parse_source_location(entity),
     })
 }
@@ -271,6 +271,7 @@ fn parse_variable(
         data_type: entity.get_type().map(|field_type| {
             render_type_for_display(&field_type, &parsed_variable_type.resolved_type)
         }),
+        template_instantiation: template_instantiation(&parsed_variable_type.resolved_type),
         visibility: parse_visibility(entity),
         is_static: entity.get_kind() == EntityKind::VarDecl,
         source_location: parse_source_location(entity),
@@ -409,6 +410,7 @@ mod tests {
             method: Method {
                 name: "compute".to_string(),
                 parameters: vec![],
+                return_template_instantiation: None,
                 ..Default::default()
             },
             method_type: ParsedMethodType {

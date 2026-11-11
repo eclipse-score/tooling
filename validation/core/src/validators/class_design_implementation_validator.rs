@@ -28,7 +28,7 @@ use crate::results::{ErrorBuilder, ErrorCategory, ErrorSection};
 use crate::ValidationResult;
 use class_diagram::{
     ClassTemplateKind, EnumLiteral, FreeFunctionDecl, MemberVariable, Method, MethodModifier,
-    Relationship, SimpleEntity, TemplateParameter, TypeAlias,
+    Relationship, SimpleEntity, TemplateInstantiation, TemplateParameter, TypeAlias,
 };
 use source_location::SourceLocation;
 use std::collections::BTreeMap;
@@ -407,9 +407,11 @@ impl ClassDesignImplementationValidator {
     ) {
         let variable_name = &design_variable.name;
 
-        if !optional_types_match(
+        if !optional_types_with_metadata_match(
             &design_variable.data_type,
             &implementation_variable.data_type,
+            &design_variable.template_instantiation,
+            &implementation_variable.template_instantiation,
         ) {
             self.result.add_failure(Self::format_mismatch(
                 design_entity,
@@ -912,7 +914,7 @@ fn free_function_groups(index: &ClassEntityIndex) -> BTreeMap<String, Vec<&FreeF
     groups
 }
 
-/// Normalize spelling only; preserve list lengths and constraints.
+/// Normalize spelling only; preserve list lengths, metadata presence and constraints.
 fn normalized_free_function(function: &FreeFunctionDecl) -> FreeFunctionDecl {
     let mut normalized = function.clone();
     normalized.source_location = SourceLocation::new("", 0);
@@ -922,6 +924,7 @@ fn normalized_free_function(function: &FreeFunctionDecl) -> FreeFunctionDecl {
         .map(normalize_qualified_name);
     normalize_callable_types(
         &mut normalized.return_type,
+        &mut normalized.return_template_instantiation,
         &mut normalized.parameters,
         &mut normalized.template_parameters,
     );
@@ -1285,9 +1288,11 @@ fn type_alias_map(entity: &SimpleEntity) -> BTreeMap<&str, &TypeAlias> {
 
 fn type_aliases_match(design_alias: &TypeAlias, implementation_alias: &TypeAlias) -> bool {
     design_alias.alias == implementation_alias.alias
-        && comparison_types_match(
+        && types_with_metadata_match(
             &design_alias.original_type,
             &implementation_alias.original_type,
+            &design_alias.template_instantiation,
+            &implementation_alias.template_instantiation,
         )
 }
 
@@ -1304,9 +1309,11 @@ fn member_variables_match(
     implementation_variable: &MemberVariable,
 ) -> bool {
     design_variable.name == implementation_variable.name
-        && optional_types_match(
+        && optional_types_with_metadata_match(
             &design_variable.data_type,
             &implementation_variable.data_type,
+            &design_variable.template_instantiation,
+            &implementation_variable.template_instantiation,
         )
         && design_variable.visibility == implementation_variable.visibility
         && design_variable.is_static == implementation_variable.is_static
@@ -1381,9 +1388,11 @@ fn method_return_types_match(
     let design_is_conversion = conversion_target(design_method).is_some();
     let implementation_is_conversion = conversion_target(implementation_method).is_some();
     if !design_is_conversion && !implementation_is_conversion {
-        return optional_types_match(
+        return optional_types_with_metadata_match(
             &design_method.return_type,
             &implementation_method.return_type,
+            &design_method.return_template_instantiation,
+            &implementation_method.return_template_instantiation,
         );
     }
 
@@ -1536,8 +1545,12 @@ fn parameter_types_match(
             .iter()
             .zip(implementation)
             .all(|(design, implementation)| {
-                optional_parameter_types_match(&design.param_type, &implementation.param_type)
-                    && design.is_variadic == implementation.is_variadic
+                optional_parameter_types_with_metadata_match(
+                    &design.param_type,
+                    &implementation.param_type,
+                    &design.template_instantiation,
+                    &implementation.template_instantiation,
+                ) && design.is_variadic == implementation.is_variadic
                     && design.is_pack_expansion == implementation.is_pack_expansion
             })
 }
@@ -1582,9 +1595,11 @@ fn parameter_differences(
             ));
         }
 
-        if !optional_parameter_types_match(
+        if !optional_parameter_types_with_metadata_match(
             &design_parameter.param_type,
             &implementation_parameter.param_type,
+            &design_parameter.template_instantiation,
+            &implementation_parameter.template_instantiation,
         ) {
             differences.push((
                 ParameterDifference::Type,
@@ -1642,7 +1657,12 @@ fn free_function_field_differences(
     implementation: &FreeFunctionDecl,
 ) -> Vec<FieldDifference> {
     let mut differences = Vec::new();
-    if !optional_types_match(&design.return_type, &implementation.return_type) {
+    if !optional_types_with_metadata_match(
+        &design.return_type,
+        &implementation.return_type,
+        &design.return_template_instantiation,
+        &implementation.return_template_instantiation,
+    ) {
         differences.push(FieldDifference {
             field: "return type".to_string(),
             design: render_optional_type(&design.return_type),
@@ -1717,9 +1737,11 @@ fn free_functions_match(
 ) -> bool {
     normalize_qualified_name(&design_function.qualified_name())
         == normalize_qualified_name(&implementation_function.qualified_name())
-        && optional_types_match(
+        && optional_types_with_metadata_match(
             &design_function.return_type,
             &implementation_function.return_type,
+            &design_function.return_template_instantiation,
+            &implementation_function.return_template_instantiation,
         )
         && parameters_match(
             &design_function.parameters,
@@ -1871,6 +1893,108 @@ fn template_pack_marker(is_pack: bool) -> &'static str {
     }
 }
 
+/// Matching type spellings pass before known metadata allows template prefixes.
+/// Never infer a prefix by parsing display strings, or rewrite literal contents.
+fn optional_types_with_metadata_match(
+    design: &Option<String>,
+    implementation: &Option<String>,
+    design_metadata: &Option<TemplateInstantiation>,
+    implementation_metadata: &Option<TemplateInstantiation>,
+) -> bool {
+    match (design.as_deref(), implementation.as_deref()) {
+        (Some(design), Some(implementation)) => types_with_metadata_match(
+            design,
+            implementation,
+            design_metadata,
+            implementation_metadata,
+        ),
+        _ => optional_types_match(design, implementation),
+    }
+}
+
+fn types_with_metadata_match(
+    design: &str,
+    implementation: &str,
+    design_metadata: &Option<TemplateInstantiation>,
+    implementation_metadata: &Option<TemplateInstantiation>,
+) -> bool {
+    if comparison_types_match(design, implementation) {
+        return true;
+    }
+    if contains_literal(design) || contains_literal(implementation) {
+        return false;
+    }
+    match (design_metadata, implementation_metadata) {
+        (Some(design), Some(implementation))
+            if design.outer_decorators.is_some() && implementation.outer_decorators.is_some() =>
+        {
+            template_instantiations_match(design, implementation)
+        }
+        _ => false,
+    }
+}
+
+/// A nonempty design argument list may omit implementation tails. Explicit
+/// arguments are complete strings, including nested templates and inner qualifiers.
+/// Outer cv/pointer/reference structure must match; nested omission is unsupported.
+fn template_instantiations_match(
+    design: &TemplateInstantiation,
+    implementation: &TemplateInstantiation,
+) -> bool {
+    outer_decorators_match(design, implementation, false)
+        && template_actuals_match(design, implementation)
+}
+
+fn outer_decorators_match(
+    design: &TemplateInstantiation,
+    implementation: &TemplateInstantiation,
+    parameter: bool,
+) -> bool {
+    use class_diagram::TypeDecorator;
+    let normalize = |metadata: &TemplateInstantiation| {
+        metadata.outer_decorators.clone().map(|mut decorators| {
+            TypeDecorator::canonicalize(&mut decorators);
+            if parameter {
+                // Only const at the outermost by-value/pointer layer is ignored.
+                // References and volatile (including top-level volatile) stay strict.
+                let layer = decorators.iter().rposition(|decorator| {
+                    !matches!(decorator, TypeDecorator::Const | TypeDecorator::Volatile)
+                });
+                if layer.is_none()
+                    || layer.is_some_and(|index| decorators[index] == TypeDecorator::Pointer)
+                {
+                    let start = layer.map_or(0, |index| index + 1);
+                    let cv: Vec<_> = decorators
+                        .drain(start..)
+                        .filter(|decorator| *decorator != TypeDecorator::Const)
+                        .collect();
+                    decorators.extend(cv);
+                }
+            }
+            decorators
+        })
+    };
+    match (normalize(design), normalize(implementation)) {
+        (Some(design), Some(implementation)) => design == implementation,
+        _ => false,
+    }
+}
+
+fn template_actuals_match(
+    design: &TemplateInstantiation,
+    implementation: &TemplateInstantiation,
+) -> bool {
+    comparison_types_match(&design.name, &implementation.name)
+        && (design.arguments.len() == implementation.arguments.len()
+            || (!design.arguments.is_empty()
+                && design.arguments.len() < implementation.arguments.len()))
+        && design
+            .arguments
+            .iter()
+            .zip(&implementation.arguments)
+            .all(|(design, implementation)| comparison_types_match(design, implementation))
+}
+
 fn optional_types_match(design: &Option<String>, implementation: &Option<String>) -> bool {
     match (design.as_deref(), implementation.as_deref()) {
         (None, None) => true,
@@ -1889,17 +2013,26 @@ fn comparison_types_match(design: &str, implementation: &str) -> bool {
     }
 }
 
-fn optional_parameter_types_match(
+fn optional_parameter_types_with_metadata_match(
     design: &Option<String>,
     implementation: &Option<String>,
+    design_metadata: &Option<TemplateInstantiation>,
+    implementation_metadata: &Option<TemplateInstantiation>,
 ) -> bool {
     match (design.as_deref(), implementation.as_deref()) {
         (None, None) => true,
         (Some(design), Some(implementation)) => {
             if contains_literal(design) || contains_literal(implementation) {
                 design == implementation
+            } else if normalize_parameter_type(design) == normalize_parameter_type(implementation) {
+                true
+            } else if let (Some(left), Some(right)) = (design_metadata, implementation_metadata) {
+                left.outer_decorators.is_some()
+                    && right.outer_decorators.is_some()
+                    && outer_decorators_match(left, right, true)
+                    && template_actuals_match(left, right)
             } else {
-                normalize_parameter_type(design) == normalize_parameter_type(implementation)
+                false
             }
         }
         _ => false,

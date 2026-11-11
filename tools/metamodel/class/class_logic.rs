@@ -156,6 +156,53 @@ pub enum Visibility {
     Protected,
 }
 
+/// Template name and argument spellings, independent of diagnostic type strings.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct TemplateInstantiation {
+    pub name: String,
+    pub arguments: Vec<String>,
+    /// Inner-to-outer decorators of this template use only. None is legacy/unknown;
+    /// Some([]) is a known bare template. Nested actuals remain complete strings.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub outer_decorators: Option<Vec<TypeDecorator>>,
+}
+
+/// Flat outer type-use metadata, not a recursive public type tree.
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
+pub enum TypeDecorator {
+    #[serde(rename = "const")]
+    Const,
+    #[serde(rename = "volatile")]
+    Volatile,
+    #[serde(rename = "*")]
+    Pointer,
+    #[serde(rename = "&")]
+    LValueReference,
+    #[serde(rename = "&&")]
+    RValueReference,
+}
+
+impl TypeDecorator {
+    /// Canonicalize cv order independently at each pointee/pointer layer.
+    pub fn canonicalize(decorators: &mut [Self]) {
+        let mut start = 0;
+        while start < decorators.len() {
+            if matches!(decorators[start], Self::Const | Self::Volatile) {
+                let mut end = start + 1;
+                while end < decorators.len()
+                    && matches!(decorators[end], Self::Const | Self::Volatile)
+                {
+                    end += 1;
+                }
+                decorators[start..end].sort();
+                start = end;
+            } else {
+                start += 1;
+            }
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
 pub struct TypeAlias {
     /// example: using Number = double;
@@ -163,6 +210,8 @@ pub struct TypeAlias {
     /// original_type = "double"
     pub alias: String,
     pub original_type: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub template_instantiation: Option<TemplateInstantiation>,
     /// Source location in input
     pub source_location: SourceLocation,
 }
@@ -175,6 +224,8 @@ pub struct MemberVariable {
     pub name: String,
     /// Data type (e.g., "int", "string", "std::vector<int>")
     pub data_type: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub template_instantiation: Option<TemplateInstantiation>,
     /// Visibility modifier
     pub visibility: Visibility,
     /// Whether this is a static member
@@ -215,6 +266,8 @@ pub struct FunctionArgument {
     /// UML multiplicity bracket interior; independent of type and C++ identity.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub multiplicity: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub template_instantiation: Option<TemplateInstantiation>,
     pub is_variadic: bool,
     #[serde(default, skip_serializing_if = "is_false")]
     pub is_pack_expansion: bool,
@@ -261,6 +314,8 @@ pub struct Method {
     /// UML return multiplicity bracket interior; independent of the return type.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub return_multiplicity: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub return_template_instantiation: Option<TemplateInstantiation>,
     /// Visibility modifier
     pub visibility: Visibility,
     /// Method parameters
@@ -334,6 +389,8 @@ pub struct FreeFunctionDecl {
     /// UML return multiplicity bracket interior; independent of the return type.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub return_multiplicity: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub return_template_instantiation: Option<TemplateInstantiation>,
     /// Function parameters.
     pub parameters: Vec<FunctionArgument>,
     /// Template parameters for generic functions.
@@ -422,6 +479,7 @@ mod tests {
             variables: vec![MemberVariable {
                 name: "name".to_string(),
                 data_type: Some("string".to_string()),
+                template_instantiation: None,
                 visibility: Visibility::Public,
                 is_static: false,
                 source_location: SourceLocation::new("test.puml", 1),
@@ -431,6 +489,7 @@ mod tests {
                 conversion_target: None,
                 return_type: Some("string".to_string()),
                 return_multiplicity: None,
+                return_template_instantiation: None,
                 visibility: Visibility::Public,
                 parameters: vec![],
                 template_parameters: None,
@@ -505,6 +564,7 @@ mod tests {
                 conversion_target: None,
                 return_type: None,
                 return_multiplicity: None,
+                return_template_instantiation: None,
                 visibility: Visibility::Public,
                 parameters: vec![],
                 template_parameters: None,

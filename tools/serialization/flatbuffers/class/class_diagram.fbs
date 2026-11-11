@@ -78,6 +78,7 @@ table TypeAlias {
     alias: string (required);
     original_type: string (required);
     source_location: SourceLocation (required);
+    template_instantiation: TemplateInstantiation;
 }
 
 enum ParameterDirection : byte {
@@ -94,6 +95,7 @@ table FunctionArgument {
     is_pack_expansion: bool = false;
     direction: ParameterDirection = Unspecified;
     multiplicity: string;
+    template_instantiation: TemplateInstantiation;
 }
 
 table MemberVariable {
@@ -102,6 +104,7 @@ table MemberVariable {
     visibility: Visibility = Public;
     is_static: bool = false;
     source_location: SourceLocation (required);
+    template_instantiation: TemplateInstantiation;
 }
 
 table Method {
@@ -114,6 +117,7 @@ table Method {
     source_location: SourceLocation (required);
     return_multiplicity: string;
     conversion_target: string;
+    return_template_instantiation: TemplateInstantiation;
 }
 
 table EnumLiteral {
@@ -155,12 +159,23 @@ table FreeFunctionDecl {
     template_parameters: [TemplateParameter];
     source_location: SourceLocation (required);
     return_multiplicity: string;
+    return_template_instantiation: TemplateInstantiation;
 }
 
 table ClassDiagram {
     name: string (required);
     entities: [SimpleEntity];
     free_functions: [FreeFunctionDecl];
+}
+
+// Ordered inner-to-outer; cv order is canonical within each layer.
+enum TypeDecorator: byte { Const, Volatile, Pointer, LValueReference, RValueReference }
+
+table TemplateInstantiation {
+    name: string (required);
+    arguments: [string] (required);
+    // Absent means legacy/unknown; an empty vector means known bare.
+    outer_decorators: [TypeDecorator];
 }
 
 root_type ClassDiagram;

@@ -12,17 +12,34 @@
                     {
                         "name": "OnFinished",
                         "return_type": "Result<void>",
+                        "return_template_instantiation": {
+                            "name": "Result",
+                            "arguments": [
+                                "void"
+                            ],
+                            "outer_decorators": []
+                        },
                         "visibility": "public",
                         "parameters": [
                             {
                                 "name": "scope",
                                 "param_type": "const safecpp::Scope<>&",
+                                "template_instantiation": {
+                                    "name": "safecpp::Scope",
+                                    "arguments": [],
+                                    "outer_decorators": ["const", "&"]
+                                },
                                 "is_variadic": false,
                                 "is_pack_expansion": false
                             },
                             {
                                 "name": "comparator",
                                 "param_type": "std::less<>",
+                                "template_instantiation": {
+                                    "name": "std::less",
+                                    "arguments": [],
+                                    "outer_decorators": []
+                                },
                                 "is_variadic": false,
                                 "is_pack_expansion": false
                             }
@@ -41,6 +58,11 @@
                     {
                         "name": "scope",
                         "data_type": "safecpp::Scope<>",
+                        "template_instantiation": {
+                            "name": "safecpp::Scope",
+                            "arguments": [],
+                            "outer_decorators": []
+                        },
                         "visibility": "public",
                         "is_static": false,
                         "source_location": {

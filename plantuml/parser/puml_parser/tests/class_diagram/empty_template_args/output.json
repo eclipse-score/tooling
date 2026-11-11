@@ -15,17 +15,51 @@
               "file": "",
               "line": 15
             },
-            "type_aliases": [],
+            "type_aliases": [
+              {
+                "alias": "Alias",
+                "original_type": "Outer<Inner<int>*, const ns::Value*>",
+                "template_instantiation": {
+                  "name": "Outer",
+                  "arguments": ["Inner<int>*", "const ns::Value*"],
+                  "outer_decorators": []
+                },
+                "source_location": {"file": "", "line": 22}
+              },
+              {
+                "alias": "Plain",
+                "original_type": "ns::Value* const",
+                "template_instantiation": null,
+                "source_location": {"file": "", "line": 23}
+              }
+            ],
             "attributes": [
               {
                 "visibility": "Public",
                 "name": "scope",
                 "type": "safecpp::Scope<>",
+                "template_instantiation": {
+                  "name": "safecpp::Scope",
+                  "arguments": [],
+                  "outer_decorators": []
+                },
                 "modifiers": [],
                 "source_location": {
                   "file": "",
                   "line": 21
                 }
+              },
+              {
+                "visibility": "Public",
+                "name": "field",
+                "type": "Box<ns::Value>* const",
+                "template_instantiation": {
+                  "name": "Box",
+                  "arguments": ["ns::Value"],
+                  "outer_decorators": ["*", "const"]
+                },
+                "modifiers": [],
+                "source_location": {"file": "", "line": 24}
               }
             ],
             "methods": [
@@ -36,11 +70,23 @@
                 "params": [
                   {
                     "name": null,
-                    "param_type": "std::optional<span<std::byte>>"
+                    "param_type": "std::optional<span<std::byte>>",
+                    "template_instantiation": {
+                      "name": "std::optional",
+                      "arguments": [
+                        "span<std::byte>"
+                      ],
+                      "outer_decorators": []
+                    }
                   },
                   {
                     "name": null,
-                    "param_type": "const safecpp::Scope<>&"
+                    "param_type": "const safecpp::Scope<>&",
+                    "template_instantiation": {
+                      "name": "safecpp::Scope",
+                      "arguments": [],
+                      "outer_decorators": ["const", "&"]
+                    }
                   },
                   {
                     "name": "uid",
@@ -48,6 +94,13 @@
                   }
                 ],
                 "type": "Result<void>",
+                "return_template_instantiation": {
+                  "name": "Result",
+                  "arguments": [
+                    "void"
+                  ],
+                  "outer_decorators": []
+                },
                 "modifiers": [],
                 "source_location": {
                   "file": "",
@@ -61,7 +114,12 @@
                 "params": [
                   {
                     "name": "comparator",
-                    "param_type": "std::less<>"
+                    "param_type": "std::less<>",
+                    "template_instantiation": {
+                      "name": "std::less",
+                      "arguments": [],
+                      "outer_decorators": []
+                    }
                   }
                 ],
                 "type": null,
@@ -77,6 +135,11 @@
                 "template_parameters": null,
                 "params": [],
                 "type": "safecpp::Scope<>",
+                "return_template_instantiation": {
+                  "name": "safecpp::Scope",
+                  "arguments": [],
+                  "outer_decorators": []
+                },
                 "modifiers": [],
                 "source_location": {
                   "file": "",
@@ -90,11 +153,26 @@
                 "params": [
                   {
                     "name": "items",
-                    "param_type": "std::vector<Foo<>>"
+                    "param_type": "std::vector<Foo<>>",
+                    "template_instantiation": {
+                      "name": "std::vector",
+                      "arguments": [
+                        "Foo<>"
+                      ],
+                      "outer_decorators": []
+                    }
                   },
                   {
                     "name": "ptr",
-                    "param_type": "Bar<Baz<>, int>*"
+                    "param_type": "Bar<Baz<>, int>*",
+                    "template_instantiation": {
+                      "name": "Bar",
+                      "arguments": [
+                        "Baz<>",
+                        "int"
+                      ],
+                      "outer_decorators": ["*"]
+                    }
                   }
                 ],
                 "type": null,
@@ -117,6 +195,64 @@
                   "file": "",
                   "line": 20
                 }
+              },
+              {
+                "visibility": "Public",
+                "name": "Plain",
+                "template_parameters": null,
+                "params": [
+                  {"name": null, "param_type": "unsigned long long int", "template_instantiation": null},
+                  {"name": "value", "param_type": "ns::Value* const", "template_instantiation": null},
+                  {"name": null, "param_type": "volatile ns::Value", "template_instantiation": null},
+                  {"name": "item", "param_type": "const ns::Value volatile*", "template_instantiation": null}
+                ],
+                "type": "unsigned long int",
+                "return_template_instantiation": null,
+                "modifiers": [],
+                "source_location": {"file": "", "line": 25}
+              },
+              {
+                "visibility": "Public",
+                "name": "Templates",
+                "template_parameters": null,
+                "params": [
+                  {
+                    "name": null,
+                    "param_type": "Box<unsigned long long int>",
+                    "template_instantiation": {"name": "Box", "arguments": ["unsigned long long int"], "outer_decorators": []}
+                  },
+                  {
+                    "name": "value",
+                    "param_type": "Box<ns::Value>* const",
+                    "template_instantiation": {"name": "Box", "arguments": ["ns::Value"], "outer_decorators": ["*", "const"]}
+                  },
+                  {
+                    "name": null,
+                    "param_type": "volatile Box<ns::Value>",
+                    "template_instantiation": {"name": "Box", "arguments": ["ns::Value"], "outer_decorators": ["volatile"]}
+                  },
+                  {
+                    "name": "item",
+                    "param_type": "const Box<ns::Value> volatile*",
+                    "template_instantiation": {"name": "Box", "arguments": ["ns::Value"], "outer_decorators": ["const", "volatile", "*"]}
+                  },
+                  {
+                    "name": "bare",
+                    "param_type": "Box<N>",
+                    "template_instantiation": {"name": "Box", "arguments": ["N"], "outer_decorators": []}
+                  },
+                  {
+                    "name": "pack",
+                    "param_type": "Box<int>",
+                    "is_pack_expansion": true,
+                    "template_instantiation": {"name": "Box", "arguments": ["int"], "outer_decorators": []}
+                  },
+                  {"name": null, "param_type": null, "is_c_variadic": true, "template_instantiation": null}
+                ],
+                "type": "const Box<unsigned long int>*",
+                "return_template_instantiation": {"name": "Box", "arguments": ["unsigned long int"], "outer_decorators": ["const", "*"]},
+                "modifiers": [],
+                "source_location": {"file": "", "line": 26}
               }
             ],
             "kind": {
