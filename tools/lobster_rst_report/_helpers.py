@@ -58,6 +58,27 @@ class RstUtils:
         return text
 
     @staticmethod
+    def plain_block(text: str) -> list:
+        """Return *text* as RST line-block lines, safe against block markup.
+
+        The ``| `` prefix keeps lines starting with ``- ``, ``.. `` or ``:x:``
+        from being parsed as lists, directives or fields.
+        """
+        return [("| " + RstUtils.escape(line)).rstrip() if line.strip() else "|" for line in text.splitlines()]
+
+    @staticmethod
+    def description(item: Item) -> list:
+        """Return RST lines for the description text of *item*.
+
+        TRLC requirement text is authored RST and is emitted as-is; text of
+        every other item is plain data and is escaped.
+        """
+        text = item.text or ""
+        if isinstance(item, Requirement) and item.framework == "TRLC":
+            return text.splitlines()
+        return RstUtils.plain_block(text)
+
+    @staticmethod
     def heading(text: str, char: str, overline: bool = False) -> list:
         """Return a list of RST lines that form a section heading.
 
@@ -65,7 +86,7 @@ class RstUtils:
         returned lines to satisfy RST's required blank line.
 
         Args:
-            text: The heading text.
+            text: The plain heading text; it is escaped here.
             char: The underline (and overline, if *overline* is ``True``)
                 character (e.g. ``"="``, ``"-"``, ``"~"``).
             overline: When ``True`` an overline of the same character is
@@ -75,6 +96,7 @@ class RstUtils:
             A list of 2 lines (underline only) or 3 lines (with overline).
             No trailing blank line is included.
         """
+        text = RstUtils.escape(text)
         line = char * len(text)
         if overline:
             return [line, text, line]

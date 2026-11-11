@@ -173,11 +173,8 @@ class ItemCardBuilder:
         if isinstance(item, (Requirement, Activity)) and item.text:
             body(".. pull-quote::")
             out.append("")
-            for text_line in item.text.splitlines():
-                # Requirement text originates from external sources — escape RST
-                # special chars. Activity text is author-controlled and may
-                # contain intentional RST markup — render as-is.
-                nested(e(text_line) if isinstance(item, Requirement) else text_line)
+            for text_line in RstUtils.description(item):
+                nested(text_line)
             out.append("")
             has_content = True
 
@@ -261,7 +258,7 @@ class ItemCardBuilder:
                 ref_item = self._report.items[key]
                 parts.append(f":ref:`{RstUtils.escape(ref_item.name)} <{ItemNaming.item_label(ref_item)}>`")
             else:
-                parts.append(f"``{RstUtils.escape(key)}`` (unresolved)")
+                parts.append(f":literal:`{RstUtils.escape(key)}` (unresolved)")
         return parts
 
 
