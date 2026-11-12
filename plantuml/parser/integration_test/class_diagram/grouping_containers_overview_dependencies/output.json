@@ -1,0 +1,98 @@
+{
+  "overview.puml": {
+    "name": "overview",
+    "entities": [
+      {
+        "id": "Worker",
+        "name": "Worker",
+        "enclosing_namespace_id": null,
+        "stereotypes": [],
+        "entity_type": "Class",
+        "type_aliases": [],
+        "variables": [],
+        "methods": [],
+        "template_parameters": null,
+        "enum_literals": [],
+        "relationships": [],
+        "source_location": { "file": "", "line": 17 }
+      },
+      {
+        "id": "ModuleClient",
+        "name": "ModuleClient",
+        "enclosing_namespace_id": null,
+        "stereotypes": [],
+        "entity_type": "Class",
+        "type_aliases": [],
+        "variables": [],
+        "methods": [],
+        "template_parameters": null,
+        "enum_literals": [],
+        "relationships": [
+          {
+            "source": "ModuleClient",
+            "target": "Worker",
+            "relation_type": "Dependency",
+            "source_multiplicity": null,
+            "target_multiplicity": null,
+            "source_location": { "file": "", "line": 26 }
+          }
+        ],
+        "source_location": { "file": "", "line": 20 }
+      },
+      {
+        "id": "OtherClient",
+        "name": "OtherClient",
+        "enclosing_namespace_id": null,
+        "stereotypes": [],
+        "entity_type": "Class",
+        "type_aliases": [],
+        "variables": [],
+        "methods": [],
+        "template_parameters": null,
+        "enum_literals": [],
+        "relationships": [
+          {
+            "source": "OtherClient",
+            "target": "Worker",
+            "relation_type": "Dependency",
+            "source_multiplicity": null,
+            "target_multiplicity": null,
+            "source_location": { "file": "", "line": 27 }
+          }
+        ],
+        "source_location": { "file": "", "line": 23 }
+      }
+    ],
+    "free_functions": []
+  },
+  "detail.puml": {
+    "name": "detail",
+    "entities": [
+      {
+        "id": "Worker",
+        "name": "Worker",
+        "enclosing_namespace_id": null,
+        "stereotypes": [],
+        "entity_type": "Class",
+        "type_aliases": [],
+        "variables": [],
+        "methods": [
+          {
+            "name": "run",
+            "return_type": null,
+            "visibility": "public",
+            "parameters": [],
+            "template_parameters": null,
+            "modifiers": [],
+            "source_location": { "file": "", "line": 17 }
+          }
+        ],
+        "template_parameters": null,
+        "enum_literals": [],
+        "relationships": [],
+        "source_location": { "file": "", "line": 16 }
+      }
+    ],
+    "free_functions": []
+  }
+}

@@ -40,6 +40,7 @@ pub struct NestedCandidate<K> {
     pub id: String,
     /// Written name path, the tail of `id`.
     pub own: String,
+    pub parent_scope: InternalScope,
     /// Id of the top-level declaration it sits under.
     pub root_id: String,
     pub file_idx: usize,
@@ -151,9 +152,6 @@ fn resolve_scope<K: PartialEq>(
         {
             continue;
         }
-        let Some(ancestors) = entry.id.strip_suffix(&format!(".{}", entry.own)) else {
-            continue;
-        };
         let root = top_level
             .iter()
             .find(|c| c.file_idx == entry.file_idx && c.id == entry.root_id);
@@ -162,8 +160,8 @@ fn resolve_scope<K: PartialEq>(
             None => None,
         };
         let scope = match root_scope {
-            Some(prefix) => prefix.child(ancestors),
-            None => InternalScope::from_path(ancestors),
+            Some(prefix) => prefix.child_scope(&entry.parent_scope),
+            None => entry.parent_scope.clone(),
         };
         scopes.insert(scope.id(), scope);
     }
@@ -231,6 +229,7 @@ mod tests {
         NestedCandidate {
             id: id.to_string(),
             own: own.to_string(),
+            parent_scope: InternalScope::from_path(id.strip_suffix(&format!(".{own}")).unwrap()),
             root_id: root_id.to_string(),
             file_idx,
             kind: "component",
@@ -246,6 +245,43 @@ mod tests {
 
         assert!(result[0].is_empty());
         assert_eq!(result[1]["c"].id(), "pkg");
+    }
+
+    #[test]
+    fn literal_parent_scope_preserves_segment_boundaries() {
+        let top_level = [top("c", 1, true), top("pkg.scope", 0, true)];
+        let parent = InternalScope::default().child_literal("pkg.scope");
+        let mut candidate = nested("pkg.scope.c", "c", "pkg.scope", 0);
+        candidate.parent_scope = parent.clone();
+
+        let result = discover_implicit_parents(&top_level, &[candidate], &["a", "b"]).unwrap();
+
+        assert_eq!(result[1]["c"], parent);
+    }
+
+    #[test]
+    fn recursive_reparenting_preserves_literal_segments() {
+        let top_level = [
+            top("outer.scope", 0, true),
+            top("pkg.scope", 1, true),
+            top("c", 2, true),
+        ];
+        let outer = InternalScope::default().child_literal("outer.scope");
+        let package = InternalScope::default().child_literal("pkg.scope");
+        let mut package_candidate = nested("outer.scope.pkg.scope", "pkg.scope", "outer.scope", 0);
+        package_candidate.parent_scope = outer.clone();
+        let mut entity_candidate = nested("pkg.scope.c", "c", "pkg.scope", 1);
+        entity_candidate.parent_scope = package;
+
+        let result = discover_implicit_parents(
+            &top_level,
+            &[package_candidate, entity_candidate],
+            &["a", "b", "c"],
+        )
+        .unwrap();
+
+        assert_eq!(result[1]["pkg.scope"], outer);
+        assert_eq!(result[2]["c"], outer.child_literal("pkg.scope"));
     }
 
     #[test]
@@ -303,6 +339,47 @@ mod tests {
             ImplicitParentError::Ambiguous { ref candidates, .. }
                 if candidates == &["p".to_string(), "q".to_string()]
         ));
+    }
+
+    #[test]
+    fn same_id_with_distinct_parent_segments_is_deduplicated() {
+        let top_level = [
+            top("c", 2, true),
+            top("pkg", 0, true),
+            top("pkg.scope", 1, true),
+        ];
+        let ordinary = nested("pkg.scope.c", "c", "pkg", 0);
+        let mut literal = nested("pkg.scope.c", "c", "pkg.scope", 1);
+        literal.parent_scope = InternalScope::default().child_literal("pkg.scope");
+
+        for candidates in [
+            [ordinary.clone(), literal.clone()],
+            [literal.clone(), ordinary.clone()],
+        ] {
+            let result =
+                discover_implicit_parents(&top_level, &candidates, &["a", "b", "c"]).unwrap();
+
+            assert_eq!(result[2]["c"].id(), "pkg.scope");
+        }
+    }
+
+    #[test]
+    fn identical_literal_parent_scopes_are_deduplicated() {
+        let top_level = [
+            top("c", 2, true),
+            top("pkg.scope", 0, true),
+            top("pkg.scope", 1, true),
+        ];
+        let parent = InternalScope::default().child_literal("pkg.scope");
+        let mut first = nested("pkg.scope.c", "c", "pkg.scope", 0);
+        first.parent_scope = parent.clone();
+        let mut second = nested("pkg.scope.c", "c", "pkg.scope", 1);
+        second.parent_scope = parent.clone();
+
+        let result =
+            discover_implicit_parents(&top_level, &[first, second], &["a", "b", "c"]).unwrap();
+
+        assert_eq!(result[2]["c"], parent);
     }
 
     #[test]

@@ -69,6 +69,72 @@ spelling wherever a name is written: declarations, `package` / `namespace`
 names, ports, `extends` / `implements` targets and relationship endpoints.
 Malformed paths (`a..b`, `a::`, `a:::b`, a lone `::`) are errors.
 
+Prefer dots (`.`) in namespace/package names and other qualified names,
+for example `a.b.X`, for compatibility with PlantUML rendering. The resolver
+also accepts `::` and normalizes it to `.`, regardless of any custom
+separator setting.
+
+### Grouping containers in class diagrams
+
+Class-diagram `namespace` and `package` containers with a `unit` or `component`
+stereotype (case-insensitive) are grouping only. Their names are omitted from
+entity identifiers and enclosing namespace identifiers; ordinary enclosing and
+nested namespaces still contribute their scopes. Class stereotypes do not make
+the class itself a grouping container.
+
+Reference paths retain the grouping containers and their aliases. For example,
+`namespace P { namespace U <<unit>> { class Foo as F } }` declares entity
+`P.Foo` with enclosing namespace `P`, referenced by `P.U.F`. Relationships
+inside `U` can use `F` directly. The same rules apply with `set separator none`
+and when resolving several files as one group.
+
+### Disabling automatic namespaces in class diagrams
+
+The file-level commands `set separator none` and `set namespaceSeparator none`
+are equivalent. They keep each written name as one scope segment rather than
+inferring namespaces from `.` or `::`. Ordinary explicit `package` and `namespace`
+blocks still contribute their enclosing scopes. Settings take effect in source order;
+a subsequent non-`none` setting restores the default separator behaviour above.
+
+Custom separator values are not supported yet. For any value other than `none`,
+`set separator <value>` and `set namespaceSeparator <value>` produce a warning;
+the specified separator is not applied. Instead, the resolver uses the default
+rules, treating both `.` and `::` as separators. For example, `set separator _`
+does not split names at `_`, and `set separator ::` does not disable dot splitting.
+Use `none` only when each written name should remain a single scope segment.
+
+```plantuml
+@startuml
+set separator none
+class A.B
+class C
+A.B --> C
+@enduml
+```
+
+Here `A.B` has no enclosing namespace, and `B` alone is not a reference to it.
+Inside `namespace P`, a class named `A.B` has enclosing namespace `P`, not `P.A`.
+Aliases retain their normal reference semantics.
+
+**Do not combine `set separator none` (or `set namespaceSeparator none`) with
+root markers (`.X` or `::X`).** While `none` is active, the resolver reports
+`RootMarkerWithSeparatorNone` for rooted declarations, aliases and references,
+with the offending name and line number. A subsequent non-`none` setting
+permits root markers again.
+
+This prevents silent identity changes: treating `::A` as a literal name would
+lose its root semantics, making it `P.A` inside `namespace P` or allowing a
+bodied top-level detail declaration to be reparented to an overview's `P.A`.
+See the
+[root-marker reparenting test case](../integration_test/class_diagram/group_separator_none_root_marker_reparenting/)
+for this rejection.
+
+Canonical identifiers still normalize `::` to `.` for cross-diagram consistency.
+Consequently, a literal class `A.B` and an explicitly nested `A { B }` have the
+same canonical identifier and cannot coexist within one diagram: resolution
+reports a duplicate id.
+This setting does not enable arbitrary free-text or malformed identifier names.
+
 The parser is deliberately more permissive than PlantUML in component
 diagrams: `a::b::X` and `::a::X` parse but are not rendered by PlantUML there.
 Write `.` if the diagram must also render; the identifier is the same.
@@ -393,6 +459,27 @@ For reparenting, a body is any member, type alias, `extends` or `implements`
 the relationships of all declarations are united, so an overview may draw them
 while the class stays a reference.
 
+Rooted declarations never reparent. With an overview's `P.A`, a detail file can
+define both `class ::A as RootA { + rootRun() }` (id `A`) and
+`class A as NestedA { + nestedRun() }` (reparented id `P.A`). Distinct aliases
+are needed here: without them, both file-local reference keys are `A`, causing
+`DuplicateAlias` even though the ids differ. See the
+[rooted and relative declarations test case](../integration_test/class_diagram/group_rooted_and_relative_same_name/).
+
+**Recommended organization.** Put cross-unit or cross-component dependencies
+in the overview, with both endpoints declared there, typically without bodies.
+Keep detail diagrams focused on members and internal relationships. Cross-file
+references in details remain supported; this is a recommendation, not a
+restriction.
+
+Declare a shared class once in the overview, under its owning unit, and draw
+dependencies from its clients to it. Keep its member definition in one detail
+file, with the same canonical id. Do not repeat it under consuming units or in
+their detail diagrams when usage is shown only in the overview. See the
+[overview](../integration_test/class_diagram/grouping_containers_overview_dependencies/overview.puml)
+and [detail](../integration_test/class_diagram/grouping_containers_overview_dependencies/detail.puml)
+for two Clients using one Worker.
+
 ### Sequence diagrams
 
 Participants are flat, so there is nothing to reparent. Declare the cast once
@@ -461,7 +548,8 @@ construct of its own kind, so that it joins the right group:
 | `Invalid identifier: <text>: name is free text, expected an identifier path …` | A name with spaces or other characters outside letters, digits, `_` and the separators | Use an identifier path; move prose into a note or stereotype |
 | `… is not a valid qualified path …` | A name with `.` or `::` and an empty segment or other characters (`a..b`, `my-pkg::unit`) | Fix the path |
 | `Duplicate entity id: <id>` | Two elements resolve to the same identifier, also with different aliases | Rename one — `core::User` and `core.User` are the *same* identifier ([Rule F](#rule-f)) |
-| `DuplicateAlias` | Two declarations share a reference key in one scope | Rename one alias |
+| `DuplicateAlias` | Two declarations share a reference key in one scope, even without explicit aliases | Give them distinct aliases |
+| `RootMarkerWithSeparatorNone` | A declaration, alias or reference uses a root marker while `separator none` is active | Remove `none` to keep root semantics, or remove the marker for a relative name |
 | `Ambiguous reference: <ref> -> <candidates>` | A reference matches more than one declared entity | Qualify the reference, or start it with `.` |
 | `Unresolved reference: <ref>` | A reference matches no element: a path that does not exist, or (class diagrams) an element declared further down in another scope | Qualify the path, or declare the element first |
 | `NameOfAliasedElement` | A reference uses the name of an element that has an alias | Refer to the element by its alias |
@@ -499,7 +587,8 @@ construct of its own kind, so that it joins the right group:
    before referring to it from another scope.
 9. **Split a view by detail, not by identity.** Write the nesting once in an
    overview and the content in a detail file whose top-level element carries
-   the same name, type and stereotype. Do not repeat the wrapper.
+   the same name, type and stereotype. Do not repeat the wrapper. Prefer showing
+   cross-unit or cross-component dependencies in the overview.
 10. **Declare a cast once.** Put the participants of a unit design in one
     file; scenario files use the aliases and contain a sequence-only construct
     (`activate`, `alt`, …) so they are detected as sequence diagrams.
@@ -515,8 +604,9 @@ for classes, and `SequenceParticipant.uid` for sequence participants.
 
 ### Definitions
 
-`normalize(s)` = `s.replace("::", ".").trim('.')` — `::` and `.` are equivalent
-separators and there are no leading or trailing dots.
+`normalize(s)` = `s.replace("::", ".").trim('.')` gives the canonical spelling,
+with no leading or trailing dots. Normalization does not determine scope
+segment boundaries.
 
 `join(a, b, …)` = the non-empty arguments joined with `.`.
 
@@ -548,8 +638,8 @@ declares.
 
 ### Rule C
 
-**Explicit scope path.** A name containing `.` or `::` is a qualified name. A
-declaration nests it under the enclosing internal scope:
+**Explicit scope path (default mode).** A name containing `.` or `::` is a
+qualified name. A declaration nests it under the enclosing internal scope:
 `uid = join(internal_scope, normalize(name))`. A name with a leading `.` or
 `::` is rooted instead: `uid = join(normalize(name))`, the enclosing scope is
 ignored. The parent of a declaration is all segments of the resulting
@@ -557,6 +647,12 @@ identifier except the last. It is a path derived from the identifier, not a
 reference: the parent need not be declared in this diagram. A qualified port or
 interface `a::I` therefore has parent `a`; a top-level one still has a parent,
 so it counts as internal API.
+
+**Separator none (class diagrams).** While `set separator none` or
+`set namespaceSeparator none` is active, each name or alias forms one literal
+scope segment: `.` and `::` do not split it. Canonical ids still normalize
+`::` to `.`. Leading root markers in declarations, aliases and references
+produce a `RootMarkerWithSeparatorNone` error.
 
 **Reference paths.** Every declaration has two paths:
 
@@ -569,8 +665,8 @@ Without aliases both paths are equal. With an alias, only the element's own
 last segment differs: `package p { class "score::x::Y" as Y }` has id
 `p.score.x.Y` and reference path `p.Y`.
 
-**References.** A reference `r` written in internal scope `S` resolves to an
-existing element. Let `local = join(S, normalize(r))` and
+**References (default mode).** A reference `r` written in internal scope `S`
+resolves to an existing element. Let `local = join(S, normalize(r))` and
 `rooted = normalize(r)`, both over reference paths.
 
 1. `r` starts with `.` or `::`: `rooted`.
@@ -614,10 +710,11 @@ the same identifier path in either spelling (`a::b::C` and `a.b.C`).
 
 1. *Reparenting.* A top-level declaration `D` with a body that is not rooted
    has a candidate scope for every nested declaration `N` of another file with
-   the same normalized name, element type and stereotype: the id of `N`
-   without its last segment, itself reparented if the top-level ancestor of `N`
-   is. No candidate keeps `D` top-level, one candidate becomes `D`'s parent
-   scope, several are `AmbiguousImplicitParent`, a cyclic chain is
+  the same normalized name, element type and stereotype: `N`'s stored internal
+  parent scope, prefixed by its top-level ancestor's inferred scope if that
+  ancestor is reparented, preserving segment boundaries. No candidate keeps
+  `D` top-level, one candidate becomes `D`'s parent scope, several are
+  `AmbiguousImplicitParent`, a cyclic chain is
    `ImplicitParentCycle`. Only the id path moves; reference paths stay
    file-local. Component and class diagrams only.
 2. *Peer references.* A reference that is unresolved in its file is resolved

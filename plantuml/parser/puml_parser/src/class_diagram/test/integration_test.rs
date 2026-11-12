@@ -60,6 +60,7 @@ fn run_class_diagram_parser_case(case_name: &str) {
 }
 
 // --------- test for include ---------
+
 #[test]
 fn test_alias_class() {
     run_class_diagram_parser_case("alias_class");
@@ -203,6 +204,11 @@ fn test_namespace_2() {
 #[test]
 fn test_namespace_3() {
     run_class_diagram_parser_case("namespace_3");
+}
+
+#[test]
+fn test_namespace_separator() {
+    run_class_diagram_parser_case("namespace_separator");
 }
 
 #[test]

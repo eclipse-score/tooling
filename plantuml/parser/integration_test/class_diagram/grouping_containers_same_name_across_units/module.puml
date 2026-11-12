@@ -1,0 +1,31 @@
+' *******************************************************************************
+' Copyright (c) 2026 Contributors to the Eclipse Foundation
+'
+' See the NOTICE file(s) distributed with this work for additional
+' information regarding copyright ownership.
+'
+' This program and the accompanying materials are made available under the
+' terms of the Apache License Version 2.0 which is available at
+' https://www.apache.org/licenses/LICENSE-2.0
+'
+' SPDX-License-Identifier: Apache-2.0
+' *******************************************************************************
+
+@startuml module
+
+namespace Module <<unit>> {
+    class "Worker"
+    class ModuleClient
+    Worker ..> ModuleClient
+}
+
+' This case tests supported declarations of the same Worker in multiple unit
+' groups; it is not a recommendation to assign one class to multiple units.
+' Prefer declaring Worker and the relevant Clients in an overview and drawing
+' these dependencies there. Keep Worker's member definition in one detail file.
+' Module/Other diagrams need no Worker declaration if they no longer draw
+' relationships sourced from Worker; otherwise the source must be declared locally.
+' For the recommended organization, see the sibling test case:
+' plantuml/parser/integration_test/class_diagram/grouping_containers_overview_dependencies
+
+@enduml

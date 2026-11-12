@@ -1,0 +1,75 @@
+{
+  "overview.puml": {
+    "name": "",
+    "entities": [
+      {
+        "id": "p.Worker",
+        "name": "W",
+        "enclosing_namespace_id": "p",
+        "stereotypes": [],
+        "entity_type": "Class",
+        "type_aliases": [],
+        "variables": [],
+        "methods": [],
+        "template_parameters": null,
+        "enum_literals": [],
+        "relationships": [],
+        "source_location": { "file": "", "line": 17 }
+      },
+      {
+        "id": "p.Target",
+        "name": "T",
+        "enclosing_namespace_id": "p",
+        "stereotypes": [],
+        "entity_type": "Class",
+        "type_aliases": [],
+        "variables": [],
+        "methods": [],
+        "template_parameters": null,
+        "enum_literals": [],
+        "relationships": [],
+        "source_location": { "file": "", "line": 18 }
+      }
+    ],
+    "free_functions": []
+  },
+  "detail.puml": {
+    "name": "",
+    "entities": [
+      {
+        "id": "p.Worker",
+        "name": "W",
+        "enclosing_namespace_id": "p",
+        "stereotypes": [],
+        "entity_type": "Class",
+        "type_aliases": [],
+        "variables": [],
+        "methods": [
+          {
+            "name": "Work",
+            "return_type": null,
+            "visibility": "public",
+            "parameters": [],
+            "template_parameters": null,
+            "modifiers": [],
+            "source_location": { "file": "", "line": 17 }
+          }
+        ],
+        "template_parameters": null,
+        "enum_literals": [],
+        "relationships": [
+          {
+            "source": "p.Worker",
+            "target": "p.Target",
+            "relation_type": "Dependency",
+            "source_multiplicity": null,
+            "target_multiplicity": null,
+            "source_location": { "file": "", "line": 20 }
+          }
+        ],
+        "source_location": { "file": "", "line": 16 }
+      }
+    ],
+    "free_functions": []
+  }
+}
