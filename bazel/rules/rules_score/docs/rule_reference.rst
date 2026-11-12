@@ -163,8 +163,8 @@ These are too broad to be assigned to a single component.
      - Target name
    * - ``srcs``
      - label list
-     - yes
-     - ``.trlc`` files containing ``AssumedSystemReq`` records
+     - no
+     - ``.trlc`` files containing ``AssumedSystemReq`` records; ``srcs`` or ``needs`` (see :ref:`rule-requirements-needs`) is required
    * - ``deps``
      - label list
      - no
@@ -210,8 +210,8 @@ integration level; can only be satisfied by multiple components working together
      - Target name
    * - ``srcs``
      - label list
-     - yes
-     - ``.trlc`` files containing ``FeatReq`` records
+     - no
+     - ``.trlc`` files containing ``FeatReq`` records; ``srcs`` or ``needs`` (see :ref:`rule-requirements-needs`) is required
    * - ``deps``
      - label list
      - no
@@ -257,8 +257,8 @@ testable within that component.
      - Target name
    * - ``srcs``
      - label list
-     - yes
-     - ``.trlc`` files containing ``CompReq`` records
+     - no
+     - ``.trlc`` files containing ``CompReq`` records; ``srcs`` or ``needs`` (see :ref:`rule-requirements-needs`) is required
    * - ``deps``
      - label list
      - no
@@ -310,8 +310,8 @@ Conditions that the *integrating project* must fulfil when using this SEooC.
      - Target name
    * - ``srcs``
      - label list
-     - yes
-     - ``.trlc`` files (containing ``AoU`` records), targets generating them (e.g. :ref:`rst_to_trlc <rule-rst-to-trlc>`), or labels to existing ``TrlcProviderInfo``-providing targets
+     - no
+     - ``.trlc`` files (containing ``AoU`` records), targets generating them (e.g. :ref:`rst_to_trlc <rule-rst-to-trlc>`), or labels to existing ``TrlcProviderInfo``-providing targets; ``srcs`` or ``needs`` (see :ref:`rule-requirements-needs`) is required
    * - ``deps``
      - label list
      - no
@@ -378,6 +378,60 @@ authored in RST can feed the requirement rules above.
 Reference fields hold plain requirement ids; ``version==N`` filters pin the
 referenced version (default ``1``). Sphinx-needs-only filters without an id are
 rejected.
+
+.. _rule-requirements-needs:
+
+Requirements from Sphinx-Needs
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+``assumed_system_requirements``, ``feature_requirements``,
+``component_requirements`` and ``assumptions_of_use`` accept Sphinx-Needs
+requirements in addition to (or instead of) TRLC ``srcs``. The
+``lobster_sphinx_needs`` tool converts them into the same LOBSTER requirement
+items as ``lobster-trlc``, so ``component``, ``dependable_element`` and the
+traceability reports treat both sources alike.
+
+.. code-block:: python
+
+   component_requirements(
+       name = "comp_reqs",
+       needs = ["//my/component:docs"],
+       comp_id = "comp__my_component",
+   )
+
+.. list-table::
+   :header-rows: 1
+   :widths: 18 12 10 60
+
+   * - Attribute
+     - Type
+     - Required
+     - Description
+   * - ``needs``
+     - label list
+     - no
+     - score_docs_as_code ``docs_bundle`` targets (their ``needs.json`` export is used) or ``needs.json`` files
+   * - ``feat_id``
+     - string
+     - with ``needs``
+     - ``feature_requirements`` only: ID of the ``feat`` need; only ``feat_req`` needs whose ``satisfied_by`` link names it are converted
+   * - ``comp_id``
+     - string
+     - with ``needs``
+     - ``component_requirements`` only: ID of the ``comp`` need; only ``comp_req`` needs whose ``satisfied_by`` link names it are converted
+
+One central configuration (``//bazel/rules/rules_score/lobster/config:sphinx_needs_config``)
+maps the need types: ``stkh_req`` → ``AssumedSystemReq``, ``feat_req`` →
+``FeatReq``, ``comp_req`` → ``CompReq`` (tracing ``derived_from`` and
+``covers``), ``aou_req`` → ``AoU``. ``stkh_req`` and ``aou_req`` belong to the
+platform, not to a feature or component, so all of them are converted.
+
+Each converted need becomes ``req <need id>@<version>``; link values become
+tracing targets, a ``[version==N]`` filter becomes ``@N``. Needs with status
+``invalid`` are skipped. The needs are listed on a plain RST page. TRLC
+rendering and the ``<name>_test`` validation only apply to ``srcs``; the
+Sphinx-Needs build of the bundle validates the needs against the
+score_docs_as_code metamodel.
 
 **Provides:** ``DefaultInfo`` with the generated ``.trlc`` files; pass the target in ``srcs`` of ``assumed_system_requirements``, ``feature_requirements``, ``component_requirements`` or ``assumptions_of_use``.
 
@@ -661,6 +715,42 @@ target, which therefore belongs in ``deps``.
        deps = [":arch"],
    )
 
+The failure modes may instead be the ``comp_saf_fmea`` needs of an FMEA written
+with score_docs_as_code (``needs``). Each need becomes a generated
+``FailureMode`` record named by its need ID, so a fault tree references it as
+``<package>.<need ID>``:
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 70
+
+   * - Need field
+     - ``FailureMode`` field
+   * - ``title`` / content
+     - ``description`` / ``note``
+   * - ``failure_effect``
+     - ``failureeffect``
+   * - ``fault_id``
+     - ``guidewords`` (fault model IDs as listed on ``ScoreReq.Guideword``)
+   * - ``violates``
+     - ``interface``: a ``real_arc_int_op`` need names the ``ApiMethod`` whose
+       signature contains ``<real_arc_int title>::<real_arc_int_op title>(``
+   * - ``safety``
+     - ``safety``; without it, the highest ``safety`` of the violated needs
+   * - ``version``
+     - ``version``
+
+Needs with status ``invalid`` are skipped.
+
+.. code-block:: python
+
+   failure_modes(
+       name = "my_failure_modes",
+       needs = ["//my/component:docs"],
+       package = "MyFmea",
+       deps = [":arch"],
+   )
+
 .. list-table::
    :header-rows: 1
    :widths: 18 12 10 60
@@ -675,8 +765,16 @@ target, which therefore belongs in ``deps``.
      - Target name
    * - ``srcs``
      - label list
-     - yes
-     - ``.trlc`` files containing ``FailureMode`` records
+     - no
+     - ``.trlc`` files containing ``FailureMode`` records (default ``[]``)
+   * - ``needs``
+     - label list
+     - no
+     - score_docs_as_code ``docs_bundle`` targets or ``needs.json`` files holding ``comp_saf_fmea`` needs (default ``[]``)
+   * - ``package``
+     - string
+     - no
+     - TRLC package of the records generated from ``needs`` (default: the target name)
    * - ``deps``
      - label list
      - no
@@ -769,6 +867,13 @@ records of the root causes and the measures they list.
        fault_trees     = ":my_fault_trees",
        safety_measures = [":aous"],
    )
+
+Without ``assessments``, failure modes generated from FMEA ``needs`` are
+assessed by their needs: a need rated ``sufficient: yes`` is the assessment of
+all root causes of its fault trees, tracing to them and to its ``mitigated_by``
+measures that are records of ``safety_measures`` (a ``[version==N]`` link filter
+is checked against the measure version). Root causes of a need rated
+``sufficient: no`` stay unassessed and are reported by the ``dependable_element``.
 
 .. list-table::
    :header-rows: 1

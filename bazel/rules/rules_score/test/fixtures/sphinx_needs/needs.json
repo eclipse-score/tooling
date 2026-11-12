@@ -1,0 +1,102 @@
+{
+  "current_version": "0.0.0",
+  "project": "rules_score_test",
+  "versions": {
+    "0.0.0": {
+      "needs": {
+        "stkh_req__bits__fast_io": {
+          "id": "stkh_req__bits__fast_io",
+          "type": "stkh_req",
+          "title": "Fast IO",
+          "content": "The platform shall support fast IO.",
+          "version": 1,
+          "status": "valid",
+          "safety": "ASIL_B",
+          "docname": "requirements/stakeholder",
+          "lineno": 10
+        },
+        "feat_req__bits__bitmanipulation": {
+          "id": "feat_req__bits__bitmanipulation",
+          "type": "feat_req",
+          "title": "Bit manipulation",
+          "content": "The feature shall manipulate bits.",
+          "version": 2,
+          "status": "valid",
+          "safety": "ASIL_B",
+          "docname": "requirements/feature",
+          "lineno": 12,
+          "satisfied_by": ["feat__bits[version==1]"]
+        },
+        "feat_req__other__feature": {
+          "id": "feat_req__other__feature",
+          "type": "feat_req",
+          "title": "Other feature",
+          "content": "Another feature of the platform.",
+          "version": 1,
+          "status": "valid",
+          "safety": "QM",
+          "docname": "requirements/feature",
+          "lineno": 20,
+          "satisfied_by": ["feat__other[version==1]"]
+        },
+        "comp_req__bits__set": {
+          "id": "comp_req__bits__set",
+          "type": "comp_req",
+          "title": "Set bits",
+          "content": "The component shall set individual bits.",
+          "version": 1,
+          "status": "valid",
+          "safety": "ASIL_B",
+          "docname": "requirements/index",
+          "lineno": 33,
+          "satisfied_by": ["comp__bits[version==1]"],
+          "derived_from": ["feat_req__bits__bitmanipulation[version==2]"],
+          "covers": ["aou_req__bits__integral"]
+        },
+        "comp_req__other__get": {
+          "id": "comp_req__other__get",
+          "type": "comp_req",
+          "title": "Other component",
+          "content": "Belongs to another component.",
+          "version": 1,
+          "status": "valid",
+          "safety": "QM",
+          "docname": "requirements/other",
+          "lineno": 7,
+          "satisfied_by": ["comp__other[version==1]"]
+        },
+        "comp_req__bits__retired": {
+          "id": "comp_req__bits__retired",
+          "type": "comp_req",
+          "title": "Retired",
+          "content": "No longer applicable.",
+          "version": 1,
+          "status": "invalid",
+          "safety": "QM",
+          "docname": "requirements/index",
+          "lineno": 45,
+          "satisfied_by": ["comp__bits[version==1]"]
+        },
+        "aou_req__bits__integral": {
+          "id": "aou_req__bits__integral",
+          "type": "aou_req",
+          "title": "Integral types",
+          "content": "The user shall use integral types only.",
+          "version": 1,
+          "status": "valid",
+          "safety": "ASIL_B",
+          "docname": "requirements/index",
+          "lineno": 60
+        },
+        "comp__bits": {
+          "id": "comp__bits",
+          "type": "comp",
+          "title": "Bits",
+          "version": 1,
+          "docname": "architecture/index",
+          "lineno": 5
+        }
+      }
+    }
+  }
+}

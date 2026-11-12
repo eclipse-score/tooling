@@ -27,11 +27,13 @@ load("//bazel/rules/rules_score/private:requirements.bzl", "score_requirements_r
 
 def component_requirements(
         name,
-        srcs,
+        srcs = [],
         deps = [],
         spec = Label("//bazel/rules/rules_score/trlc/config:score_requirements_model"),
         lobster_config = Label("//bazel/rules/rules_score/lobster/config:component_requirement"),
         image_srcs = [],
+        needs = [],
+        comp_id = None,
         **kwargs):
     """Define component requirements following S-CORE process guidelines.
 
@@ -63,6 +65,14 @@ def component_requirements(
             include `derived_from` as a tracing target, including any AoU
             entries within it (resolved only at the dependable_element level,
             which has a "Received AoUs" level).
+        needs: score_docs_as_code ``docs_bundle`` targets or ``needs.json``
+            files with Sphinx-Needs requirements. Their ``comp_req`` needs are
+            converted by ``lobster_sphinx_needs`` into the same LOBSTER items
+            as TRLC records, with ``derived_from`` and ``covers`` as tracing
+            targets; ``<name>_test`` only checks ``srcs``.
+        comp_id: ID of the component (``comp`` need) the requirements belong
+            to. Mandatory with ``needs``: only ``comp_req`` needs whose
+            ``satisfied_by`` link names this component are converted.
         visibility: Bazel visibility specification for the generated targets.
 
     Generated Targets:
@@ -79,6 +89,8 @@ def component_requirements(
         )
         ```
     """
+    if needs and not comp_id:
+        fail("{}: needs requires comp_id".format(name))
     score_requirements_rule(
         name = name,
         srcs = srcs,
@@ -87,10 +99,13 @@ def component_requirements(
         lobster_config = lobster_config,
         spec = spec,
         image_srcs = image_srcs,
+        needs = needs,
+        needs_satisfied_by = comp_id,
         **kwargs
     )
-    trlc_requirements_test(
-        name = name + "_test",
-        reqs = [":" + name],
-        **kwargs
-    )
+    if srcs != []:
+        trlc_requirements_test(
+            name = name + "_test",
+            reqs = [":" + name],
+            **kwargs
+        )

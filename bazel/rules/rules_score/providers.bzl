@@ -135,6 +135,8 @@ FailureModesInfo = provider(
     fields = {
         "srcs": "Depset of .lobster traceability files generated from the FailureMode TRLC sources.",
         "name": "Name of the failure_modes target.",
+        "needs": "Depset of the needs.json files the FailureMode records were generated from (empty for TRLC sources).",
+        "package": "TRLC package of the records generated from `needs`, or None.",
     },
 )
 

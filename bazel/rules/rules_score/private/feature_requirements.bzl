@@ -28,11 +28,13 @@ load("//bazel/rules/rules_score/private:requirements.bzl", "score_requirements_r
 
 def feature_requirements(
         name,
-        srcs,
+        srcs = [],
         deps = [],
         spec = Label("//bazel/rules/rules_score/trlc/config:score_requirements_model"),
         lobster_config = Label("//bazel/rules/rules_score/lobster/config:feature_requirement"),
         image_srcs = [],
+        needs = [],
+        feat_id = None,
         **kwargs):
     """Define feature requirements following S-CORE process guidelines.
 
@@ -57,6 +59,13 @@ def feature_requirements(
             (``@score_tooling//bazel/rules/rules_score/trlc/config:score_requirements_model``).
         lobster_config: Optional Lobster extraction config label. Defaults to the
             S-CORE feature requirement config.
+        needs: score_docs_as_code ``docs_bundle`` targets or ``needs.json``
+            files with Sphinx-Needs requirements. Their ``feat_req`` needs are
+            converted by ``lobster_sphinx_needs`` into the same LOBSTER items
+            as TRLC records; ``<name>_test`` only checks ``srcs``.
+        feat_id: ID of the feature (``feat`` need) the requirements belong
+            to. Mandatory with ``needs``: only ``feat_req`` needs whose
+            ``satisfied_by`` link names this feature are converted.
         visibility: Bazel visibility specification for the generated targets.
 
     Generated Targets:
@@ -78,6 +87,8 @@ def feature_requirements(
         )
         ```
     """
+    if needs and not feat_id:
+        fail("{}: needs requires feat_id".format(name))
     score_requirements_rule(
         name = name,
         srcs = srcs,
@@ -86,10 +97,13 @@ def feature_requirements(
         lobster_config = lobster_config,
         spec = spec,
         image_srcs = image_srcs,
+        needs = needs,
+        needs_satisfied_by = feat_id,
         **kwargs
     )
-    trlc_requirements_test(
-        name = name + "_test",
-        reqs = [":" + name],
-        **kwargs
-    )
+    if srcs != []:
+        trlc_requirements_test(
+            name = name + "_test",
+            reqs = [":" + name],
+            **kwargs
+        )

@@ -92,6 +92,12 @@ are rendered under :doc:`tool_reference/index`.
      - ``rst_to_trlc`` rule
      - Converts RST requirement directives (``feat_req``, ``comp_req``, …) into
        ``.trlc`` records so requirements can be authored in either RST or TRLC.
+   * - **lobster_sphinx_needs**
+     - ``src/lobster_sphinx_needs.py`` (local)
+     - ``feature_requirements``, ``component_requirements``,
+       ``assumed_system_requirements``, ``assumptions_of_use`` (``needs``)
+     - Counterpart of ``lobster-trlc``: converts Sphinx-Needs ``needs.json``
+       requirements into the same LOBSTER requirement items.
    * - **parse_test_spec**
      - ``src/test_case_coverage/parse_test_spec.py`` (local)
      - ``test_specification`` rule
