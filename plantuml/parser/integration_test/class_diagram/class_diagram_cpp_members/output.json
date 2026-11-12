@@ -110,6 +110,13 @@
           {
             "name": "operator->",
             "return_type": "Result<Artifact>*",
+            "return_template_instantiation": {
+              "name": "Result",
+              "arguments": [
+                "Artifact"
+              ],
+              "outer_decorators": ["*"]
+            },
             "visibility": "public",
             "parameters": [],
             "template_parameters": null,

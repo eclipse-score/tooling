@@ -1,0 +1,252 @@
+{
+  "types": {
+    "Mixed": {
+      "id": "Mixed",
+      "name": "Mixed",
+      "enclosing_namespace_id": null,
+      "stereotypes": [],
+      "entity_type": "Class",
+      "template_kind": "Primary",
+      "type_aliases": [],
+      "variables": [],
+      "methods": [],
+      "template_parameters": [
+        {
+          "Type": {
+            "name": "Value",
+            "is_pack": false
+          }
+        },
+        {
+          "NonType": {
+            "name": "Count",
+            "value_type": "int",
+            "is_pack": false
+          }
+        }
+      ],
+      "enum_literals": [],
+      "relationships": [],
+      "source_location": {
+        "file": "cpp/libclang/integration_test/cases/type_shapes/types.cpp",
+        "line": 15
+      }
+    },
+    "Pair": {
+      "id": "Pair",
+      "name": "Pair",
+      "enclosing_namespace_id": null,
+      "stereotypes": [],
+      "entity_type": "Class",
+      "template_kind": "Primary",
+      "type_aliases": [],
+      "variables": [],
+      "methods": [],
+      "template_parameters": [
+        {
+          "Type": {
+            "name": "First",
+            "is_pack": false
+          }
+        },
+        {
+          "Type": {
+            "name": "Second",
+            "is_pack": false
+          }
+        }
+      ],
+      "enum_literals": [],
+      "relationships": [],
+      "source_location": {
+        "file": "cpp/libclang/integration_test/cases/type_shapes/types.cpp",
+        "line": 14
+      }
+    },
+    "Widget": {
+      "id": "Widget",
+      "name": "Widget",
+      "enclosing_namespace_id": null,
+      "stereotypes": [],
+      "entity_type": "Struct",
+      "type_aliases": [
+        {
+          "alias": "TemplateAlias",
+          "original_type": "const Pair<int *const, volatile float *> *",
+          "template_instantiation": {
+            "name": "Pair",
+            "arguments": [
+              "int *const",
+              "volatile float *"
+            ],
+            "outer_decorators": ["const", "*"]
+          },
+          "source_location": {
+            "file": "cpp/libclang/integration_test/cases/type_shapes/types.cpp",
+            "line": 19
+          }
+        }
+      ],
+      "variables": [
+        {
+          "name": "wrapped",
+          "data_type": "const Pair<int *const, volatile float *> *",
+          "template_instantiation": {
+            "name": "Pair",
+            "arguments": [
+              "int *const",
+              "volatile float *"
+            ],
+            "outer_decorators": ["const", "*"]
+          },
+          "visibility": "public",
+          "is_static": false,
+          "source_location": {
+            "file": "cpp/libclang/integration_test/cases/type_shapes/types.cpp",
+            "line": 20
+          }
+        },
+        {
+          "name": "nested",
+          "data_type": "Pair<int, Pair<float, const int *>>",
+          "template_instantiation": {
+            "name": "Pair",
+            "arguments": [
+              "int",
+              "Pair<float, const int *>"
+            ],
+            "outer_decorators": []
+          },
+          "visibility": "public",
+          "is_static": false,
+          "source_location": {
+            "file": "cpp/libclang/integration_test/cases/type_shapes/types.cpp",
+            "line": 23
+          }
+        },
+        {
+          "name": "mixed",
+          "data_type": "Mixed<const int *, 3>",
+          "visibility": "public",
+          "is_static": false,
+          "source_location": {
+            "file": "cpp/libclang/integration_test/cases/type_shapes/types.cpp",
+            "line": 26
+          }
+        },
+        {
+          "name": "unsupported_nested",
+          "data_type": "Pair<int, void (*)(int)>",
+          "visibility": "public",
+          "is_static": false,
+          "source_location": {
+            "file": "cpp/libclang/integration_test/cases/type_shapes/types.cpp",
+            "line": 27
+          }
+        }
+      ],
+      "methods": [
+        {
+          "name": "template_method",
+          "return_type": "const Pair<int *const, volatile float *> *",
+          "return_template_instantiation": {
+            "name": "Pair",
+            "arguments": [
+              "int *const",
+              "volatile float *"
+            ],
+            "outer_decorators": ["const", "*"]
+          },
+          "visibility": "public",
+          "parameters": [
+            {
+              "name": "value",
+              "param_type": "const Pair<int *const, volatile float *> &",
+              "template_instantiation": {
+                "name": "Pair",
+                "arguments": [
+                  "int *const",
+                  "volatile float *"
+                ],
+                "outer_decorators": ["const", "&"]
+              },
+              "is_variadic": false
+            }
+          ],
+          "template_parameters": null,
+          "modifiers": [],
+          "source_location": {
+            "file": "cpp/libclang/integration_test/cases/type_shapes/types.cpp",
+            "line": 30
+          }
+        }
+      ],
+      "template_parameters": null,
+      "enum_literals": [],
+      "relationships": [
+        {
+          "source": "Widget",
+          "target": "Pair",
+          "relation_type": "Aggregation",
+          "source_multiplicity": null,
+          "target_multiplicity": null,
+          "source_location": {
+            "file": "cpp/libclang/integration_test/cases/type_shapes/types.cpp",
+            "line": 20
+          }
+        },
+        {
+          "source": "Widget",
+          "target": "Pair",
+          "relation_type": "Dependency",
+          "source_multiplicity": null,
+          "target_multiplicity": null,
+          "source_location": {
+            "file": "cpp/libclang/integration_test/cases/type_shapes/types.cpp",
+            "line": 30
+          }
+        }
+      ],
+      "source_location": {
+        "file": "cpp/libclang/integration_test/cases/type_shapes/types.cpp",
+        "line": 17
+      }
+    }
+  },
+  "free_function_declarations": [
+    {
+      "name": "free_template",
+      "enclosing_namespace_id": null,
+      "return_type": "const Pair<int *const, volatile float *> *",
+      "return_template_instantiation": {
+        "name": "Pair",
+        "arguments": [
+          "int *const",
+          "volatile float *"
+        ],
+        "outer_decorators": ["const", "*"]
+      },
+      "parameters": [
+        {
+          "name": "value",
+          "param_type": "const Pair<int *const, volatile float *> &",
+          "template_instantiation": {
+            "name": "Pair",
+            "arguments": [
+              "int *const",
+              "volatile float *"
+            ],
+            "outer_decorators": ["const", "&"]
+          },
+          "is_variadic": false
+        }
+      ],
+      "template_parameters": null,
+      "source_location": {
+        "file": "cpp/libclang/integration_test/cases/type_shapes/types.cpp",
+        "line": 35
+      }
+    }
+  ],
+  "functions": []
+}

@@ -78,11 +78,17 @@ template parameters on the corresponding implementation entities and methods.
 
 For classes, methods, and free functions:
 
-- Parameters match by position, count, kind, and pack marker. Non-type parameter
-  types are normalized before comparison; template-template parameters are
-  compared recursively.
+- A nonempty design declaration parameter list may omit trailing implementation
+  parameters; defaults are not required or inspected. Extra design entries and
+  skipped intermediate positions are not allowed.
+- Explicit parameters match by position, kind, and pack marker; non-type types
+  follow **Type Normalization**. Template-template lists follow these rules
+  recursively.
 - Omitted design names are unconstrained; explicit names must match. An absent
-  parameter list is not a wildcard.
+  (`None`) list matches only `None`, and an explicit empty list only an explicit
+  empty list; neither is a wildcard.
+- Method/free-function template declarations are checked after selection under
+  **Overload Group Matching**.
 
 **Specialization exception:** implementation partial and explicit full
 specializations are matched by fully qualified base name only. Their class
@@ -136,8 +142,10 @@ change that ID.
 
 The declared interface is checked against **every implementation partial or explicit full
 specialization with the same fully qualified base name**, without comparing its
-class template parameters or specialization arguments. The raw design `<…>` text
-is not retained for argument comparison, so a typo such as
+class template parameters or specialization arguments. On the implementation side,
+that base name is the qualified ID after removing only its final template-argument
+list: `Outer<Policy>::Box<int>` matches `Outer<Policy>::Box`, not `Outer::Box`.
+The raw design `<…>` text is not retained for argument comparison, so a typo such as
 `<ReturnTyp(ArgTypes...), Capacity, Alignment>` or an unrelated list such as
 `<int, X>` does not cause a specialization-argument mismatch. A debug diagnostic
 identifies each skipped class template-parameter check and explains this
@@ -230,11 +238,17 @@ implementation entity. The method name, visibility, parameters, and method
 modifiers must match, and the normalized return type must also match (this
 applies to constructors and destructors too, which typically have no return
 type on either side). Method modifiers include `const`, `static`, `virtual`,
-`abstract`, `override`, constructor, destructor, and `noexcept`. Parameters
-match when they have the same count, with matching parameter name, normalized
-type, and pack-expansion (`...`) marker at each position. Top-level `const` on
-a parameter is ignored; see [Top-level `const` on parameters](#top-level-const-on-parameters).
+`abstract`, `override`, constructor, destructor, and `noexcept`. A nonempty
+design parameter list constrains a positional prefix: names, normalized types
+(see **Type Normalization**), and variadic/pack-expansion (`...`) markers must
+match. Only trailing implementation parameters may be omitted, without requiring
+or inspecting defaults; extra design entries, skipped positions, and reordering
+are not allowed. An empty list strictly requires zero implementation parameters.
+Top-level `const` on a parameter is ignored; see
+[Top-level `const` on parameters](#top-level-const-on-parameters).
 *(Requirement: {requirement:downstream-ref}`Tools.ClassDesignImplementationMethodConsistency`)*
+
+For example, `f(id: int)` may match `f(int id, bool enabled)`, but `f()` cannot.
 
 `static`, `abstract`, `virtual`, and `override` may each be written either as a
 brace qualifier (e.g. `{virtual}`) or as a stereotype (e.g. `<<virtual>>`); both
@@ -253,6 +267,9 @@ These forms are equivalent and can be combined with `noexcept`, e.g.
 `+ Empty() const noexcept : bool`. Method qualification is independent of
 `const` in a parameter or return type: `+ Value() : const int&` alone does not
 declare a const-qualified method.
+
+The trailing-parameter omission rule applies equally to const-qualified and
+non-const methods; see the examples under **Overload Group Matching**.
 
 ```text
 ' PlantUML class diagram
@@ -288,17 +305,15 @@ C-style variadic parameters (e.g. `void Log(const char* fmt, ...)`) are not
 currently supported by the PlantUML parser and are not validated: a design
 parameter is always treated as non-variadic.
 
-Method lookup first tries the method name, normalized parameter types, and
-method `const` qualification. Thus `Check()` and `Check() const` are distinct
-overloads, even when their return types are identical. If no exact signature
-match exists and exactly one implementation method has the same name, that
-method is compared to produce field-level diagnostics. A `const` mismatch is
+Method lookup follows **Overload Group Matching**, including method `const`
+qualification when forming candidates. Thus `Check()` and `Check() const` are
+distinct overloads, even when their return types are identical. A `const` mismatch is
 rejected in both directions: the design is const-qualified but the implementation
 is not, or the implementation is const-qualified but the design is not. For a
 unique same-named candidate, this produces a method-modifier mismatch showing
-`[Const]` versus `[]`. If multiple same-named
-implementation overloads exist, the design method is reported as missing because
-the validator cannot safely choose a candidate.
+`[Const]` versus `[]`. With no compatible candidate, one same-name implementation
+yields field-level diagnostics (including parameter count errors); otherwise, a
+missing-signature diagnostic is reported.
 
 ```text
 ' PlantUML class diagram
@@ -361,10 +376,10 @@ public:
 ### Free Function Consistency
 
 Every free function (at global or namespace scope) modeled in the unit design
-must exist in the implementation. Functions are matched by their
-namespace-qualified name and normalized parameter types, which supports
-overloads. Return type, parameter names and types, variadic or pack-expansion
-markers, and template parameters must match.
+must exist in the implementation. Functions are grouped by fully
+namespace-qualified name and follow **Method Consistency** parameter and
+no-candidate diagnostic rules and **Overload Group Matching**. Return types and
+template declarations must also match; class-only visibility/modifiers do not apply.
 *(Requirement: {requirement:downstream-ref}`Tools.ClassDesignImplementationFreeFunctionConsistency`)*
 
 ```text
@@ -383,6 +398,97 @@ void Dispatch(std::uint8_t mode);
 }
 ```
 
+### Overload Group Matching
+
+For each same-name method group within a matched class, or fully qualified free
+function group:
+
+1. Form candidates using positional normalized parameter types, counts, and
+  variadic/pack flags under **Method Consistency**. For methods, `const`
+  qualification must also be equal.
+2. Require a **unique injective assignment** covering every design declaration:
+   each selects a different implementation; implementation-only overloads may
+   remain unused.
+3. Check parameter names, return types, template declarations, and applicable
+  visibility/remaining modifiers after selection, never to disambiguate candidates.
+
+There is no exact-first preference, implicit conversion, template deduction, or
+substitution.
+
+| Design declarations | Implementation overloads | Result |
+|---|---|---|
+| `f(int)` | `f(int, int)` | Unique trailing omission, no defaults required |
+| `f(int)` | `f(int)`, `f(int, int)` | Ambiguous, even with an exact signature |
+| `f(int)`, `f(int, int)` | `f(int)`, `f(int, int)` | Unique group-wide assignment |
+| `f(int)`, `f(int, int)` | `f(int, int)` | Collision: no injective assignment |
+| `f(int)`, `f(int, int)` | `f(int)`, `f(int, int)`, `f(int, int, float)` | Still ambiguous |
+| `f()` | `f()`, `f(int)` | Unique zero-parameter candidate |
+| `f()` | `f(int)` | Parameter-count mismatch, not omission |
+| `f(int)` | `f(double, int)` | Type mismatch, no conversion |
+| `f(int id) const` | `f(int id, bool enabled) const` | Unique trailing omission also applies to const-qualified methods |
+| `f() const` | `f(int id, bool enabled) const` | Parameter-count mismatch: an empty design list requires zero implementation parameters |
+| `f(bool enabled) const` | `f(int id, bool enabled) const` | Type mismatch: the design must specify a positional prefix, not skip the first parameter |
+| `f(int id)` | `f(int id, bool enabled) const` | Method const-qualification mismatch: non-const and const methods do not match |
+| `template<typename T> f(int)` | `template<typename T> f(int)` | Unique assignment; template declaration matches |
+| `template<typename T> f(int)` | `template<typename T, typename U> f(int)` | Unique assignment; trailing template parameter omission is allowed, no defaults required |
+| `template<typename T> f(int)` | `template<int N> f(int)` | Unique assignment, then template parameter kind mismatch |
+| `template<typename T> f(int)` | `f(int)` | Unique assignment, then template declaration mismatch |
+| `template<typename T> f(int)` | `f(int)`, `template<typename T> f(int)` | Ambiguous; the matching template declaration does not disambiguate candidates |
+| `template<typename T> f(T)` | `template<typename U> f(U)` | Parameter type mismatch; no template parameter renaming or substitution |
+| `template<int N> C` | `template<int N, typename T> C` | Unique trailing omission also applies to non-type parameters |
+| `template<int N> C` | `template<typename T, int N> C` | Kind mismatch: the design must specify a positional prefix, not skip the first parameter |
+| `template<int N> C` | `template<long N> C` | Non-type parameter type mismatch; no conversion |
+| `template<int N> C` | `template<int M> C` | Explicit non-type parameter names must match |
+| `template<std::size_t N> C` | `template<size_t N> C` | Non-type parameter types match after type normalization |
+| `template<template<typename> class C> Owner` | `template<template<typename> class C, typename T> Owner` | Unique trailing omission also applies to template-template parameters |
+| `template<template<typename> class C> Owner` | `template<template<typename U> class C> Owner` | Inner template-template lists also allow trailing omission |
+| `template<template<typename T> class C> Owner` | `template<template<int N> class C> Owner` | Nested template parameter kind mismatch |
+| `template<template<typename> class C> Owner` | `template<typename C> Owner` | Template-template and type parameters do not match |
+| `Map<K, V>` | `Map<K, V, Compare>` | Compatible type prefix only with known template metadata on both sides; otherwise type mismatch |
+
+The `template<...> f(...)` notation above describes declaration metadata, not
+template call arguments; return types and parameter names are omitted for brevity.
+A unique assignment is only the selection result: subsequent template or other
+field checks may still fail validation.
+
+Ambiguity and collision diagnostics include the design and implementation
+declarations, recorded parameter spellings/flags, and source locations.
+No-candidate diagnostics follow **Method Consistency**.
+
+Method/free-function grouping ignores source location and deduplicates exact
+recorded non-location fields; distinct conflicting records remain. This is not
+full C++ redeclaration resolution. Member `const` qualification distinguishes
+candidates; ref qualification is not represented or checked.
+
+#### Effect of Partial and Explicit Full Specializations
+
+Class specialization matching and overload matching operate at different levels.
+Under **Specialization Interface Matching**, every implementation partial or
+explicit full class specialization with the same fully qualified base name is
+checked against the shared design contract. Overload assignment is performed
+**separately within each matched implementation class**, not across a combined
+pool of methods from all specializations. Two specializations each providing
+`f(int)` therefore do not, by themselves, create overload ambiguity.
+
+| Design contract | Implementation specializations | Result |
+|---|---|---|
+| `Box<T>` with `f(int)` | Partial specialization `Box<T*>` and full specialization `Box<int>`, each with only `f(int)` in that method group | Unique method assignment in each specialization; both are checked |
+| `Box<T>` with `f(int)` | `Box<int>` with `f(int)`; `Box<double>` with `f(int)` and `f(int, double)` | Unique in `Box<int>`, ambiguous in `Box<double>`; validation fails |
+| Design label `Box<int>` with `f(int)` | `Box<int>` with `f(int)`; `Box<double>` without `f` | Both specializations are checked by base name; missing method in `Box<double>` fails validation |
+
+In these examples:
+
+- `Box<T>` declares a class template, but `f(int)` requires an `int` parameter,
+  not `T`. Even a design label `Box<int>` matches specializations by base name
+  `Box`, not by the argument `int`.
+- Class specializations skip class template-parameter and specialization-argument
+  checks only; their members and method template declarations are still checked.
+  A matching primary template is also checked if its template parameters match
+  the design (see **Template Parameter Consistency**).
+- Methods and free functions follow the overload rules above, with no preference
+  for explicit full function specializations. C++ function templates cannot be
+  partially specialized; additional function templates are overloads.
+
 ### Type Normalization
 
 Before comparing types, the validator applies limited normalization.
@@ -399,11 +505,13 @@ Before comparing types, the validator applies limited normalization.
 The last row accounts for a difference between the class diagram and
 implementation parser UIDs: dots used as namespace separators are converted to
 `::` before comparison. This applies to type names, class/entity IDs, and
-relationship source/target identifiers alike. cv-qualifiers such as `const`
+relationship source/target identifiers alike. For full-string comparisons,
+cv-qualifiers such as `const`
 and `volatile`, and the pointer/reference decorators `*`/`&`, are preserved
 (only the spacing around them is normalized). The `uint8_t* const` row
 accounts for the implementation parser printing a const pointer as
 `uint8_t *const`, which is compared against the design form `uint8_t* const`.
+Known template metadata preserves the same outer cv/pointer/reference structure.
 
 #### Top-level `const` on parameters
 
@@ -420,14 +528,59 @@ it is ignored when comparing method and free function parameter types. Low-level
 | `const int*` | `int*` | mismatch |
 | `const int&` | `int&` | mismatch |
 
-Top-level `const` is not ignored for return types, variable data types, or
-type alias original types; those are compared as written. `volatile` is not
-supported by this rule.
+In full-string comparisons, top-level `const` is not ignored for return types,
+variable data types, or type alias original types; those are compared as written.
+`volatile` is not supported by this parameter-normalization rule. When both types
+have known template metadata, the same parameter-normalization rule applies.
 
 The class diagram reader already rewrites `::` to `.` in class/entity IDs,
 enclosing namespace IDs, and relationship endpoints of both inputs, so
 sequence validators and this validator compare IDs in the same form. Type
 names are read as written and normalized only here.
+
+When **both inputs provide known template-instantiation metadata**, the outermost template
+actual-argument list may be a **nonempty positional prefix** of the implementation
+list: `Map<K, V>` matches `Map<K, V, C>`. Defaults are neither required nor inferred.
+No proof that omitted arguments originated from defaults is needed. Metadata stores
+the template name, complete argument strings, and optional flat outer decorators.
+The template name must match strictly after the normalization above. Outer
+`const`, `volatile`, pointer levels, lvalue-reference and rvalue-reference
+decorators **must match**, including cv attachment at each layer (cv order within
+a layer is canonicalized). `Map<K>&` matches `Map<K, V>&`, but bare `Map<K>`
+does not match `const Map<K, V>&`; neither `&` versus `*` nor `&` versus `&&`
+matches. Only parameter by-value top-level `const` and top-level pointer `const`
+are ignored, as above. Return types, fields and aliases retain all outer cv.
+
+> **WARNING: NESTED TEMPLATE ACTUAL OMISSION IS NOT SUPPORTED.**
+> Explicit nested actuals are full strings, never recursively prefix-matched.
+
+Every explicitly listed argument is compared as a **complete normalized string**,
+without splitting or parsing nested lists. Inner qualifiers and pointer/reference
+modifiers remain strict: `Map<const K>` does not match `Map<K, V>`.
+There is no nested prefix relaxation: `Outer<Map<K>>` matches
+`Outer<Map<K>, Policy>`, but not `Outer<Map<K, V>, Policy>`. Bare `Map` and `Map<>`
+are not wildcards, and the design cannot contain more actuals than the
+implementation. Empty lists match only empty lists.
+
+This policy applies uniformly to alias original types, member-variable types,
+method/free-function return types, and parameter types, including overload
+candidate selection and final field checks. It is directional (design to
+implementation), not an equality relation. Callable deduplication therefore uses
+exact field and metadata equality (ignoring source location), never prefix matching;
+declarations with different or absent metadata remain distinct. An exact type
+signature has no priority over another compatible prefix candidate, and return
+types do not disambiguate overloads.
+
+If either metadata value or its outer-decorator metadata is absent (including
+legacy serialized inputs and unsupported type syntax), types require
+**complete normalized string equality**; the validator does not parse display
+strings to recover a prefix. Parameter comparisons still ignore top-level `const`
+as described above. Otherwise, this retains outer modifiers and full equality for
+non-template types: `const K&` does not match `K&`. Literal-bearing strings always
+require exact string equality, even if metadata is present. Missing type strings match only missing
+type strings. No alias expansion, default-argument insertion, or template
+substitution is performed. Declaration template-parameter rules are unchanged;
+**Specialization Interface Matching** does not otherwise relax member type checks.
 
 ## Failure Cases
 
@@ -445,6 +598,9 @@ names are read as written and normalized only here.
 | Method return type, visibility, parameter, or modifier mismatch | Method Consistency |
 | Method `const` qualification mismatch in either direction | Method Consistency |
 | Method template parameter mismatch | Template Parameter Consistency |
+| Ambiguous member/free-function overload assignment | Overload Group Matching |
+| Multiple designs contend for too few compatible implementations | Overload Group Matching |
+| Incompatible template metadata, strict argument-string mismatch, or unequal complete types when metadata is absent | Type Normalization |
 | Missing enum literal | Enum Literal Consistency |
 | Enum literal data mismatch | Enum Literal Consistency |
 | Missing relationship | Relationship Consistency |

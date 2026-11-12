@@ -149,11 +149,25 @@
               {
                 "name": "",
                 "param_type": "amp::pmr::unique_ptr<ExecutorFactory>",
+                "template_instantiation": {
+                  "name": "amp::pmr::unique_ptr",
+                  "arguments": [
+                    "ExecutorFactory"
+                  ],
+                  "outer_decorators": []
+                },
                 "is_variadic": false
               },
               {
                 "name": "",
                 "param_type": "std::shared_ptr<mw::diag::IConversations>",
+                "template_instantiation": {
+                  "name": "std::shared_ptr",
+                  "arguments": [
+                    "mw::diag::IConversations"
+                  ],
+                  "outer_decorators": []
+                },
                 "is_variadic": false
               }
             ],

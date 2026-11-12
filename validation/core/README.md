@@ -135,6 +135,34 @@ under every containing design path. Conflicting component paths are excluded
 from downstream matching diagnostics to avoid cascading errors. An entry without
 its own `design_name` is rejected when reading the JSON.
 
+## Class Design Validation Semantics
+
+For `unit`, the design constrains the implementation; this is not C++ call resolution.
+
+- Nonempty function and template **declaration** parameter lists may omit trailing
+  implementation parameters without defaults. Explicit entries remain constrained;
+  `f()` requires zero parameters, and absent/empty template lists are not wildcards.
+- When both inputs provide known template-instantiation metadata, a nonempty outermost
+  template-actual list may be a positional prefix: `Map<K, V>` matches
+  `Map<K, V, Allocator>`. Outer cv/pointer/reference structure must match, including
+  pointer levels and cv attachment (cv order per layer is canonical). Only parameter
+  by-value top-level `const` and top-level pointer `const` are ignored. Template
+  names and explicit argument strings require strict normalized
+  equality; nested lists are not split or relaxed. Bare names and empty lists are
+  not wildcards, and omitted tails need no proof of default origin. Missing template
+  or outer-decorator metadata on either side (including legacy inputs) retains
+  complete normalized string equality, including outer
+  modifiers and non-template types. Literal-bearing strings always require exact
+  string equality.
+- **WARNING: NESTED TEMPLATE ACTUAL OMISSION IS NOT SUPPORTED.**
+  `Outer<Map<K>>` cannot match `Outer<Map<K, V>, Policy>`.
+- Overload groups require a unique one-to-one assignment covering every design
+  declaration. Unused implementation overloads are allowed; exact signatures have
+  no priority over other compatible prefixes.
+
+See the [class design implementation specification](docs/specifications/class_design_implementation.md)
+for detailed rules and current limitations.
+
 ## Run
 
 Build the CLI:

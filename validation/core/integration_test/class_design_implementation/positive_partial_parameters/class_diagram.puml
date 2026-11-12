@@ -1,0 +1,42 @@
+' *******************************************************************************
+' Copyright (c) 2026 Contributors to the Eclipse Foundation
+'
+' See the NOTICE file(s) distributed with this work for additional
+' information regarding copyright ownership.
+'
+' This program and the accompanying materials are made available under the
+' terms of the Apache License Version 2.0 which is available at
+' https://www.apache.org/licenses/LICENSE-2.0
+'
+' SPDX-License-Identifier: Apache-2.0
+' *******************************************************************************
+
+@startuml positive_partial_parameters
+
+namespace partial {
+    struct Consumer {
+        using Storage = partial::containers::Map<partial::types::Key, partial::types::Value, partial::types::Compare, partial::types::Allocator>
+        + values : partial::containers::Map<partial::types::Key, partial::types::Value, partial::types::Compare, partial::types::Allocator>
+        + Read(mode: int) const : const partial::containers::Map<partial::types::Key, partial::types::Value, partial::types::Compare, partial::types::Allocator>&
+        + Write(value: const partial::containers::Map<partial::types::Key, partial::types::Value, partial::types::Compare, partial::types::Allocator>&) : void
+        + Convert<typename T>(mode: int) : int
+        + Select(mode: int, force: int) : int
+        + Select(mode: int) : int
+        + Zero() : int
+    }
+
+    ' Nonempty declaration lists omit trailing parameters, never type actuals.
+    class "Declaration<typename T>" as Declaration
+    class "NestedDeclaration<template<typename> class C>" as NestedDeclaration
+
+    entity Functions <<function>> {
+        + Make(mode: int) : partial::containers::Map<partial::types::Key, partial::types::Value, partial::types::Compare, partial::types::Allocator>
+        + Submit(value: const partial::containers::Map<partial::types::Key, partial::types::Value, partial::types::Compare, partial::types::Allocator>&) : void
+        + Convert<typename T>(mode: int) : int
+        + Select(mode: int, force: int) : int
+        + Select(mode: int) : int
+        + Zero() : int
+    }
+}
+
+@enduml

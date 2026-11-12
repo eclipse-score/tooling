@@ -69,6 +69,13 @@
         {
           "name": "getHistory",
           "return_type": "std::vector<int>",
+          "return_template_instantiation": {
+            "name": "std::vector",
+            "arguments": [
+              "int"
+            ],
+            "outer_decorators": []
+          },
           "parameters": [],
           "modifiers": ["Const"],
           "template_parameters": null,
@@ -81,6 +88,13 @@
         {
           "name": "getNames",
           "return_type": "std::vector<const char *>",
+          "return_template_instantiation": {
+            "name": "std::vector",
+            "arguments": [
+              "const char *"
+            ],
+            "outer_decorators": []
+          },
           "parameters": [],
           "modifiers": ["Const"],
           "template_parameters": null,
@@ -93,6 +107,13 @@
         {
           "name": "getConstPointerMatrix",
           "return_type": "std::vector<std::vector<const int *>>",
+          "return_template_instantiation": {
+            "name": "std::vector",
+            "arguments": [
+              "std::vector<const int *>"
+            ],
+            "outer_decorators": []
+          },
           "parameters": [],
           "modifiers": ["Const"],
           "template_parameters": null,
@@ -105,6 +126,14 @@
         {
           "name": "getNameIndex",
           "return_type": "std::map<int, std::vector<const char *>>",
+          "return_template_instantiation": {
+            "name": "std::map",
+            "arguments": [
+              "int",
+              "std::vector<const char *>"
+            ],
+            "outer_decorators": []
+          },
           "parameters": [],
           "modifiers": ["Const"],
           "template_parameters": null,
@@ -117,6 +146,14 @@
         {
           "name": "getRouteInfoById",
           "return_type": "std::map<int, external_types::RouteInfo>",
+          "return_template_instantiation": {
+            "name": "std::map",
+            "arguments": [
+              "int",
+              "external_types::RouteInfo"
+            ],
+            "outer_decorators": []
+          },
           "parameters": [],
           "modifiers": ["Const"],
           "template_parameters": null,

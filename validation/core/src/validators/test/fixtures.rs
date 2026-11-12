@@ -305,6 +305,7 @@ pub(super) fn method(name: &str) -> Method {
     Method {
         name: name.to_string(),
         return_type: None,
+        return_template_instantiation: None,
         source_location: dummy_source_location(),
         visibility: Visibility::Public,
         parameters: Vec::new(),

@@ -87,6 +87,13 @@
         {
           "name": "engine5",
           "data_type": "std::vector<MyNamespace::Engine>",
+          "template_instantiation": {
+            "name": "std::vector",
+            "arguments": [
+              "MyNamespace::Engine"
+            ],
+            "outer_decorators": []
+          },
           "is_static": false,
           "visibility": "public",
           "source_location": {

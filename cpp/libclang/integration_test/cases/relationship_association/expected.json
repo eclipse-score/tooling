@@ -100,6 +100,13 @@
         {
           "name": "allDrivers",
           "return_type": "std::vector<Driver>",
+          "return_template_instantiation": {
+            "name": "std::vector",
+            "arguments": [
+              "Driver"
+            ],
+            "outer_decorators": []
+          },
           "parameters": [],
           "modifiers": [],
           "template_parameters": null,

@@ -68,6 +68,46 @@ fn positive_free_function_features() {
 }
 
 #[test]
+fn positive_partial_parameters() {
+    assert_case("positive_partial_parameters");
+}
+
+#[test]
+fn negative_complete_type_actual_mismatch() {
+    assert_case("negative_complete_type_actual_mismatch");
+}
+
+#[test]
+fn positive_default_template_actual_omission() {
+    assert_case("positive_default_template_actual_omission");
+}
+
+#[test]
+fn positive_structured_template_actual_omission() {
+    assert_case("positive_structured_template_actual_omission");
+}
+
+#[test]
+fn negative_unsupported_template_actual_mismatch() {
+    assert_case("negative_unsupported_template_actual_mismatch");
+}
+
+#[test]
+fn negative_parameter_prefix_matches_multiple_implementation_overloads() {
+    assert_case("negative_parameter_prefix_matches_multiple_implementation_overloads");
+}
+
+#[test]
+fn negative_multiple_design_overloads_compete_for_one_implementation() {
+    assert_case("negative_multiple_design_overloads_compete_for_one_implementation");
+}
+
+#[test]
+fn negative_zero_parameter_design_with_parameterized_implementation() {
+    assert_case("negative_zero_parameter_design_with_parameterized_implementation");
+}
+
+#[test]
 fn positive_shared_implementation_dependency() {
     assert_case("positive_shared_implementation_dependency");
 }
