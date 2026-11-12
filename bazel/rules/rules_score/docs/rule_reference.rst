@@ -715,6 +715,42 @@ target, which therefore belongs in ``deps``.
        deps = [":arch"],
    )
 
+The failure modes may instead be the ``comp_saf_fmea`` needs of an FMEA written
+with score_docs_as_code (``needs``). Each need becomes a generated
+``FailureMode`` record named by its need ID, so a fault tree references it as
+``<package>.<need ID>``:
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 70
+
+   * - Need field
+     - ``FailureMode`` field
+   * - ``title`` / content
+     - ``description`` / ``note``
+   * - ``failure_effect``
+     - ``failureeffect``
+   * - ``fault_id``
+     - ``guidewords`` (fault model IDs as listed on ``ScoreReq.Guideword``)
+   * - ``violates``
+     - ``interface``: a ``real_arc_int_op`` need names the ``ApiMethod`` whose
+       signature contains ``<real_arc_int title>::<real_arc_int_op title>(``
+   * - ``safety``
+     - ``safety``; without it, the highest ``safety`` of the violated needs
+   * - ``version``
+     - ``version``
+
+Needs with status ``invalid`` are skipped.
+
+.. code-block:: python
+
+   failure_modes(
+       name = "my_failure_modes",
+       needs = ["//my/component:docs"],
+       package = "MyFmea",
+       deps = [":arch"],
+   )
+
 .. list-table::
    :header-rows: 1
    :widths: 18 12 10 60
@@ -729,8 +765,16 @@ target, which therefore belongs in ``deps``.
      - Target name
    * - ``srcs``
      - label list
-     - yes
-     - ``.trlc`` files containing ``FailureMode`` records
+     - no
+     - ``.trlc`` files containing ``FailureMode`` records (default ``[]``)
+   * - ``needs``
+     - label list
+     - no
+     - score_docs_as_code ``docs_bundle`` targets or ``needs.json`` files holding ``comp_saf_fmea`` needs (default ``[]``)
+   * - ``package``
+     - string
+     - no
+     - TRLC package of the records generated from ``needs`` (default: the target name)
    * - ``deps``
      - label list
      - no
@@ -823,6 +867,13 @@ records of the root causes and the measures they list.
        fault_trees     = ":my_fault_trees",
        safety_measures = [":aous"],
    )
+
+Without ``assessments``, failure modes generated from FMEA ``needs`` are
+assessed by their needs: a need rated ``sufficient: yes`` is the assessment of
+all root causes of its fault trees, tracing to them and to its ``mitigated_by``
+measures that are records of ``safety_measures`` (a ``[version==N]`` link filter
+is checked against the measure version). Root causes of a need rated
+``sufficient: no`` stay unassessed and are reported by the ``dependable_element``.
 
 .. list-table::
    :header-rows: 1

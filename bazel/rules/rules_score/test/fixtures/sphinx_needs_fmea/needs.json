@@ -1,0 +1,70 @@
+{
+  "current_version": "0.0.0",
+  "project": "needs_fmea_example",
+  "versions": {
+    "0.0.0": {
+      "needs": {
+        "real_arc_int__example__public_interface": {
+          "id": "real_arc_int__example__public_interface",
+          "type": "real_arc_int",
+          "title": "PublicInterface",
+          "safety": "ASIL_B",
+          "status": "valid",
+          "docname": "architecture/index",
+          "lineno": 5
+        },
+        "real_arc_int_op__example__send": {
+          "id": "real_arc_int_op__example__send",
+          "type": "real_arc_int_op",
+          "title": "Send",
+          "included_by": ["real_arc_int__example__public_interface"],
+          "safety": "ASIL_B",
+          "status": "valid",
+          "docname": "architecture/index",
+          "lineno": 12
+        },
+        "comp_req__example__retry": {
+          "id": "comp_req__example__retry",
+          "type": "comp_req",
+          "title": "Retry on missing response",
+          "content": "The component shall retry a request without response.",
+          "satisfied_by": ["comp__example"],
+          "safety": "ASIL_B",
+          "status": "valid",
+          "version": 1,
+          "docname": "requirements/index",
+          "lineno": 3
+        },
+        "comp_saf_fmea__example__no_response": {
+          "id": "comp_saf_fmea__example__no_response",
+          "type": "comp_saf_fmea",
+          "title": "PublicInterface stops responding",
+          "content": "Covered by the \"error reaction\" AoU of the platform.",
+          "fault_id": "MF_01_01,EX_01_04",
+          "failure_effect": "Callers never receive a response",
+          "violates": ["real_arc_int_op__example__send[version==1]"],
+          "mitigated_by": ["comp_req__example__retry[version==1]", "aou_req__platform__error_reaction"],
+          "sufficient": "yes",
+          "status": "valid",
+          "version": 2,
+          "docname": "safety_analysis/fmea",
+          "doctype": ".rst",
+          "lineno": 20
+        },
+        "comp_saf_fmea__example__obsolete": {
+          "id": "comp_saf_fmea__example__obsolete",
+          "type": "comp_saf_fmea",
+          "title": "Obsolete failure mode",
+          "fault_id": "MF_01_05",
+          "failure_effect": "None",
+          "violates": ["real_arc_int_op__example__send"],
+          "sufficient": "no",
+          "status": "invalid",
+          "version": 1,
+          "docname": "safety_analysis/fmea",
+          "lineno": 40
+        }
+      }
+    }
+  }
+}
