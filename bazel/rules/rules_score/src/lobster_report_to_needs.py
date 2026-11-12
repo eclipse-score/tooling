@@ -38,6 +38,8 @@ NEEDS_JSON_VERSION = "1.0"
 
 _RESULTS = {"ok": "passed", "fail": "failed"}
 _RE_FIELD = re.compile(r"^:(?P<key>[A-Za-z]+):\s*(?P<value>.*)$")
+# Activity levels of a dependable element report that hold no test cases.
+_NON_TEST_LEVELS = {"Root Causes"}
 
 
 class ReportError(Exception):
@@ -105,7 +107,7 @@ def convert(report: dict[str, Any], project: str) -> dict[str, Any]:
         raise ReportError(f"expected a lobster-report, got schema {report.get('schema')!r}")
     needs: dict[str, dict[str, Any]] = {}
     for level in report.get("levels", []):
-        if level.get("kind") != "activity":
+        if level.get("kind") != "activity" or level.get("name") in _NON_TEST_LEVELS:
             continue
         for item in level.get("items", []):
             need = testcase_need(item)

@@ -70,6 +70,11 @@ class ConvertTest(unittest.TestCase):
         self.assertEqual(len(needs), 3)
         self.assertEqual({n["type"] for n in needs.values()}, {"testcase"})
 
+    def test_fault_tree_root_causes_are_no_testcases(self):
+        root_causes = {"name": "Root Causes", "kind": "activity", "items": [_item("Fta.Crash")]}
+        report = dict(REPORT, levels=REPORT["levels"] + [root_causes])
+        self.assertEqual(len(_needs(report)), 3)
+
     def test_testcase_uses_the_docs_as_code_test_xml_scheme(self):
         name = "SetBit__WithUInt8"
         need = _needs()[f"testcase__{name}_{short_hash('score/bits/bits_test.cpp' + name)}"]
