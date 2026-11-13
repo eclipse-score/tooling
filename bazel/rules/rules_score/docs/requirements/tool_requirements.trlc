@@ -315,18 +315,11 @@ section "Tool Requirements" {
             satisfied_by = Tools.Bazel
         }
 
-        ToolQualification.ToolRequirement Cover_Received_AoU_Via_Component_Requirement {
+        ToolQualification.ToolRequirement Cover_Received_AoU_Via_Manual_Analysis {
             description = '''
-                The CompReq requirement type's derived_from field
-                (CompReqSourceId) shall accept versioned, typed cross-module
-                TRLC references to AoU records alongside its usual FeatReq/
-                AssumedSystemReq references. Resolving an AoU reference shall
-                require the defining assumptions_of_use target to be listed
-                directly in the CompReq target's deps. The dependable_element
-                rule shall convert such references to lobster trace references
-                resolved against the "Received AoUs" tier, so a component
-                requirement can cover a received AoU it handles locally without
-                requiring that AoU to be chain-forwarded.
+            The dependable_element rule shall include manual analysis
+            evidence referencing received AoU records directly in its
+            "Received AoUs" coverage policy.
             '''
             mitigates = [AoU_Silently_Dropped]
             derived_from = [Forward_AoU_To_Dependees, Gate_Traceability_At_Test_Time]
@@ -337,8 +330,8 @@ section "Tool Requirements" {
             description = '''
                 The lobster traceability report of a dependable element shall
                 require every item in its "Received AoUs" tier to be covered
-                by at least one of: a component requirement (via
-                derived_from) or a chain-forwarding entry (via
+                by at least one of: manual analysis (via a direct reference)
+                or a chain-forwarding entry (via
                 aou_forwarding), so that the existing lobster-ci-report test
                 fails when a received AoU is neither handled nor forwarded.
             '''

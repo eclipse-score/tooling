@@ -39,23 +39,9 @@ ScoreReq.CompReq CompBFromAsrD {
     derived_from = [AsilUpstream.AsrD@1]
 }
 
-ScoreReq.CompReq CompQmFromAouB {
-    description = "QM from received AoU B."
-    safety = ScoreReq.Asil.QM
-    version = 1
-    derived_from = [AsilUpstream.AouB@1]
-}
-
-ScoreReq.CompReq CompBFromAouD {
-    description = "B from received AoU D."
+ScoreReq.CompReq CompBFromAsrBAndFeatD {
+    description = "B from assumed system requirement B and feature D; the feature lowers the ASIL."
     safety = ScoreReq.Asil.B
     version = 1
-    derived_from = [AsilUpstream.AouD@1]
-}
-
-ScoreReq.CompReq CompBFromAouBAndFeatD {
-    description = "B from AoU B and feature D; the feature lowers the ASIL."
-    safety = ScoreReq.Asil.B
-    version = 1
-    derived_from = [AsilUpstream.AouB@1, AsilValid.FeatDFromD@1]
+    derived_from = [AsilUpstream.AsrB@1, AsilValid.FeatDFromD@1]
 }

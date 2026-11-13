@@ -26,6 +26,8 @@ def _lobster_ci_report_test_impl(ctx):
     ]
     if ctx.attr.expect_ci_failure:
         lines.append("[ \"$rc\" -ne 0 ] || { echo 'lobster-ci-report passed, a failure was expected'; cat \"$out\"; exit 1; }")
+    else:
+        lines.append("[ \"$rc\" -eq 0 ] || { echo 'lobster-ci-report failed, success was expected'; cat \"$out\"; exit 1; }")
     for text in ctx.attr.contains:
         lines.append("grep -qF -- {t} \"$out\" || {{ echo {m}; cat \"$out\"; exit 1; }}".format(
             t = shell.quote(text),

@@ -10,7 +10,7 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
-"""Runs trlc on the given files and expects exactly N check errors with a message."""
+"""Runs trlc on the given files and expects exactly check N errors with a message."""
 
 import argparse
 import contextlib
@@ -23,6 +23,7 @@ from trlc import trlc
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--message", required=True)
+    parser.add_argument("--error-kind", default="check error")
     parser.add_argument("--count", type=int, required=True)
     parser.add_argument("files", nargs="+")
     args = parser.parse_args()
@@ -33,7 +34,7 @@ def main() -> int:
         exit_code = trlc.main()
     report = output.getvalue()
 
-    expected = f"check error: {args.message}"
+    expected = f"{args.error_kind}: {args.message}"
     found = report.count(expected)
 
     if exit_code == 0 or found != args.count:
