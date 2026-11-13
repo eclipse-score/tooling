@@ -15,8 +15,13 @@
 
 namespace other_seooc {
     interface "OtherLibraryAPI" as OtherLibraryAPI {
-        + Compute(): int
+        + Compute(value: const uint8_t*): uint8_t
     }
 }
+
+note right of other_seooc.OtherLibraryAPI
+    Synchronous read; the pointer is not retained.
+    Caller must satisfy OtherLibrary.ValidInputPointer.
+end note
 
 @enduml
