@@ -95,6 +95,18 @@ my_manual_analysis_context = rule(
 Use your custom target in `manual_analysis(contexts = [...])` exactly like the
 built-in helper rules.
 
+## Lock File Identities
+
+Files in the same repository as the manual analysis target use repository-relative
+paths in the lock file. Rule labels from that repository use `@@//package:target`.
+These identities remain unchanged whether the repository is built independently
+or as an external dependency of an integrator.
+
+Files and rule labels from other repositories retain their repository prefixes
+to distinguish dependencies with identical package or file names. An analysis
+defined in the integrator therefore does not necessarily share the lock file of
+an analysis defined in the SEooC.
+
 ## Analysis YAML Schema
 
 The analysis YAML describes the verification procedure. Supported step types:
