@@ -25,3 +25,9 @@ ScoreReq.AoU SpaceConstraint {
     safety = ScoreReq.Asil.B
     version = 1
 }
+
+ScoreReq.AoU ValidInputPointer {
+    description = "The caller shall pass Compute a non-null pointer to a uint8_t object that remains alive and is not modified by any thread until Compute returns"
+    safety = ScoreReq.Asil.B
+    version = 1
+}

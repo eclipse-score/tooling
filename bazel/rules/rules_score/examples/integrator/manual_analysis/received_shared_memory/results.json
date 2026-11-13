@@ -1,0 +1,22 @@
+{
+  "analysis": "manual_analysis/received_shared_memory/analysis.yaml",
+  "results": [
+    {
+      "type": "action",
+      "description": "Review SampleType.SampleAoU@1 and identify the shared-memory naming contract, creation paths, and deployment configuration within the integrator's responsibility.",
+      "result": "The received AoU requires shared-memory segments to be created with the correct name. The integration inputs provide no accepted naming specification or deployed shared-memory configuration. This is a coding-assistant gap assessment, not independent human safety approval."
+    },
+    {
+      "type": "action",
+      "description": "Inspect the integration implementation and dependency sources for shared-memory creation and name validation. Record missing contract or deployment evidence.",
+      "result": "integrator_lib has no source files and links sample_library. The integrator has no shared-memory creation implementation or deployment evidence. Absence of creation code in this example does not establish correctness of the eventual deployed integration."
+    },
+    {
+      "type": "assertion",
+      "description": "Is SampleType.SampleAoU@1 demonstrably satisfied for all shared-memory creation paths in the reviewed integration context?",
+      "answer": "No",
+      "passed": false,
+      "justification": "Not demonstrated. Establish the naming contract and complete integration scope, provide implementation and deployment evidence, and repeat the review."
+    }
+  ]
+}

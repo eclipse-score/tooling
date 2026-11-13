@@ -77,7 +77,8 @@ dependable_element(
     name = "safety_software_seooc_example",
     # Chain-forward received AoUs that this element cannot handle itself.
     # TimingConstraint from other_seooc is forwarded to dependees (integrator);
-    # SpaceConstraint is handled locally by REQ_COMP_EXTRA_003.
+    # SpaceConstraint and ValidInputPointer are reviewed directly by manual analysis.
+    # Compliance with SpaceConstraint is not yet demonstrated.
     aou_forwarding = "aou_forwarding.yaml",
     architectural_design = ["//design:sample_seooc_design"],
     components = [":component_example"],
@@ -86,6 +87,10 @@ dependable_element(
     ],
     glossary = ["//docs:glossary"],
     integrity_level = "B",
+    manual_analysis = [
+        "//manual_analysis/received_input_pointer:review",
+        "//manual_analysis/received_space_constraint:review",
+    ],
     maturity = "development",
     requirements = [
         "//docs/requirements:feature_requirements",
