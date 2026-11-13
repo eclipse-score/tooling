@@ -183,14 +183,38 @@ pub struct MemberVariable {
     pub source_location: SourceLocation,
 }
 
-/// Represents a method parameter
-/// renamed from LogicParameter
+/// Explicit UML parameter direction, independent of the C++ parameter type.
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "lowercase")]
+pub enum ParameterDirection {
+    In,
+    Out,
+    InOut,
+}
+
+impl ParameterDirection {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::In => "in",
+            Self::Out => "out",
+            Self::InOut => "inout",
+        }
+    }
+}
+
+/// Represents a method parameter.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
 pub struct FunctionArgument {
     /// Parameter name
     pub name: String,
     /// Parameter type
     pub param_type: Option<String>,
+    /// Explicit UML direction; absent for legacy parameters and C++ declarations.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub direction: Option<ParameterDirection>,
+    /// UML multiplicity bracket interior; independent of type and C++ identity.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub multiplicity: Option<String>,
     pub is_variadic: bool,
     #[serde(default, skip_serializing_if = "is_false")]
     pub is_pack_expansion: bool,
@@ -231,6 +255,9 @@ pub struct Method {
     pub name: String,
     /// Return type
     pub return_type: Option<String>,
+    /// UML return multiplicity bracket interior; independent of the return type.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub return_multiplicity: Option<String>,
     /// Visibility modifier
     pub visibility: Visibility,
     /// Method parameters
@@ -301,6 +328,9 @@ pub struct FreeFunctionDecl {
     pub enclosing_namespace_id: Option<String>,
     /// Return type.
     pub return_type: Option<String>,
+    /// UML return multiplicity bracket interior; independent of the return type.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub return_multiplicity: Option<String>,
     /// Function parameters.
     pub parameters: Vec<FunctionArgument>,
     /// Template parameters for generic functions.
@@ -396,6 +426,7 @@ mod tests {
             methods: vec![Method {
                 name: "getName".to_string(),
                 return_type: Some("string".to_string()),
+                return_multiplicity: None,
                 visibility: Visibility::Public,
                 parameters: vec![],
                 template_parameters: None,
@@ -468,6 +499,7 @@ mod tests {
             methods: vec![Method {
                 name: "getUser".to_string(),
                 return_type: None,
+                return_multiplicity: None,
                 visibility: Visibility::Public,
                 parameters: vec![],
                 template_parameters: None,

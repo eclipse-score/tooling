@@ -1,0 +1,194 @@
+{
+  "parameter_directions.puml": {
+    "name": "parameter_directions",
+    "elements": [
+      {
+        "Type": {
+          "ClassLikeDef": {
+            "name": {
+              "internal": "ParameterDirections",
+              "alias": null
+            },
+            "namespace": "",
+            "package": "",
+            "stereotypes": [],
+            "source_location": {
+              "file": "",
+              "line": 15
+            },
+            "template_parameters": null,
+            "attributes": [],
+            "type_aliases": [],
+            "methods": [
+              {
+                "visibility": "Public",
+                "name": "Transfer",
+                "template_parameters": null,
+                "params": [
+                  {
+                    "name": "input",
+                    "param_type": "int",
+                    "direction": "in"
+                  },
+                  {
+                    "name": "output",
+                    "param_type": "int",
+                    "direction": "out"
+                  },
+                  {
+                    "name": "state",
+                    "param_type": "int",
+                    "direction": "inout"
+                  },
+                  {
+                    "name": "plain",
+                    "param_type": "int"
+                  }
+                ],
+                "type": "void",
+                "modifiers": [],
+                "source_location": {
+                  "file": "",
+                  "line": 16
+                }
+              },
+              {
+                "visibility": "Public",
+                "name": "KeywordNames",
+                "template_parameters": null,
+                "params": [
+                  {
+                    "name": "in",
+                    "param_type": "int"
+                  },
+                  {
+                    "name": "out",
+                    "param_type": "int"
+                  },
+                  {
+                    "name": "inout",
+                    "param_type": "int"
+                  }
+                ],
+                "type": "void",
+                "modifiers": [],
+                "source_location": {
+                  "file": "",
+                  "line": 17
+                }
+              },
+              {
+                "visibility": "Public",
+                "name": "KeywordTypes",
+                "template_parameters": null,
+                "params": [
+                  {
+                    "name": "input",
+                    "param_type": "in"
+                  },
+                  {
+                    "name": "output",
+                    "param_type": "out"
+                  },
+                  {
+                    "name": "state",
+                    "param_type": "inout"
+                  }
+                ],
+                "type": "void",
+                "modifiers": [],
+                "source_location": {
+                  "file": "",
+                  "line": 18
+                }
+              },
+              {
+                "visibility": "Public",
+                "name": "BareNames",
+                "template_parameters": null,
+                "params": [
+                  {
+                    "name": "in",
+                    "param_type": null
+                  },
+                  {
+                    "name": "out",
+                    "param_type": null
+                  },
+                  {
+                    "name": "inout",
+                    "param_type": null
+                  }
+                ],
+                "type": "void",
+                "modifiers": [],
+                "source_location": {
+                  "file": "",
+                  "line": 19
+                }
+              },
+              {
+                "visibility": "Public",
+                "name": "CppNames",
+                "template_parameters": null,
+                "params": [
+                  {
+                    "name": "in",
+                    "param_type": "int"
+                  },
+                  {
+                    "name": "out",
+                    "param_type": "int"
+                  },
+                  {
+                    "name": "inout",
+                    "param_type": "int"
+                  }
+                ],
+                "type": "void",
+                "modifiers": [],
+                "source_location": {
+                  "file": "",
+                  "line": 20
+                }
+              },
+              {
+                "visibility": "Public",
+                "name": "CppTypes",
+                "template_parameters": null,
+                "params": [
+                  {
+                    "name": "input",
+                    "param_type": "in"
+                  },
+                  {
+                    "name": "output",
+                    "param_type": "out"
+                  },
+                  {
+                    "name": "state",
+                    "param_type": "inout"
+                  }
+                ],
+                "type": "void",
+                "modifiers": [],
+                "source_location": {
+                  "file": "",
+                  "line": 21
+                }
+              }
+            ],
+            "kind": {
+              "Class": {
+                "is_abstract": false,
+                "extends": [],
+                "implements": []
+              }
+            }
+          }
+        }
+      }
+    ],
+    "relationships": []
+  }
+}

@@ -58,6 +58,11 @@ fn assert_case(case_dir: &str) {
 }
 
 #[test]
+fn positive_return_multiplicities() {
+    assert_case("positive_return_multiplicities");
+}
+
+#[test]
 fn positive_class_features() {
     assert_case("positive_class_features");
 }

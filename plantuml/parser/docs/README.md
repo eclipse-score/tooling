@@ -42,6 +42,143 @@ Each preprocessed file is parsed into an AST based on its diagram type. The diag
 - Auto-detected by trying parsers in order (Sequence → Class → Component) until one succeeds
 - If all parsers fail, the error with the longest match is reported
 
+##### Class operation parameter directions
+
+Class operation parameters support explicit `in`, `out` and `inout` metadata.
+One operation demonstrates all three directions and an unspecified direction:
+
+```plantuml
+@startuml parameter_directions_demo
+class Example {
+    +transfer(in source : Buffer, out target : Buffer, inout state : State, count : int) : void
+}
+@enduml
+```
+
+| Parameter name | Base type | Direction in JSON |
+|---|---|---|
+| `source` | `Buffer` | `"in"` |
+| `target` | `Buffer` | `"out"` |
+| `state` | `State` | `"inout"` |
+| `count` | `int` | Field omitted (`None`) |
+
+**Generated API signature** retains the existing C++-style layout:
+
+```text
+void Example::transfer(in Buffer source, out Buffer target, inout State state, int count)
+```
+
+**Compatibility:** These are parameter declarations inside PlantUML, not C++
+source code. Direction is recognized only in `direction name : type` syntax.
+Existing `type name` syntax remains unchanged: `out value` means type `out`,
+name `value`, and no explicit direction. Likewise, `in : T` means name `in`,
+type `T`, and no explicit direction. The parser does not check type existence.
+
+**Storage and validation:** Direction is stored separately from name and base
+type as `Option<ParameterDirection>`. Explicit directions use lowercase JSON
+values; unspecified direction stays `None`, not explicit `in`. Direction is
+preserved in the logical model, FlatBuffers exports and API signatures, but
+does not affect C++ overload identity. Design/implementation validation does
+not infer or verify direction from pointers, references or `const` qualifiers.
+
+##### Class operation parameter multiplicity
+
+UML named parameters accept `x : T[0..1]`, `x : T[0..*]`,
+`x : T[1..*]`, and `x : T[*]`, with or without an explicit direction.
+One operation demonstrates all four annotations and an unspecified multiplicity:
+
+```plantuml
+@startuml parameter_multiplicity_demo
+class Example {
+    +transfer(in source : Buffer[0..1], out targets : Buffer[0..*], inout states : State[1..*], extras : Buffer[*], count : int) : void
+}
+@enduml
+```
+
+| Parameter name | Base type | Multiplicity in JSON |
+|---|---|---|
+| `source` | `Buffer` | `"0..1"` |
+| `targets` | `Buffer` | `"0..*"` |
+| `states` | `State` | `"1..*"` |
+| `extras` | `Buffer` | `"*"` |
+| `count` | `int` | Field omitted (`None`) |
+
+**Generated API signature** retains the annotations for documentation:
+
+```text
+void Example::transfer(in Buffer[0..1] source, out Buffer[0..*] targets, inout State[1..*] states, Buffer[*] extras, int count)
+```
+
+General nonnegative integer ranges are supported; finite bounds must fit in
+`u64`, and the lower bound must not exceed the upper bound. Missing, negative,
+or noninteger bounds are rejected.
+
+The bracket interior is stored independently as `multiplicity: Option<String>`.
+Spelling is preserved: `*` is not rewritten to `0..*`, and leading zeros or
+whitespace are not normalized. JSON omits absent multiplicity and defaults
+missing fields to `None`; older FlatBuffers exports also read as `None`.
+
+**Important: multiplicity is stored and displayed only. It is NOT compared
+against C++ implementations and does NOT verify parameter value counts.**
+A successful design/implementation validation does not establish that the C++
+implementation satisfies the declared multiplicity. API display signatures
+preserve the annotation for documentation; they are not C++ source or the input
+to C++ type comparison.
+
+Parameter multiplicity is supported only on UML **named method parameters**;
+multiplicity in C++-style parameter syntax is not implemented. Existing
+`T[1]`, `T[N]`, and `T[]` array syntax remains part of the type everywhere,
+including return types. Multiplicity is preserved through resolution and
+serialization, but does not participate in C++ parameter matching or overload
+identity; no container, pointer, reference, or optional mapping is inferred or
+verified.
+
+##### Operation return multiplicity
+
+Methods and free functions accept return annotations `: T[0..1]`, `: T[0..*]`,
+`: T[1..*]`, and `: T[*]`. General nonnegative integer ranges follow the same
+bound checks and raw-spelling policy as parameter multiplicity above.
+
+```plantuml
+@startuml return_multiplicity_demo
+class Example {
+    +find() : Value[0..1]
+    +all() : Value[0..*]
+    +required() : Value[1..*]
+    +extras() : Value[*]
+}
+@enduml
+```
+
+**Storage:** `return_type` remains the base type (`"Value"` in the first four
+operations). The bracket interior is stored independently on methods and free
+functions as `return_multiplicity: Option<String>`, for example `"0..1"` or
+`"*"`. Leading zeros and whitespace are preserved, and `*` is not rewritten
+to `0..*`. JSON omits absent return multiplicity; missing fields default to
+`None` for compatibility with older data.
+
+**Generated API signatures** append the annotation directly to the return type:
+
+```text
+Value[0..1] Example::find()
+Value[0..*] Example::all()
+Value[1..*] Example::required()
+Value[*] Example::extras()
+Value[0..1] ns::find()
+```
+
+The namespaced free-function example uses the same display policy.
+Unannotated return signatures are unchanged. Return annotations affect display
+only, not API record names or identity.
+
+**Compatibility and semantics:** `T[1]`, `T[N]`, and `T[]` remain array types,
+not return multiplicity. These are PlantUML documentation annotations, not C++
+semantics: multiplicity is not part of C++ return-type comparison or overload
+identity and does not verify return value counts. No optional, container,
+pointer, or reference mapping is inferred or checked. A successful
+design/implementation validation does not establish that the C++ implementation
+satisfies the declared return multiplicity.
+
 #### 3. Semantic Resolution Phase
 
 The AST is resolved into a logical model by the `ComponentResolver`:

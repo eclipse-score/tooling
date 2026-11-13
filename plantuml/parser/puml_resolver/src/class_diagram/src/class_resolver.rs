@@ -738,6 +738,7 @@ impl ClassResolver {
                 name: method.name.clone(),
                 enclosing_namespace_id: enclosing_namespace_id.clone(),
                 return_type: method.r#type.clone(),
+                return_multiplicity: method.return_multiplicity.clone(),
                 parameters: method.params.iter().map(Self::convert_param).collect(),
                 template_parameters: Self::convert_template_parameters_with_pack_expansions(
                     &method.template_parameters,
@@ -845,6 +846,7 @@ impl ClassResolver {
         Method {
             name: m.name.clone(),
             return_type: m.r#type.clone(),
+            return_multiplicity: m.return_multiplicity.clone(),
             visibility: Self::map_visibility(m.visibility.clone()),
             parameters: m.params.iter().map(Self::convert_param).collect(),
             template_parameters: Self::convert_template_parameters_with_pack_expansions(
@@ -937,6 +939,8 @@ impl ClassResolver {
         FunctionArgument {
             name: param.name.clone().unwrap_or_default(),
             param_type: param.param_type.clone(),
+            direction: param.direction,
+            multiplicity: param.multiplicity.clone(),
             is_variadic: param.is_c_variadic,
             is_pack_expansion: param.is_pack_expansion,
         }
@@ -1503,6 +1507,26 @@ mod tests {
     // ----------------------------
     // process_class
     // ----------------------------
+    #[test]
+    fn test_convert_param_preserves_explicit_direction() {
+        use class_diagram::ParameterDirection::{In, InOut, Out};
+        for direction in [Some(In), Some(Out), Some(InOut), None] {
+            let parameter = ParserParam {
+                name: Some("value".to_string()),
+                param_type: Some("T".to_string()),
+                direction,
+                multiplicity: None,
+                is_c_variadic: false,
+                is_pack_expansion: false,
+            };
+            let converted = ClassResolver::convert_param(&parameter);
+            assert_eq!(converted.direction, direction);
+            assert_eq!(converted.multiplicity, None);
+            assert_eq!(converted.name, "value");
+            assert_eq!(converted.param_type.as_deref(), Some("T"));
+        }
+    }
+
     #[test]
     fn test_process_class() {
         let mut resolver = ClassResolver::new();

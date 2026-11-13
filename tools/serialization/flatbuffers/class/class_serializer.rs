@@ -13,8 +13,8 @@
 
 use class_diagram::{
     ClassDiagram, ClassTemplateKind, EntityType, EnumLiteral, FreeFunctionDecl, FunctionArgument,
-    MemberVariable, Method, MethodModifier, RelationType, Relationship, SimpleEntity,
-    SourceLocation, TemplateParameter, TypeAlias, Visibility,
+    MemberVariable, Method, MethodModifier, ParameterDirection, RelationType, Relationship,
+    SimpleEntity, SourceLocation, TemplateParameter, TypeAlias, Visibility,
 };
 use class_fbs::class_metamodel as fb;
 use flatbuffers::FlatBufferBuilder;
@@ -203,6 +203,10 @@ impl ClassSerializer {
             .return_type
             .as_ref()
             .map(|return_type| builder.create_string(return_type));
+        let return_multiplicity_offset = method
+            .return_multiplicity
+            .as_ref()
+            .map(|value| builder.create_string(value));
 
         let parameter_offsets: Vec<_> = method
             .parameters
@@ -233,6 +237,7 @@ impl ClassSerializer {
             &fb::MethodArgs {
                 name: Some(name_offset),
                 return_type: return_type_offset,
+                return_multiplicity: return_multiplicity_offset,
                 visibility: Self::map_visibility(method.visibility),
                 parameters: Some(parameters_offset),
                 template_parameters: template_parameters_offset,
@@ -255,6 +260,10 @@ impl ClassSerializer {
             .return_type
             .as_ref()
             .map(|return_type| builder.create_string(return_type));
+        let return_multiplicity_offset = function
+            .return_multiplicity
+            .as_ref()
+            .map(|value| builder.create_string(value));
 
         let parameter_offsets: Vec<_> = function
             .parameters
@@ -279,6 +288,7 @@ impl ClassSerializer {
                 name: Some(name_offset),
                 enclosing_namespace_id: enclosing_namespace_id_offset,
                 return_type: return_type_offset,
+                return_multiplicity: return_multiplicity_offset,
                 parameters: Some(parameters_offset),
                 template_parameters: template_parameters_offset,
                 source_location: Some(source_location_offset),
@@ -295,6 +305,10 @@ impl ClassSerializer {
             .param_type
             .as_ref()
             .map(|param_type| builder.create_string(param_type));
+        let multiplicity_offset = param
+            .multiplicity
+            .as_ref()
+            .map(|value| builder.create_string(value));
 
         fb::FunctionArgument::create(
             builder,
@@ -303,6 +317,8 @@ impl ClassSerializer {
                 param_type: param_type_offset,
                 is_variadic: param.is_variadic,
                 is_pack_expansion: param.is_pack_expansion,
+                direction: Self::map_parameter_direction(param.direction),
+                multiplicity: multiplicity_offset,
             },
         )
     }
@@ -411,6 +427,15 @@ impl ClassSerializer {
                 source_location: Some(source_location_offset),
             },
         )
+    }
+
+    fn map_parameter_direction(direction: Option<ParameterDirection>) -> fb::ParameterDirection {
+        match direction {
+            None => fb::ParameterDirection::Unspecified,
+            Some(ParameterDirection::In) => fb::ParameterDirection::In,
+            Some(ParameterDirection::Out) => fb::ParameterDirection::Out,
+            Some(ParameterDirection::InOut) => fb::ParameterDirection::InOut,
+        }
     }
 
     fn map_visibility(v: Visibility) -> fb::Visibility {

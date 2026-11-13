@@ -76,6 +76,7 @@ filegroup(
         "//validation/core/integration_test/class_design_implementation/positive_overview_relationship_merge:case_data",
         "//validation/core/integration_test/class_design_implementation/positive_relationship_diamonds:case_data",
         "//validation/core/integration_test/class_design_implementation/positive_relationship_features:case_data",
+        "//validation/core/integration_test/class_design_implementation/positive_return_multiplicities:case_data",
         "//validation/core/integration_test/class_design_implementation/positive_shared_implementation_dependency:case_data",
         "//validation/core/integration_test/class_design_implementation/positive_top_level_const_features:case_data",
         "//validation/core/integration_test/class_design_implementation/positive_unresolved_type_not_int:case_data",

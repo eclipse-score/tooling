@@ -1566,6 +1566,7 @@ mod tests {
         Method {
             name: name.to_string(),
             return_type: None,
+            return_multiplicity: None,
             source_location: SourceLocation::new("test.puml", 1),
             visibility: Visibility::Public,
             parameters: Vec::new(),
@@ -1588,6 +1589,8 @@ mod tests {
                 .map(|parameter_type| FunctionArgument {
                     name: String::new(),
                     param_type: Some((*parameter_type).to_string()),
+                    direction: None,
+                    multiplicity: None,
                     is_variadic: false,
                     is_pack_expansion: false,
                 })
@@ -1600,6 +1603,8 @@ mod tests {
         FunctionArgument {
             name: name.to_string(),
             param_type: Some(param_type.to_string()),
+            direction: None,
+            multiplicity: None,
             is_variadic: false,
             is_pack_expansion,
         }
@@ -1675,6 +1680,7 @@ mod tests {
             name: name.to_string(),
             enclosing_namespace_id: None,
             return_type: Some("void".to_string()),
+            return_multiplicity: None,
             parameters: parameter_types
                 .iter()
                 .map(|parameter_type| parameter("", parameter_type, false))
@@ -1761,11 +1767,27 @@ mod tests {
     }
 
     #[test]
+    fn uml_parameter_directions_do_not_affect_cpp_matching_or_overload_identity() {
+        use class_diagram::ParameterDirection::{In, InOut, Out};
+        let implementation = method_with_parameter_types("update", &["T"]);
+        for direction in [In, Out, InOut] {
+            let mut design = implementation.clone();
+            design.parameters[0].direction = Some(direction);
+            assert_eq!(method_key(&design), method_key(&implementation));
+            assert!(parameters_match(
+                &design.parameters,
+                &implementation.parameters
+            ));
+        }
+    }
+
+    #[test]
     fn free_function_key_normalizes_qualified_name_and_parameters() {
         let function = FreeFunctionDecl {
             name: "Dispatch".to_string(),
             enclosing_namespace_id: Some("vehicle.core".to_string()),
             return_type: Some("void".to_string()),
+            return_multiplicity: None,
             parameters: vec![
                 parameter("mode", "std::uint8_t", false),
                 parameter("args", "vehicle.Payload", true),
@@ -1778,6 +1800,39 @@ mod tests {
             free_function_key(&function),
             "vehicle::core::Dispatch(uint8_t, vehicle::Payload...)"
         );
+    }
+
+    #[test]
+    fn uml_parameter_multiplicities_do_not_affect_cpp_matching_or_overload_identity() {
+        let implementation = method_with_parameter_types("update", &["T"]);
+        for value in ["0..1", "0..*", "1..*", "*", "2..5"] {
+            let mut design = implementation.clone();
+            design.parameters[0].multiplicity = Some(value.to_string());
+            assert_eq!(method_key(&design), method_key(&implementation));
+            assert!(parameters_match(
+                &design.parameters,
+                &implementation.parameters
+            ));
+            let design_function = FreeFunctionDecl {
+                name: "update".to_string(),
+                parameters: design.parameters.clone(),
+                ..Default::default()
+            };
+            let implementation_function = FreeFunctionDecl {
+                parameters: implementation.parameters.clone(),
+                ..design_function.clone()
+            };
+            assert_eq!(
+                free_function_key(&design_function),
+                free_function_key(&implementation_function)
+            );
+            // Metadata must not relax the actual type comparison.
+            design.parameters[0].param_type = Some("T*".to_string());
+            assert!(!parameters_match(
+                &design.parameters,
+                &implementation.parameters
+            ));
+        }
     }
 
     #[test]

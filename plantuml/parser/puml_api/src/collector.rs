@@ -71,6 +71,7 @@ impl ApiCollector {
             let signature = render_signature(&SignatureParts {
                 qualified_name: &format!("{qualified_scope}::{}", method.name),
                 return_type: method.return_type.as_deref(),
+                return_multiplicity: method.return_multiplicity.as_deref(),
                 parameters: &method.parameters,
                 template_parameters: method.template_parameters.as_deref(),
                 modifiers: &method.modifiers,
@@ -103,6 +104,7 @@ impl ApiCollector {
         let signature = render_signature(&SignatureParts {
             qualified_name: &qualified,
             return_type: function.return_type.as_deref(),
+            return_multiplicity: function.return_multiplicity.as_deref(),
             parameters: &function.parameters,
             template_parameters: function.template_parameters.as_deref(),
             modifiers: &[],

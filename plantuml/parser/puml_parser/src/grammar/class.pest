@@ -204,10 +204,20 @@ type_kind = @{
     ~ keyword_boundary
 }
 
-class_body = { "{" ~ EOL* ~ (ignored_mock_method_stmt | class_member | class_body_separator)* ~ EOL* ~ "}" }
+class_body = { "{" ~ EOL* ~ (ignored_mock_method_stmt | class_body_separator | class_member)* ~ EOL* ~ "}" }
 
 class_member = { (method | attribute) ~ EOL+ }
-class_body_separator = { "--" ~ EOL+ }
+// Match the whole line without implicit whitespace skipping. A title must end
+// with the same delimiter; stop only at a closing delimiter followed by EOL.
+class_body_separator = @{
+    (
+        "--" ~ ((! ("--" ~ WHITESPACE* ~ EOL) ~ !EOL ~ ANY)* ~ "--")?
+        | ".." ~ ((! (".." ~ WHITESPACE* ~ EOL) ~ !EOL ~ ANY)* ~ "..")?
+        | "==" ~ ((! ("==" ~ WHITESPACE* ~ EOL) ~ !EOL ~ ANY)* ~ "==")?
+        | "__" ~ ((! ("__" ~ WHITESPACE* ~ EOL) ~ !EOL ~ ANY)* ~ "__")?
+    )
+    ~ WHITESPACE* ~ EOL+
+}
 
 ignored_mock_method_stmt = _{
     method_modifier*
@@ -438,9 +448,10 @@ operator_overload_name = @{
             | ","
         )
 }
-return_type = { ":" ~ static_modifier* ~ type_name }
+return_type = { ":" ~ static_modifier* ~ type_name ~ return_multiplicity? }
+return_multiplicity = { param_multiplicity }
 
-attribute = { static_modifier* ~ class_visibility? ~ (using_attribute | named_attribute | unnamed_attribute) }
+attribute = { static_modifier* ~ class_visibility? ~ static_modifier* ~ (using_attribute | named_attribute | unnamed_attribute) }
 attribute_end = _{ ";"? ~ &(WHITESPACE* ~ (EOL | "}")) }
 using_attribute = { "using" ~ identifier ~ "=" ~ type_name ~ attribute_end }
 named_attribute = { identifier ~ (":" ~ attribute_type_specifier* ~ type_name)? ~ attribute_end }
@@ -455,11 +466,21 @@ param = {
 }
 
 param_named = {
-    identifier
+    param_direction?
+    ~ identifier
     ~ ":"
     ~ type_name
+    ~ param_multiplicity?
     ~ param_default_value?
 }
+
+// UML named parameters and returns. Single dimensions (including T[1]) remain arrays.
+param_multiplicity = { "[" ~ ("*" | multiplicity_bound ~ ".." ~ (multiplicity_bound | "*")) ~ "]" }
+multiplicity_bound = @{ ASCII_DIGIT+ }
+
+// Recognize direction only before a UML named parameter, not a name/type
+// spelled in, out or inout. Atomic matching requires a whitespace boundary.
+param_direction = @{ ("inout" | "in" | "out") ~ &(WHITESPACE+ ~ identifier ~ WHITESPACE* ~ ":") }
 
 param_cpp_named = {
     type_name

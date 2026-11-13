@@ -75,6 +75,8 @@ pub(crate) fn parse_callable_parameters(entity: &Entity) -> ParsedCallableParame
             param_type: Some(normalize_pack_expansion_type(&raw_param_type)),
             is_variadic: false,
             is_pack_expansion,
+            direction: None,
+            multiplicity: None,
         });
 
         if let Some(resolved_type) = resolved_type {
@@ -96,6 +98,8 @@ pub(crate) fn parse_callable_parameters(entity: &Entity) -> ParsedCallableParame
             param_type: None,
             is_variadic: true,
             is_pack_expansion: false,
+            direction: None,
+            multiplicity: None,
         });
         parameter_keys.push(CallableArgumentKey {
             param_type: None,

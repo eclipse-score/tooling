@@ -76,6 +76,11 @@ fn test_attr_method() {
 }
 
 #[test]
+fn test_class_body_separators() {
+    run_class_diagram_parser_case("class_body_separators");
+}
+
+#[test]
 fn test_class_merge() {
     run_class_diagram_parser_case("class_merge");
 }
@@ -103,6 +108,11 @@ fn test_friend_method() {
 #[test]
 fn test_pointer_trailing_const() {
     run_class_diagram_parser_case("pointer_trailing_const");
+}
+
+#[test]
+fn test_named_const_void_pointer_const() {
+    run_class_diagram_parser_case("named_const_void_pointer_const");
 }
 
 #[test]
@@ -233,6 +243,21 @@ fn test_package() {
 #[test]
 fn test_param() {
     run_class_diagram_parser_case("param");
+}
+
+#[test]
+fn test_parameter_directions() {
+    run_class_diagram_parser_case("parameter_directions");
+}
+
+#[test]
+fn test_parameter_multiplicities() {
+    run_class_diagram_parser_case("parameter_multiplicities");
+}
+
+#[test]
+fn test_return_multiplicities() {
+    run_class_diagram_parser_case("return_multiplicities");
 }
 
 #[test]

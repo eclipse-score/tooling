@@ -1,0 +1,71 @@
+{
+  "class_body_separators.puml": {
+    "name": "class_body_separators",
+    "elements": [
+      {
+        "Type": {
+          "ClassLikeDef": {
+            "name": { "internal": "A", "alias": null },
+            "namespace": "",
+            "package": "",
+            "source_location": { "file": "", "line": 14 },
+            "type_aliases": [],
+            "attributes": [
+              {
+                "visibility": "Public",
+                "name": "__value",
+                "type": "int",
+                "modifiers": [],
+                "source_location": { "file": "", "line": 15 }
+              }
+            ],
+            "methods": [
+              {
+                "visibility": "Public",
+                "name": "operator--",
+                "params": [],
+                "type": "A&",
+                "template_parameters": null,
+                "modifiers": [],
+                "source_location": { "file": "", "line": 28 }
+              },
+              {
+                "visibility": "Public",
+                "name": "operator==",
+                "params": [],
+                "type": "bool",
+                "template_parameters": null,
+                "modifiers": [],
+                "source_location": { "file": "", "line": 29 }
+              }
+            ],
+            "kind": { "Class": { "is_abstract": false, "extends": [], "implements": [] } }
+          }
+        }
+      },
+      {
+        "Type": {
+          "ClassLikeDef": {
+            "name": { "internal": "B", "alias": null },
+            "namespace": "",
+            "package": "",
+            "source_location": { "file": "", "line": 31 },
+            "type_aliases": [],
+            "attributes": [],
+            "methods": [],
+            "kind": { "Class": { "is_abstract": false, "extends": [], "implements": [] } }
+          }
+        }
+      }
+    ],
+    "relationships": [
+      {
+        "left": "A",
+        "right": "B",
+        "arrow": { "left": null, "line": { "raw": ".." }, "middle": null, "right": { "raw": ">" } },
+        "label": null,
+        "source_location": { "file": "", "line": 32 }
+      }
+    ]
+  }
+}

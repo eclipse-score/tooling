@@ -1,0 +1,173 @@
+{
+  "return_multiplicities.puml": {
+    "name": "return_multiplicities",
+    "elements": [
+      {
+        "Type": {
+          "ClassLikeDef": {
+            "name": {
+              "internal": "ReturnMultiplicities",
+              "alias": null
+            },
+            "namespace": "",
+            "package": "",
+            "stereotypes": [],
+            "source_location": { "file": "", "line": 15 },
+            "template_parameters": null,
+            "attributes": [],
+            "type_aliases": [],
+            "methods": [
+              {
+                "visibility": "Public",
+                "name": "Open",
+                "template_parameters": null,
+                "params": [
+                  { "name": "path", "param_type": "Path[1]", "direction": "in" }
+                ],
+                "type": "Shared<ISharedMemoryResource>",
+                "return_multiplicity": "0..1",
+                "modifiers": [],
+                "source_location": { "file": "", "line": 16 }
+              },
+              {
+                "visibility": "Public",
+                "name": "ZeroOrMore",
+                "template_parameters": null,
+                "params": [],
+                "type": "Shared<T>",
+                "return_multiplicity": "0..*",
+                "modifiers": [],
+                "source_location": { "file": "", "line": 17 }
+              },
+              {
+                "visibility": "Public",
+                "name": "OneOrMore",
+                "template_parameters": null,
+                "params": [],
+                "type": "Shared<T>",
+                "return_multiplicity": "1..*",
+                "modifiers": [],
+                "source_location": { "file": "", "line": 18 }
+              },
+              {
+                "visibility": "Public",
+                "name": "Star",
+                "template_parameters": null,
+                "params": [],
+                "type": "Shared<T>",
+                "return_multiplicity": "*",
+                "modifiers": [],
+                "source_location": { "file": "", "line": 19 }
+              },
+              {
+                "visibility": "Public",
+                "name": "RawSpelling",
+                "template_parameters": null,
+                "params": [],
+                "type": "Shared<T>",
+                "return_multiplicity": " 01 .. 02 ",
+                "modifiers": [],
+                "source_location": { "file": "", "line": 20 }
+              },
+              {
+                "visibility": "Public",
+                "name": "FixedArray",
+                "template_parameters": null,
+                "params": [],
+                "type": "T[1]",
+                "modifiers": [],
+                "source_location": { "file": "", "line": 21 }
+              },
+              {
+                "visibility": "Public",
+                "name": "BoundedArray",
+                "template_parameters": null,
+                "params": [],
+                "type": "T[N]",
+                "modifiers": [],
+                "source_location": { "file": "", "line": 22 }
+              },
+              {
+                "visibility": "Public",
+                "name": "EmptyArray",
+                "template_parameters": null,
+                "params": [],
+                "type": "T[]",
+                "modifiers": [],
+                "source_location": { "file": "", "line": 23 }
+              }
+            ],
+            "kind": {
+              "Class": {
+                "is_abstract": false,
+                "extends": [],
+                "implements": []
+              }
+            }
+          }
+        }
+      },
+      {
+        "Type": {
+          "ClassLikeDef": {
+            "name": {
+              "internal": "IReturnMultiplicities",
+              "alias": null
+            },
+            "namespace": "",
+            "package": "",
+            "stereotypes": [],
+            "source_location": { "file": "", "line": 26 },
+            "template_parameters": null,
+            "attributes": [],
+            "type_aliases": [],
+            "methods": [
+              {
+                "visibility": "Public",
+                "name": "Open",
+                "template_parameters": null,
+                "params": [],
+                "type": "Shared<T>",
+                "return_multiplicity": "0..1",
+                "modifiers": [],
+                "source_location": { "file": "", "line": 27 }
+              }
+            ],
+            "kind": {
+              "Interface": {
+                "extends": []
+              }
+            }
+          }
+        }
+      },
+      {
+        "Type": {
+          "EntityDef": {
+            "name": {
+              "internal": "Collect",
+              "display": null
+            },
+            "namespace": "",
+            "package": "",
+            "stereotypes": ["function"],
+            "methods": [
+              {
+                "visibility": "Public",
+                "name": "Collect",
+                "template_parameters": null,
+                "params": [],
+                "type": "Shared<T>",
+                "return_multiplicity": "*",
+                "modifiers": [],
+                "source_location": { "file": "", "line": 31 }
+              }
+            ],
+            "source_location": { "file": "", "line": 30 }
+          }
+        }
+      }
+    ],
+    "relationships": []
+  }
+}

@@ -10,7 +10,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 // *******************************************************************************
-pub use class_diagram::TemplateParameter;
+pub use class_diagram::{ParameterDirection, TemplateParameter};
 pub use parser_core::common_ast::Arrow;
 use serde::{Deserialize, Serialize};
 use source_location::SourceLocation;
@@ -80,6 +80,10 @@ pub struct Relationship {
 pub struct Param {
     pub name: Option<String>,
     pub param_type: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub direction: Option<ParameterDirection>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub multiplicity: Option<String>,
     /// C-style variadic parameter represented by a standalone `...`.
     #[serde(default, skip_serializing_if = "is_false")]
     pub is_c_variadic: bool,
@@ -122,6 +126,8 @@ pub struct Method {
     pub template_parameters: Option<Vec<TemplateParameter>>,
     pub params: Vec<Param>,
     pub r#type: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub return_multiplicity: Option<String>,
     pub modifiers: Vec<String>,
     #[serde(default, skip_serializing_if = "is_false")]
     pub is_friend: bool,
@@ -140,6 +146,7 @@ impl Default for Method {
             template_parameters: None,
             params: Vec::new(),
             r#type: None,
+            return_multiplicity: None,
             modifiers: Vec::new(),
             is_friend: false,
             source_location: SourceLocation::default(),

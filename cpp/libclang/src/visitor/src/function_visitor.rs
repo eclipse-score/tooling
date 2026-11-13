@@ -174,6 +174,7 @@ impl FunctionVisitor {
         let method = Method {
             name: id.name.clone(),
             return_type,
+            return_multiplicity: None,
             visibility: parse_visibility(entity),
             parameters: parsed_parameters.parameters,
             template_parameters: parse_template_parameters(entity),
@@ -230,6 +231,7 @@ impl FunctionVisitor {
                 name: id.name.clone(),
                 enclosing_namespace_id: namespace_id(entity),
                 return_type: parse_callable_return_type(entity),
+                return_multiplicity: None,
                 parameters: parsed_parameters.parameters,
                 template_parameters: parse_template_parameters(entity),
                 source_location: parse_source_location(entity),
