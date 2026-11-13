@@ -193,6 +193,7 @@ lacks full up/down traceability.
       "Forwarded AoUs" [fillcolor="#2196F3", fontcolor="white"];
       "Component Requirements" [fillcolor="#2196F3", fontcolor="white"];
       "Unit Test" [fillcolor="#FF9800", fontcolor="white"];
+      "Manual Analysis" [fillcolor="#FF9800", fontcolor="white"];
       "Test Case Coverage" [fillcolor="#FF9800", fontcolor="white"];
       "Architecture" [fillcolor="#4CAF50", fontcolor="white"];
       "Public API" [fillcolor="#4CAF50", fontcolor="white"];
@@ -202,7 +203,7 @@ lacks full up/down traceability.
       "Root Cause Assessments" [fillcolor="#2196F3", fontcolor="white"];
       "Forwarded AoUs" -> "Received AoUs";
       "Component Requirements" -> "Feature Requirements";
-      "Component Requirements" -> "Received AoUs";
+      "Manual Analysis" -> "Received AoUs";
       "Unit Test" -> "Component Requirements";
       "Test Case Coverage" -> "Component Requirements";
       "Architecture" -> "Component Requirements";

@@ -13,8 +13,8 @@
 
 @startuml safety_analysis_linkage
 
-' Record linkage of a dependable element's safety analysis.  Arrows point from
-' the referencing record to the referenced one; the label is the TRLC field.
+' Safety-analysis record linkage and received-AoU verification. Arrows point
+' from the referencing artifact to its referenced record.
 
 skinparam ArrowFontSize 10
 skinparam defaultTextAlignment center
@@ -63,6 +63,10 @@ package "This dependable_element" {
         class FeatReq <<authored>>
         class AssumedSystemReq <<authored>>
     }
+
+    package "Verification" {
+        class "Manual analysis" as ManualAnalysis <<authored>>
+    }
 }
 
 ' ── Generated from the public API class diagrams (public_api.trlc) ──────────
@@ -79,8 +83,13 @@ RootCauseAssessment "0..*" --> "0..*" CompReq : measures @version\n(control)
 ' ── Requirement chain ───────────────────────────────────────────────────────
 CompReq --> FeatReq : derived_from
 CompReq --> AssumedSystemReq : derived_from
-CompReq --> RecvAoU : derived_from\n(received AoU only)
+ManualAnalysis --> RecvAoU : requirements @version
 FeatReq --> AssumedSystemReq : derived_from
+
+note bottom of RecvAoU
+    Received AoUs are reviewed by manual analysis
+    or chain-forwarded to integrating projects.
+end note
 
 note bottom of RootCause
   Every RootCause is covered by exactly one

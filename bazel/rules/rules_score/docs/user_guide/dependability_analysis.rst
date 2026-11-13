@@ -526,13 +526,22 @@ Rules for assessments:
   ``dependable_element``.
 
 An ``AoU`` is how you *push an obligation outward* when the SEooC cannot close a
-root cause itself — it must be forwarded to the integrating project (see
-:doc:`assumptions_of_use`).
+root cause itself: the obligation must be passed to the integrating project.
+Own AoUs must be referenced in the ``measures`` of at least one ``RootCauseAssessment``.
+Its ``rationale`` should explain why fulfilment of the referenced AoUs is sufficient
+to address the assessed root causes.
 
-A ``CompReq`` lists an ``AoU`` in ``derived_from`` only for an AoU *received*
-from another ``dependable_element`` (one of this element's ``deps``). The
-element's own AoUs are never a ``derived_from`` source; they close a root
-cause by being listed in an assessment.
+For an AoU *received* from another ``dependable_element`` through ``deps``,
+the receiving element must provide verification evidence through a
+``manual_analysis`` target or forward the obligation to its integrating
+project (see :doc:`assumptions_of_use`).
+
+Neither received nor own AoUs may be referenced by ``CompReq.derived_from``;
+component requirements derive from feature or assumed system requirements.
+
+Traceability completeness does not imply that a manual analysis passed or
+that its lock is current. Check the corresponding ``manual_analysis`` test
+result separately.
 
 Step 4 — Wire the analysis into Bazel
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

@@ -117,8 +117,14 @@ The `manual_analysis_test` rule separates **computation** from **verification**:
 - loads `requirements` from the analysis YAML via `load_analysis()`
 - emits a `.lobster` artifact through `write_lobster_file()`
 
-The `.lobster` file is generated even when checks fail inside the Bazel action,
-so traceability tooling can still consume the verification outcome.
+The activity's `status` is `"ok"` only when both the lock check and the final
+assertion check pass; otherwise it is `"fail"`. A positive assertion with an
+out-of-date lock therefore still produces a failing activity status.
+
+The artifact-generation action still emits the `.lobster` file when the lock
+or results check fails, so traceability tooling can consume the failed outcome.
+This does not cover all errors: missing required environment variables or an
+invalid analysis YAML abort the runner before artifact emission.
 
 #### 5. Deployment / Runtime View
 
@@ -134,6 +140,28 @@ The most relevant runtime artifacts are:
 - **results JSON** — persisted reviewer answers and command outcomes
 - **lock file** — deterministic digest of context plus rule state
 - **LOBSTER JSON** — traceability output for downstream reporting
+
+### `rules_score` Integration
+
+To include this evidence in a `rules_score` report, pass the manual-analysis
+test target through the `dependable_element` rule's `manual_analysis`
+attribute. The target exposes its `.lobster` artifact through `LobsterProvider`,
+and `rules_score` collects that input into the generated traceability
+configuration and report. The artifact must also be present in the target's
+`DefaultInfo.files`; otherwise Bazel analysis fails.
+
+The generated `Manual Analysis` activity traces to Component Requirements and
+Feature Requirements. For Component Requirements, Manual Analysis can provide
+traceability coverage as an alternative to Unit Test and Test Case Coverage.
+Architecture remains a separate traceability coverage requirement.
+
+Traceability coverage does not establish that verification passed. An activity
+can have `tracing_status: "OK"` because its tracing links are complete while
+its verification `status` is `"fail"`. The current RST traceability report uses
+`tracing_status` for activity card titles, colours, and coverage summaries; it
+does not display the activity's verification status. Run the manual-analysis
+test target to check the lock and final assertion rather than treating a green
+traceability card as a passing verification result.
 
 ---
 
@@ -232,19 +260,30 @@ So the committed lock is only refreshed after the interactive flow completed.
 
 ### Test Runner Contract
 
-`manual_analysis_test` wires two environments:
+`manual_analysis_test` invokes the runner in two contexts: an artifact-generation
+action and the Bazel test executable. Their environment variables differ.
 
-- an **action environment** with absolute paths for Bazel actions
-- a **runfiles environment** with short paths for the test executable itself
-
-The verification runner expects:
+The artifact-generation action receives artifact paths relative to the Bazel
+execroot through:
 
 - `MANUAL_ANALYSIS_COMPUTED_LOCK`
 - `MANUAL_ANALYSIS_COMMITTED_LOCK`
 - `MANUAL_ANALYSIS_YAML`
 - `MANUAL_ANALYSIS_RESULTS_FILE`
-- `MANUAL_ANALYSIS_LOBSTER_OUTPUT`
-- `MANUAL_ANALYSIS_LABEL`
+- `MANUAL_ANALYSIS_LOBSTER_OUTPUT` (the declared `.lobster` output)
+
+It also receives the analysis target's Bazel label through
+`MANUAL_ANALYSIS_LABEL`.
+
+This action passes `--allow-check-failures`, allowing it to emit a `.lobster`
+artifact and return success when the lock or results check fails. Other errors,
+such as analysis YAML parsing failures, are not suppressed. The separate Bazel
+test executable receives
+runfiles-relative paths through `MANUAL_ANALYSIS_COMPUTED_LOCK`,
+`MANUAL_ANALYSIS_COMMITTED_LOCK`, `MANUAL_ANALYSIS_YAML`, and
+`MANUAL_ANALYSIS_RESULTS_FILE`, plus `MANUAL_ANALYSIS_LABEL`. It does not
+receive `MANUAL_ANALYSIS_LOBSTER_OUTPUT`; it reruns the checks and fails the
+test when either check fails.
 
 This keeps the rule logic in Starlark while leaving the policy checks in Python.
 

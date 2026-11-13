@@ -93,10 +93,3 @@ ScoreReq.CompReq CompDFromAsrD {
     version = 1
     derived_from = [AsilUpstream.AsrD@1]
 }
-
-ScoreReq.CompReq CompBFromAouB {
-    description = "B from received AoU B."
-    safety = ScoreReq.Asil.B
-    version = 1
-    derived_from = [AsilUpstream.AouB@1]
-}

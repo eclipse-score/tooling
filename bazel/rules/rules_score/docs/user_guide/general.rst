@@ -51,6 +51,12 @@ A *dependable element* is the top-level entity:
    * - Dependability Analysis
      - FMEA, FTA diagrams and control measures
 
+Received AoUs can be covered by manual analysis referencing the received AoU
+IDs directly, or by chain-forwarding. These are alternative coverage paths.
+Add the review target to
+``dependable_element.manual_analysis``. This does not establish that the
+element's own AoUs have been fulfilled by its users.
+
 Architecture Overview
 ---------------------
 
