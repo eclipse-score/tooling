@@ -50,19 +50,43 @@ def _collect_inputs(ctx):
     results_files = ctx.attr.results_file[DefaultInfo].files
     return [depset(transitive = context_depsets + [analysis_files, results_files]).to_list(), rules]
 
+def _lock_file_id(file, repository):
+    # Bazel documents external File.short_path values as starting with ../<repo_name>/:
+    # https://bazel.build/rules/lib/builtins/File#short_path
+    # Strip only the analysis repository's prefix to keep its lock identities stable.
+    if file.owner != None and file.owner.repo_name == repository:
+        prefix = "../{}/".format(repository)
+        if file.short_path.startswith(prefix):
+            return file.short_path[len(prefix):]
+    return file.short_path
+
+def _lock_rule_entry(entry, repository_prefix):
+    label, canonical_form = entry.split("\t", 1)
+    prefix, relative_label = label.split("//", 1)
+    if prefix == repository_prefix:
+        label = "@@//" + relative_label
+    return "{}\t{}".format(label, canonical_form)
+
+def _runfiles_path(file):
+    path = file.short_path
+    return path[3:] if path.startswith("../") else path
+
 def _make_manifests(ctx, input_files, input_rules):
     """Write two TSV manifests for *input_files* and *input_rules* and return the declared Files."""
     file_manifest = ctx.actions.declare_file("{}_file_manifest.tsv".format(ctx.label.name))
     ctx.actions.write(
         output = file_manifest,
-        content = "\n".join(["{}\t{}".format(f.short_path, f.path) for f in input_files]) + "\n",
+        content = "\n".join(["{}\t{}".format(_lock_file_id(f, ctx.label.repo_name), f.path) for f in input_files]) + "\n",
     )
     rule_manifest = ctx.actions.declare_file("{}_rule_manifest.tsv".format(ctx.label.name))
 
     # Flatten list of depsets into a single sorted list of serialized rule entries.
     flattened_rules = []
     for rule_set in input_rules:
-        flattened_rules.extend(rule_set.to_list())
+        flattened_rules.extend([
+            _lock_rule_entry(entry, str(ctx.label).split("//", 1)[0])
+            for entry in rule_set.to_list()
+        ])
     flattened_rules = sorted(flattened_rules)
     ctx.actions.write(
         output = rule_manifest,
@@ -143,7 +167,11 @@ def _manual_analysis_update_impl(ctx):
         target_file = workspace_results_file,
     )
 
-    runfiles = ctx.runfiles(files = input_files + manifests + [lock_file, results_file])
+    runfiles_inputs = input_files + manifests + [lock_file, results_file]
+    runfiles = ctx.runfiles(
+        files = runfiles_inputs,
+        root_symlinks = {file.path: file for file in runfiles_inputs},
+    )
     runfiles = runfiles.merge(ctx.attr._manual_analysis_update_runner[DefaultInfo].default_runfiles)
 
     executable = ctx.actions.declare_file(
@@ -162,11 +190,11 @@ def _manual_analysis_update_impl(ctx):
             runfiles = runfiles,
         ),
         RunEnvironmentInfo(environment = {
-            "MANUAL_ANALYSIS_FILES_MANIFEST": manifests[0].short_path,
-            "MANUAL_ANALYSIS_RULES_MANIFEST": manifests[1].short_path,
-            "MANUAL_ANALYSIS_LOCK_FILE": lock_file.short_path,
-            "MANUAL_ANALYSIS_YAML": analysis_file.short_path,
-            "MANUAL_ANALYSIS_RESULTS_FILE": results_file.short_path,
+            "MANUAL_ANALYSIS_FILES_MANIFEST": manifests[0].path,
+            "MANUAL_ANALYSIS_RULES_MANIFEST": manifests[1].path,
+            "MANUAL_ANALYSIS_LOCK_FILE": lock_file.path,
+            "MANUAL_ANALYSIS_YAML": analysis_file.path,
+            "MANUAL_ANALYSIS_RESULTS_FILE": results_file.path,
         }),
     ]
 
@@ -216,11 +244,10 @@ def _manual_analysis_test_impl(ctx):
     }
 
     test_environment = {
-        "MANUAL_ANALYSIS_COMPUTED_LOCK": computed_lock.short_path,
-        "MANUAL_ANALYSIS_COMMITTED_LOCK": lock_file.short_path,
-        "MANUAL_ANALYSIS_YAML": analysis_file.short_path,
-        "MANUAL_ANALYSIS_RESULTS_FILE": results_file.short_path,
-        "MANUAL_ANALYSIS_LOBSTER_OUTPUT": "{}.lobster".format(ctx.label.name),
+        "MANUAL_ANALYSIS_COMPUTED_LOCK": _runfiles_path(computed_lock),
+        "MANUAL_ANALYSIS_COMMITTED_LOCK": _runfiles_path(lock_file),
+        "MANUAL_ANALYSIS_YAML": _runfiles_path(analysis_file),
+        "MANUAL_ANALYSIS_RESULTS_FILE": _runfiles_path(results_file),
         "MANUAL_ANALYSIS_LABEL": str(ctx.label),
     }
 
@@ -329,6 +356,11 @@ manual_analysis = macro(
             doc = "Results file to capture interactive manual-analysis outcomes",
             mandatory = True,
             allow_single_file = True,
+            configurable = False,
+        ),
+        "tags": attr.string_list(
+            doc = "Bazel tags forwarded to both the manual analysis test and the update target",
+            default = [],
             configurable = False,
         ),
     },

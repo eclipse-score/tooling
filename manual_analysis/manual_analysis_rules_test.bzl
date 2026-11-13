@@ -153,6 +153,43 @@ def _manual_analysis_update_env_test_impl(ctx):
     asserts.true(env, "MANUAL_ANALYSIS_YAML" in run_env, "Missing analysis yaml env")
     asserts.true(env, "MANUAL_ANALYSIS_RESULTS_FILE" in run_env, "Missing results file env")
 
+    aliases = {
+        entry.path: entry.target_file
+        for entry in target_under_test[DefaultInfo].default_runfiles.root_symlinks.to_list()
+    }
+    for path in run_env.values():
+        asserts.true(env, path in aliases, "Update environment must reference an explicit runfiles alias: " + path)
+    manifests = [
+        action
+        for action in analysistest.target_actions(env)
+        if any([file.basename.endswith("_file_manifest.tsv") for file in action.outputs.to_list()])
+    ]
+    asserts.equals(env, 1, len(manifests))
+    for row in manifests[0].content.splitlines():
+        display, runtime = row.split("\t")
+        asserts.true(env, runtime in aliases, "Manifest input must have a runfiles alias: " + runtime)
+        file = aliases[runtime]
+        if file.owner.repo_name == target_under_test.label.repo_name:
+            expected = file.short_path
+            prefix = "../{}/".format(file.owner.repo_name)
+            if expected.startswith(prefix):
+                expected = expected[len(prefix):]
+            asserts.equals(env, expected, display, "Same-repository lock paths must be repository-relative")
+            asserts.false(env, display.startswith("../"))
+        else:
+            asserts.equals(env, file.short_path, display, "Dependency lock paths must retain their repository identity")
+
+    rule_manifests = [
+        action
+        for action in analysistest.target_actions(env)
+        if any([file.basename.endswith("_rule_manifest.tsv") for file in action.outputs.to_list()])
+    ]
+    asserts.equals(env, 1, len(rule_manifests))
+    for row in rule_manifests[0].content.splitlines():
+        label, canonical_form = row.split("\t", 1)
+        asserts.true(env, label.startswith("@@//manual_analysis/example:"))
+        asserts.true(env, canonical_form.startswith("{"))
+
     default_files = target_under_test[DefaultInfo].files.to_list()
     asserts.true(
         env,
@@ -186,6 +223,18 @@ def _manual_analysis_test_env_test_impl(ctx):
     asserts.true(env, "MANUAL_ANALYSIS_YAML" in run_env, "Missing analysis yaml env")
     asserts.true(env, "MANUAL_ANALYSIS_RESULTS_FILE" in run_env, "Missing results file env")
     asserts.true(env, "MANUAL_ANALYSIS_LABEL" in run_env, "Missing analysis label env")
+    for name in [
+        "MANUAL_ANALYSIS_COMPUTED_LOCK",
+        "MANUAL_ANALYSIS_COMMITTED_LOCK",
+        "MANUAL_ANALYSIS_YAML",
+        "MANUAL_ANALYSIS_RESULTS_FILE",
+    ]:
+        asserts.false(env, run_env[name].startswith("../"), "Test inputs must use normalized runfiles paths")
+    asserts.false(
+        env,
+        "MANUAL_ANALYSIS_LOBSTER_OUTPUT" in run_env,
+        "Tests must not overwrite the build-generated LOBSTER artifact in read-only runfiles",
+    )
 
     default_info = target_under_test[DefaultInfo]
     executable = default_info.files_to_run.executable

@@ -39,7 +39,7 @@ rectangle "dependency_b\ndefines AoU_2" <<dep>> as dep_b
 
 rectangle "one_seooc" <<seooc>> as seooc {
     rectangle "received AoUs\n(each dep's own_aou_lobster +\nchain_forwarded_lobster, merged)" <<received>> as received
-    rectangle "AoU_1 -- handled locally\n(CompReq.derived_from)" <<handled>> as handled
+    rectangle "AoU_1 -- reviewed locally\n(manual analysis YAML: requirements)" <<handled>> as handled
     rectangle "AoU_2 -- chain-forwarded\n(aou_forwarding.yaml)" <<forwarded>> as forwarded
     rectangle "own AoU_3\n(auto-forwarded)" <<forwarded>> as own
 

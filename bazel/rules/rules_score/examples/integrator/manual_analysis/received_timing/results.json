@@ -1,0 +1,22 @@
+{
+  "analysis": "manual_analysis/received_timing/analysis.yaml",
+  "results": [
+    {
+      "type": "action",
+      "description": "Review OtherLibrary.TimingConstraint@1 and identify the required invocation period, timing interpretation, deployment scope, and scheduler evidence.",
+      "result": "The received AoU constrains invocation cycle time to 10 ms. Clarification is needed on the interval measurement and allowed jitter. This is a coding-assistant gap assessment, not independent human safety approval."
+    },
+    {
+      "type": "action",
+      "description": "Inspect the integrator implementation for invocation scheduling and verify worst-case intervals using timer configuration, jitter and execution-time evidence. Record missing evidence.",
+      "result": "COMP_INT_002 describes a 10 ms hardware-timer task, but integrator_lib has no source files. The context supplies no task implementation, timer configuration, scheduler bound, jitter analysis or target timing measurements. A requirement declaration alone is not scheduling evidence."
+    },
+    {
+      "type": "assertion",
+      "description": "Is OtherLibrary.TimingConstraint@1 demonstrably satisfied for all relevant invocations in the reviewed integration context?",
+      "answer": "No",
+      "passed": false,
+      "justification": "Not demonstrated. Clarify the timing contract, implement the scheduling integration, provide worst-case timing evidence, and repeat the review."
+    }
+  ]
+}

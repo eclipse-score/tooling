@@ -25,9 +25,7 @@
 #   integrator_seooc (this target)
 #       - receives SampleType.SampleAoU          (auto-forwarded from seooc)
 #       - receives OtherLibrary.TimingConstraint  (chain-forwarded through seooc)
-#       - also depends on other_seooc directly, so TimingConstraint arrives a
-#         second time; it is merged into one received AoU
-#       - HANDLES both locally: COMP_INT_001 and COMP_INT_002
+#       - reviews both received AoUs directly with manual analysis
 #
 
 load(
@@ -37,6 +35,8 @@ load(
     "dependable_element",
     "unit",
 )
+load("@score_tooling//manual_analysis:context_from_cc_library.bzl", "manual_analysis_context_from_cc_library")
+load("@score_tooling//manual_analysis:context_from_filegroup.bzl", "manual_analysis_context_from_filegroup")
 
 cc_library(
     name = "integrator_lib",
@@ -45,6 +45,29 @@ cc_library(
     deps = [
         "@seooc//:sample_library",
     ],
+)
+
+manual_analysis_context_from_cc_library(
+    name = "implementation_review_context",
+    library = ":integrator_lib",
+    visibility = ["//manual_analysis:__subpackages__"],
+)
+
+filegroup(
+    name = "integration_review_inputs",
+    srcs = [
+        "BUILD",
+        "static_design.puml",
+        "//docs/requirements:component_requirements",
+        "@seooc//docs:sample_aous",
+        "@some_other_library//:other_library_aous",
+    ],
+)
+
+manual_analysis_context_from_filegroup(
+    name = "integration_review_context",
+    filegroup = ":integration_review_inputs",
+    visibility = ["//manual_analysis:__subpackages__"],
 )
 
 architectural_design(
@@ -81,6 +104,10 @@ dependable_element(
     components = [":integrator_component"],
     dependability_analysis = [],
     integrity_level = "B",
+    manual_analysis = [
+        "//manual_analysis/received_shared_memory:review",
+        "//manual_analysis/received_timing:review",
+    ],
     maturity = "development",
     requirements = [
         "//docs/requirements:feature_requirements",
@@ -88,6 +115,5 @@ dependable_element(
     tests = [],
     deps = [
         "@seooc//:safety_software_seooc_example",
-        "@some_other_library//:other_seooc",
     ],
 )

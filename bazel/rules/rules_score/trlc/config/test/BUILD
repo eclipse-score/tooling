@@ -57,6 +57,30 @@ trlc_requirements_test(
     reqs = [":valid"],
 )
 
+trlc_requirements(
+    name = "invalid_aou",
+    srcs = ["invalid_aou.trlc"],
+    spec = _SPEC,
+    deps = [":upstream"],
+)
+
+py_test(
+    name = "aou_source_rejected_test",
+    srcs = ["expect_check_errors_test.py"],
+    args = [
+        "--error-kind",
+        "error",
+        "--message",
+        "'expected reference of type [FeatReq, AssumedSystemReq], but AouB is of type AoU'",
+        "--count",
+        "1",
+        "$(locations :invalid_aou)",
+    ],
+    data = [":invalid_aou"],
+    main = "expect_check_errors_test.py",
+    deps = ["@trlc//trlc"],
+)
+
 py_test(
     name = "asil_invalid_feat_test",
     srcs = ["expect_check_errors_test.py"],
@@ -79,7 +103,7 @@ py_test(
         "--message",
         _ASIL_ERROR,
         "--count",
-        "6",
+        "4",
         "$(locations :invalid_comp)",
     ],
     data = [":invalid_comp"],

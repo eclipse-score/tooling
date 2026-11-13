@@ -111,9 +111,6 @@ TEST(Foo, ValueConsistentAcrossReads) {
 }
 
 TEST(Foo, FootprintWithinBudget) {
-  ::testing::Test::RecordProperty("lobster-tracing",
-                                  "SampleComponentExtra.REQ_COMP_EXTRA_003");
-
   ::testing::Test::RecordProperty("given", "the Foo class definition");
   ::testing::Test::RecordProperty("when", "querying the size of Foo");
   ::testing::Test::RecordProperty("then",
