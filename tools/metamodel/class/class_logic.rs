@@ -253,6 +253,9 @@ impl MethodModifier {
 pub struct Method {
     /// Method name
     pub name: String,
+    /// Explicit conversion-operator target; absent for ordinary methods.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub conversion_target: Option<String>,
     /// Return type
     pub return_type: Option<String>,
     /// UML return multiplicity bracket interior; independent of the return type.
@@ -425,6 +428,7 @@ mod tests {
             }],
             methods: vec![Method {
                 name: "getName".to_string(),
+                conversion_target: None,
                 return_type: Some("string".to_string()),
                 return_multiplicity: None,
                 visibility: Visibility::Public,
@@ -498,6 +502,7 @@ mod tests {
             entity_type: EntityType::Class,
             methods: vec![Method {
                 name: "getUser".to_string(),
+                conversion_target: None,
                 return_type: None,
                 return_multiplicity: None,
                 visibility: Visibility::Public,

@@ -76,6 +76,11 @@ fn test_attr_method() {
 }
 
 #[test]
+fn test_conversion_operators() {
+    run_class_diagram_parser_case("conversion_operators");
+}
+
+#[test]
 fn test_class_body_separators() {
     run_class_diagram_parser_case("class_body_separators");
 }

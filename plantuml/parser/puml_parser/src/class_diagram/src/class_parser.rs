@@ -614,6 +614,7 @@ impl ClassParseSession<'_> {
         let mut method = Method::default();
         let mut vis = None;
         let mut name = None;
+        let mut conversion_target = None;
         method.source_location = self.original_source_location(&pair);
 
         for p in pair.into_inner() {
@@ -629,7 +630,18 @@ impl ClassParseSession<'_> {
                 Rule::friend_specifier => method.is_friend = true,
                 Rule::pure_virtual_suffix => ensure_abstract_modifier(&mut method),
                 Rule::class_visibility => vis = Some(p),
-                Rule::method_name | Rule::identifier => name = Some(p.as_str().to_string()),
+                Rule::method_name | Rule::identifier => {
+                    name = Some(p.as_str().to_string());
+                    conversion_target = p
+                        .into_inner()
+                        .find(|inner| inner.as_rule() == Rule::conversion_operator_name)
+                        .and_then(|inner| {
+                            inner
+                                .into_inner()
+                                .find(|target| target.as_rule() == Rule::conversion_target)
+                        })
+                        .map(|target| target.as_str().trim().to_string());
+                }
                 Rule::param_list => {
                     for param_pair in p.into_inner() {
                         match param_pair.as_rule() {
@@ -676,6 +688,26 @@ impl ClassParseSession<'_> {
         }
         method.visibility = Self::parse_visibility(vis);
         method.name = name.unwrap_or_default();
+
+        if let Some(target) = conversion_target {
+            if !method.params.is_empty()
+                || method.is_friend
+                || method
+                    .modifiers
+                    .iter()
+                    .any(|modifier| modifier.contains("static"))
+            {
+                return Err(ClassError::UnexpectedClassMember(
+                    "conversion operators must be non-static members with no parameters".into(),
+                ));
+            }
+            // Preserve explicit return spelling; validation checks type consistency.
+            if method.r#type.is_none() {
+                method.r#type = Some(target.clone());
+            }
+            method.name = format!("operator {target}");
+            method.conversion_target = Some(target);
+        }
 
         Ok(method)
     }
@@ -1778,6 +1810,88 @@ mod tests {
         for parameter in ["input x : T", "in out x : T", "out :", "inout x :"] {
             let member = format!("+f({parameter}) : void");
             assert!(parse_single_class_member_file(&member).is_err(), "{member}");
+        }
+    }
+
+    #[test]
+    fn keyword_operators_do_not_store_conversion_metadata() {
+        for (member, name, return_type, parameter_count) in [
+            ("+operator delete() : void", "operator delete", "void", 0),
+            (
+                "+operator co_await() : Awaiter",
+                "operator co_await",
+                "Awaiter",
+                0,
+            ),
+            (
+                "+operator new(std::size_t n) : void*",
+                "operator new",
+                "void*",
+                1,
+            ),
+            (
+                "+static operator new[](std::size_t n) : void*",
+                "operator new[]",
+                "void*",
+                1,
+            ),
+            (
+                "+operator delete[](void* p) : void",
+                "operator delete[]",
+                "void",
+                1,
+            ),
+        ] {
+            let result = parse_single_class_member_file(member).expect(member);
+            let ClassUmlTopLevel::Type(TypeDefinition::ClassLikeDef(def)) = &result.elements[0]
+            else {
+                panic!("expected class element");
+            };
+            let method = &def.members.methods[0];
+            assert_eq!(method.name, name, "{member}");
+            assert_eq!(method.conversion_target, None, "{member}");
+            assert_eq!(method.r#type.as_deref(), Some(return_type), "{member}");
+            assert_eq!(method.params.len(), parameter_count, "{member}");
+        }
+    }
+
+    #[test]
+    fn conversion_target_declarators_store_explicit_metadata() {
+        for target in [
+            "bool",
+            "ns::Value<T>",
+            "const T*",
+            "T**&",
+            "T* const&&",
+            "new_type",
+            "delete_type",
+            "co_await_type",
+        ] {
+            let member = format!("+operator {target}()");
+            let result = parse_single_class_member_file(&member).unwrap();
+            let ClassUmlTopLevel::Type(TypeDefinition::ClassLikeDef(def)) = &result.elements[0]
+            else {
+                panic!("expected class element");
+            };
+            assert_eq!(
+                def.members.methods[0].conversion_target.as_deref(),
+                Some(target)
+            );
+            assert_eq!(def.members.methods[0].r#type.as_deref(), Some(target));
+        }
+        for target in ["T&*", "T&&&", "T&&*", "T& &"] {
+            assert!(
+                parse_single_class_member_file(&format!("+operator {target}()")).is_err(),
+                "{target}"
+            );
+        }
+        for member in ["+operator()() : int", "+operatorX() : bool", "+f() : int"] {
+            let result = parse_single_class_member_file(member).unwrap();
+            let ClassUmlTopLevel::Type(TypeDefinition::ClassLikeDef(def)) = &result.elements[0]
+            else {
+                panic!("expected class element");
+            };
+            assert_eq!(def.members.methods[0].conversion_target, None);
         }
     }
 

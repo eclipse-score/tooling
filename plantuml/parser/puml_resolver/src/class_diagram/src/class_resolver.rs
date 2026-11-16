@@ -845,6 +845,7 @@ impl ClassResolver {
 
         Method {
             name: m.name.clone(),
+            conversion_target: m.conversion_target.clone(),
             return_type: m.r#type.clone(),
             return_multiplicity: m.return_multiplicity.clone(),
             visibility: Self::map_visibility(m.visibility.clone()),

@@ -113,6 +113,7 @@ table Method {
     modifiers: [MethodModifier];
     source_location: SourceLocation (required);
     return_multiplicity: string;
+    conversion_target: string;
 }
 
 table EnumLiteral {

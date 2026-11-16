@@ -207,6 +207,10 @@ impl ClassSerializer {
             .return_multiplicity
             .as_ref()
             .map(|value| builder.create_string(value));
+        let conversion_target_offset = method
+            .conversion_target
+            .as_ref()
+            .map(|target| builder.create_string(target));
 
         let parameter_offsets: Vec<_> = method
             .parameters
@@ -236,6 +240,7 @@ impl ClassSerializer {
             builder,
             &fb::MethodArgs {
                 name: Some(name_offset),
+                conversion_target: conversion_target_offset,
                 return_type: return_type_offset,
                 return_multiplicity: return_multiplicity_offset,
                 visibility: Self::map_visibility(method.visibility),

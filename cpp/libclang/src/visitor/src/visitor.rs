@@ -15,7 +15,6 @@ use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 
 use clang::{Entity, EntityKind};
-use log::warn;
 
 use crate::clang_adapter::class_collection::{classify_class, ClassCollectionDecision};
 use crate::clang_adapter::source_filter;
@@ -109,7 +108,8 @@ impl<'a> Visitor<'a> {
             | EntityKind::FunctionTemplate
             | EntityKind::Method
             | EntityKind::Constructor
-            | EntityKind::Destructor => {
+            | EntityKind::Destructor
+            | EntityKind::ConversionFunction => {
                 FunctionVisitor::visit_with_state(
                     self.ctx,
                     self.source_files,
@@ -118,9 +118,6 @@ impl<'a> Visitor<'a> {
                     self.seen_function_definitions,
                     entity,
                 );
-            }
-            EntityKind::ConversionFunction => {
-                warn!("Ignoring conversion function: {:?}", entity);
             }
             _ => {}
         }

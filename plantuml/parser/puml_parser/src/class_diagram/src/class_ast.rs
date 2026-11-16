@@ -123,6 +123,8 @@ pub struct TypeAlias {
 pub struct Method {
     pub visibility: Visibility,
     pub name: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub conversion_target: Option<String>,
     pub template_parameters: Option<Vec<TemplateParameter>>,
     pub params: Vec<Param>,
     pub r#type: Option<String>,
@@ -143,6 +145,7 @@ impl Default for Method {
         Method {
             visibility: Visibility::Public,
             name: String::new(),
+            conversion_target: None,
             template_parameters: None,
             params: Vec::new(),
             r#type: None,
@@ -317,6 +320,7 @@ mod tests {
 
         assert_eq!(method.visibility, Visibility::Public);
         assert_eq!(method.name, "");
+        assert_eq!(method.conversion_target, None);
         assert_eq!(method.template_parameters, None);
         assert!(method.params.is_empty());
         assert_eq!(method.r#type, None);

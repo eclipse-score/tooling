@@ -56,7 +56,8 @@ pub enum FunctionKind {
     StaticMethod,
     Constructor,
     Destructor,
-    Conversion,
+    /// A C++ conversion operator, such as `operator bool()`.
+    ConversionFunction,
 }
 
 /// Lightweight semantic identity of a C++ callable within this model.

@@ -58,6 +58,21 @@ fn assert_case(case_dir: &str) {
 }
 
 #[test]
+fn positive_keyword_operators() {
+    assert_case("positive_keyword_operators");
+}
+
+#[test]
+fn negative_keyword_operator_return_type_mismatch() {
+    assert_case("negative_keyword_operator_return_type_mismatch");
+}
+
+#[test]
+fn positive_conversion_operators() {
+    assert_case("positive_conversion_operators");
+}
+
+#[test]
 fn positive_return_multiplicities() {
     assert_case("positive_return_multiplicities");
 }

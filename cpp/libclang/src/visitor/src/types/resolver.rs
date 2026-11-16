@@ -387,6 +387,21 @@ fn resolve_named_type(original: &Type, canonical: &Type) -> ResolvedType {
         .unwrap_or_else(|| {
             let name = resolve_unknown_name(original, canonical);
             if is_dependent_expression_type(original) {
+                // resolve_type re-applies top-level cv. An opaque dependent
+                // spelling already contains it, unlike a declaration-derived id.
+                let mut name = name;
+                for (qualified, qualifier) in [
+                    (original.is_const_qualified(), "const"),
+                    (original.is_volatile_qualified(), "volatile"),
+                ] {
+                    if qualified {
+                        if let Some(inner) = name.strip_prefix(&format!("{qualifier} ")) {
+                            name = inner.to_string();
+                        } else if let Some(inner) = name.strip_suffix(&format!(" {qualifier}")) {
+                            name = inner.to_string();
+                        }
+                    }
+                }
                 log::debug!(
                     "type '{}' is structurally unresolvable before template instantiation",
                     name

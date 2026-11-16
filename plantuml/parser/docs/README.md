@@ -42,6 +42,72 @@ Each preprocessed file is parsed into an AST based on its diagram type. The diag
 - Auto-detected by trying parsers in order (Sequence → Class → Component) until one succeeds
 - If all parsers fail, the error with the longest match is reported
 
+##### Conversion operators
+
+Class operations support conversion to builtin, alias, qualified/template and
+pointer/reference types, including member-template conversions:
+
+```plantuml
+@startuml conversion_operators_demo
+class Example<class T> {
+    +using pointer = T*
+    +operator bool() const noexcept
+    +operator pointer() const
+    +operator ns::Value&()
+    +operator U*()<class U> const
+}
+@enduml
+```
+
+`pointer` aliases `T*`; `T` belongs to the class and `U` to the method template
+list after `()`. The parser does not check whether `ns::Value` exists.
+
+| UML operation | Method name in JSON | Conversion target in JSON | Return type in JSON |
+|---|---|---|---|
+| `operator bool() const noexcept` | `"operator bool"` | `"bool"` | `"bool"` |
+| `operator pointer() const` | `"operator pointer"` | `"pointer"` | `"pointer"` |
+| `operator ns::Value&()` | `"operator ns::Value&"` | `"ns::Value&"` | `"ns::Value&"` |
+| `operator U*()<class U> const` | `"operator U*"` | `"U*"` | `"U*"` |
+
+**Generated API signatures** preserve the UML target spelling without a separate
+leading return type:
+
+```text
+Example<T>::operator bool() const noexcept
+Example<T>::operator pointer() const
+Example<T>::operator ns::Value&()
+Example<T>::operator U*<U>() const
+```
+
+**Parsing and storage:** These are PlantUML declarations, not C++ source.
+Conversions must have no operation parameters and cannot be static or friend.
+Pointer layers may end in one `&` or `&&`; malformed ordering is rejected.
+An omitted return type is inferred from the target; an explicit `: type` is
+preserved and checked by validation. `conversion_target` retains the target
+spelling with surrounding whitespace trimmed and identifies conversions without
+name-prefix guessing. Ordinary JSON omits it; missing JSON/FlatBuffers fields
+read as `None`. C++ extraction uses libclang cursor kinds (`ConversionFunction`).
+Existing symbolic operators and ordinary methods are unchanged.
+
+**Validation:** Design and implementation are expected to use the same type names,
+including aliases such as `pointer`. Types are normalized without expanding aliases;
+owning-class qualification added by libclang is aligned with the local alias name.
+Each conversion target must match its return type. Type-alias declarations are checked separately.
+
+**API names:** Records use `operator_conversion_<target>`, e.g.
+`operator_conversion_bool` or `operator_conversion_T_ptr`. Namespace separators
+and whitespace become underscores; `*`, `&`, `&&`, `<`, `>` and `,` become
+`ptr`, `ref`, `rref`, `of`, `end` and `and` tokens. Repeated separators collapse.
+Different method origins with case/underscore-insensitive name collisions report
+`NameCollision`. This naming does not change type matching; references to old
+hexadecimal record names need updating when regenerating records.
+
+**Limitations:** `const`, bare `noexcept`, virtual/abstract, override and final
+metadata are retained where supported. C++ `explicit` is not stored or checked;
+UML `explicit` is rejected. Template defaults, SFINAE, conditional
+`explicit`/`noexcept` and method ref qualifiers are not modeled. Validation does
+not establish template instantiation or implicit-conversion eligibility.
+
 ##### Class operation parameter directions
 
 Class operation parameters support explicit `in`, `out` and `inout` metadata.
@@ -146,6 +212,7 @@ class Example {
     +all() : Value[0..*]
     +required() : Value[1..*]
     +extras() : Value[*]
+    +operator pointer() const noexcept : pointer[0..1]
 }
 @enduml
 ```
@@ -165,11 +232,16 @@ Value[0..*] Example::all()
 Value[1..*] Example::required()
 Value[*] Example::extras()
 Value[0..1] ns::find()
+Example::operator pointer() const noexcept : pointer[0..1]
 ```
 
-The namespaced free-function example uses the same display policy.
-Unannotated return signatures are unchanged. Return annotations affect display
-only, not API record names or identity.
+The namespaced free-function example uses the same display policy. Conversion
+operators normally omit the separate return type, as described above; when
+return multiplicity is present, a trailing ` : Type[multiplicity]` preserves
+the annotation **after** `const` and `noexcept`. Unannotated conversions retain
+their existing display, e.g. `Example::operator pointer() const noexcept`.
+Other unannotated return signatures are also unchanged. Return annotations
+affect display only, not API record names or identity.
 
 **Compatibility and semantics:** `T[1]`, `T[N]`, and `T[]` remain array types,
 not return multiplicity. These are PlantUML documentation annotations, not C++

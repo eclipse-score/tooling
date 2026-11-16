@@ -161,6 +161,7 @@ fn read_method(
 
     Ok(Method {
         name: method.name().to_string(),
+        conversion_target: method.conversion_target().map(str::to_string),
         return_type: method.return_type().map(|s| s.to_string()),
         return_multiplicity: method.return_multiplicity().map(str::to_string),
         visibility: map_visibility(

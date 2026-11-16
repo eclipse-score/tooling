@@ -404,10 +404,11 @@ impl ClassDesignImplementationValidator {
     ) {
         let implementation_methods = method_map(implementation_entity);
         for design_method in &design_entity.methods {
-            let key = method_key(design_method);
+            let key = method_key_for_matching(design_entity, design_method);
             match implementation_methods.get(key.as_str()) {
                 Some(implementation_method)
-                    if methods_match(design_method, implementation_method) => {}
+                    if conversion_target(design_method).is_none()
+                        && methods_match(design_method, implementation_method) => {}
                 Some(implementation_method) => self.check_method_fields(
                     design_entity,
                     implementation_entity,
@@ -418,8 +419,12 @@ impl ClassDesignImplementationValidator {
                 // when a same-named implementation method is unique. Overloaded methods are left
                 // as missing full signatures because the validator cannot safely choose a candidate.
                 None => {
-                    match unique_method_index_by_name(implementation_entity, &design_method.name)
-                        .and_then(|index| implementation_entity.methods.get(index))
+                    match unique_method_index_by_matching_name(
+                        implementation_entity,
+                        design_entity,
+                        design_method,
+                    )
+                    .and_then(|index| implementation_entity.methods.get(index))
                     {
                         Some(implementation_method) => self.check_method_fields(
                             design_entity,
@@ -453,9 +458,12 @@ impl ClassDesignImplementationValidator {
     ) {
         let method_name = &design_method.name;
 
-        if normalized_optional_type(&design_method.return_type)
-            != normalized_optional_type(&implementation_method.return_type)
-        {
+        if !method_return_types_match(
+            design_entity,
+            implementation_entity,
+            design_method,
+            implementation_method,
+        ) {
             self.result.add_failure(Self::format_mismatch(
                 design_entity,
                 implementation_entity,
@@ -952,8 +960,110 @@ fn method_map(entity: &SimpleEntity) -> BTreeMap<String, &Method> {
     entity
         .methods
         .iter()
-        .map(|method| (method_key(method), method))
+        .map(|method| (method_key_for_matching(entity, method), method))
         .collect()
+}
+
+fn conversion_target(method: &Method) -> Option<&str> {
+    method.conversion_target.as_deref()
+}
+
+/// Align libclang's owner-qualified alias spelling with the local alias name.
+/// Compare whole names only; never expand aliases or interpret type declarators.
+fn normalize_conversion_type_name(entity: &SimpleEntity, ty: &str) -> String {
+    let normalized = normalize_type_name(ty);
+    let owner = normalize_qualified_name(&entity.id);
+    let local_owner = specialization_base_id(&owner)
+        .rsplit("::")
+        .next()
+        .unwrap_or(&owner);
+    for alias in &entity.type_aliases {
+        if normalized == format!("{owner}::{}", alias.alias)
+            || normalized == format!("{local_owner}::{}", alias.alias)
+        {
+            return alias.alias.clone();
+        }
+    }
+    normalized
+}
+
+fn method_name_for_matching(entity: &SimpleEntity, method: &Method) -> String {
+    conversion_target(method).map_or_else(
+        || method.name.clone(),
+        |target| {
+            format!(
+                "operator {}",
+                normalize_conversion_type_name(entity, target)
+            )
+        },
+    )
+}
+
+fn method_key_for_matching(entity: &SimpleEntity, method: &Method) -> String {
+    if conversion_target(method).is_none() {
+        return method_key(method);
+    }
+    let mut canonical = method.clone();
+    canonical.name = method_name_for_matching(entity, method);
+    method_key(&canonical)
+}
+
+/// Compare return types and, for conversions, require each target to match its return type.
+fn method_return_types_match(
+    design_entity: &SimpleEntity,
+    implementation_entity: &SimpleEntity,
+    design_method: &Method,
+    implementation_method: &Method,
+) -> bool {
+    let design_is_conversion = conversion_target(design_method).is_some();
+    let implementation_is_conversion = conversion_target(implementation_method).is_some();
+    if !design_is_conversion && !implementation_is_conversion {
+        return normalized_optional_type(&design_method.return_type)
+            == normalized_optional_type(&implementation_method.return_type);
+    }
+
+    if design_is_conversion != implementation_is_conversion {
+        return false;
+    }
+
+    let design_return = design_method
+        .return_type
+        .as_deref()
+        .map(|ty| normalize_conversion_type_name(design_entity, ty));
+    let implementation_return = implementation_method
+        .return_type
+        .as_deref()
+        .map(|ty| normalize_conversion_type_name(implementation_entity, ty));
+    if design_return != implementation_return {
+        return false;
+    }
+
+    design_return.is_some()
+        && implementation_return.is_some()
+        && conversion_target(design_method)
+            .map(|target| normalize_conversion_type_name(design_entity, target))
+            == design_return
+        && conversion_target(implementation_method)
+            .map(|target| normalize_conversion_type_name(implementation_entity, target))
+            == implementation_return
+}
+
+fn unique_method_index_by_matching_name(
+    implementation_entity: &SimpleEntity,
+    design_entity: &SimpleEntity,
+    design_method: &Method,
+) -> Option<usize> {
+    if conversion_target(design_method).is_none() {
+        return unique_method_index_by_name(implementation_entity, &design_method.name);
+    }
+    let name = method_name_for_matching(design_entity, design_method);
+    let mut matches = implementation_entity
+        .methods
+        .iter()
+        .enumerate()
+        .filter(|(_, method)| method_name_for_matching(implementation_entity, method) == name);
+    let (index, _) = matches.next()?;
+    matches.next().is_none().then_some(index)
 }
 
 fn unique_method_index_by_name(entity: &SimpleEntity, method_name: &str) -> Option<usize> {
@@ -968,6 +1078,7 @@ fn unique_method_index_by_name(entity: &SimpleEntity, method_name: &str) -> Opti
 
 fn methods_match(design_method: &Method, implementation_method: &Method) -> bool {
     design_method.name == implementation_method.name
+        && design_method.conversion_target == implementation_method.conversion_target
         && normalized_optional_type(&design_method.return_type)
             == normalized_optional_type(&implementation_method.return_type)
         && design_method.visibility == implementation_method.visibility
@@ -1565,6 +1676,7 @@ mod tests {
     fn method(name: &str) -> Method {
         Method {
             name: name.to_string(),
+            conversion_target: None,
             return_type: None,
             return_multiplicity: None,
             source_location: SourceLocation::new("test.puml", 1),
@@ -1744,6 +1856,39 @@ mod tests {
             normalize_qualified_name("amp.move_only_function"),
             normalize_qualified_name("amp::move_only_function")
         );
+    }
+
+    #[test]
+    fn conversion_alias_names_match_without_expansion() {
+        let mut owner = entity("ns.Owner", vec![]);
+        owner.type_aliases.push(TypeAlias {
+            alias: "pointer".into(),
+            original_type: "PointedType*".into(),
+            source_location: Default::default(),
+        });
+        for (ty, expected) in [
+            ("pointer", "pointer"),
+            ("Owner::pointer", "pointer"),
+            ("::ns::Owner::pointer", "pointer"),
+            ("other::Owner::pointer", "other::Owner::pointer"),
+            ("pointer<T>", "pointer<T>"),
+            ("pointer&", "pointer&"),
+            ("PointedType *", "PointedType*"),
+        ] {
+            assert_eq!(normalize_conversion_type_name(&owner, ty), expected);
+        }
+
+        owner.methods.push(Method {
+            conversion_target: Some("pointer".into()),
+            ..method_with_return_type("operator pointer", "pointer")
+        });
+        let design = index(vec![owner.clone()]);
+        // libclang qualifies the alias even though the C++ source uses `pointer`.
+        owner.methods[0].name = "operator ns::Owner::pointer".into();
+        owner.methods[0].conversion_target = Some("ns::Owner::pointer".into());
+        owner.methods[0].return_type = Some("ns::Owner::pointer".into());
+        let result = validate_class_design_implementation(&design, &index(vec![owner]));
+        assert!(result.failures.is_empty(), "{:?}", result.failures);
     }
 
     #[test]

@@ -21,6 +21,7 @@ pub(crate) struct SignatureParts<'a> {
     pub qualified_name: &'a str,
     pub return_type: Option<&'a str>,
     pub return_multiplicity: Option<&'a str>,
+    pub conversion_target: Option<&'a str>,
     pub parameters: &'a [FunctionArgument],
     pub template_parameters: Option<&'a [TemplateParameter]>,
     pub modifiers: &'a [MethodModifier],
@@ -31,7 +32,10 @@ pub(crate) fn render_signature(parts: &SignatureParts) -> String {
     if parts.modifiers.contains(&MethodModifier::Static) {
         out.push_str("static ");
     }
-    if let Some(return_type) = parts.return_type {
+    if let Some(return_type) = parts
+        .return_type
+        .filter(|_| parts.conversion_target.is_none())
+    {
         out.push_str(return_type);
         if let Some(multiplicity) = parts.return_multiplicity {
             out.push_str(&format!("[{multiplicity}]"));
@@ -49,6 +53,14 @@ pub(crate) fn render_signature(parts: &SignatureParts) -> String {
     }
     if parts.modifiers.contains(&MethodModifier::Noexcept) {
         out.push_str(" noexcept");
+    }
+    // Conversions omit the leading return type, but must not lose annotations.
+    if parts.conversion_target.is_some() {
+        if let (Some(return_type), Some(multiplicity)) =
+            (parts.return_type, parts.return_multiplicity)
+        {
+            out.push_str(&format!(" : {return_type}[{multiplicity}]"));
+        }
     }
     out
 }

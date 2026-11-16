@@ -402,14 +402,22 @@ pure_virtual_suffix = { "=" ~ "0" }
 
 method_name = {
     operator_overload_name
+    | conversion_operator_name
     | destructor_name
     | class_qualified_name
 }
+// Conversion targets deliberately exclude function suffixes: the following ()
+// belongs to the method, not to the target type. Do not relax type_expr globally.
+conversion_operator_name = { conversion_operator_keyword ~ !non_conversion_operator_keyword ~ conversion_target }
+conversion_operator_keyword = @{ "operator" ~ (" " | "\t")+ }
+non_conversion_operator_keyword = @{ ("new" | "delete" | "co_await") ~ keyword_boundary }
+conversion_target = { const_qualifier* ~ qualified_type ~ generic_type_args? ~ (pointer_suffix ~ const_qualifier?)* ~ reference_suffix? }
 destructor_name = @{ "~" ~ identifier }
 operator_overload_name = @{
         "operator"
         ~ (
-            "->*"
+            (" " | "\t")+ ~ (("new" | "delete") ~ keyword_boundary ~ "[]"? | "co_await" ~ keyword_boundary)
+            | "->*"
             | "->"
             | "()"
             | "[]"
