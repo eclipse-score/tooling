@@ -12,7 +12,7 @@
  ********************************************************************************/
 package Tools
 import ToolQualification
-import UseCases
+import rules_score
 
 section "Tool Requirements" {
 
@@ -26,7 +26,7 @@ section "Tool Requirements" {
                 corresponding `package <<SEooC>>` in the PlantUML component
                 diagram, or when a `package <<SEooC>>` exists without a
                 corresponding Bazel `dependable_element` target.'''
-                derived_from = [UseCases.Validate_Architecture_Specification_Documents]
+                derived_from = [rules_score.Validate_Architecture_Specification_Documents]
                 satisfied_by = Verifier
             }
 
@@ -39,7 +39,7 @@ section "Tool Requirements" {
                 labels count separately even when their design names are
                 identical; for multiple roots, the error lists all root
                 labels.'''
-                derived_from = [UseCases.Validate_Architecture_Specification_Documents]
+                derived_from = [rules_score.Validate_Architecture_Specification_Documents]
                 satisfied_by = Verifier
             }
 
@@ -50,7 +50,7 @@ section "Tool Requirements" {
                 under the same parent, or when a `<<component>>` entity
                 exists in PlantUML without a corresponding Bazel `component`
                 target under the expected parent.'''
-                derived_from = [UseCases.Validate_Architecture_Specification_Documents]
+                derived_from = [rules_score.Validate_Architecture_Specification_Documents]
                 satisfied_by = Verifier
             }
 
@@ -61,7 +61,7 @@ section "Tool Requirements" {
                 parent component, or when a `<<unit>>` entity exists in
                 PlantUML without a corresponding Bazel `unit` target under
                 the expected parent.'''
-                derived_from = [UseCases.Validate_Architecture_Specification_Documents]
+                derived_from = [rules_score.Validate_Architecture_Specification_Documents]
                 satisfied_by = Verifier
             }
 
@@ -73,7 +73,7 @@ section "Tool Requirements" {
                 targets, defaulting to the target's short name, or the
                 `dependable_element` target name for the root. PlantUML
                 aliases do not participate in matching.'''
-                derived_from = [UseCases.Validate_Architecture_Specification_Documents]
+                derived_from = [rules_score.Validate_Architecture_Specification_Documents]
                 satisfied_by = Verifier
             }
 
@@ -87,7 +87,7 @@ section "Tool Requirements" {
                 target name and each enclosing component's effective
                 `design_name`. A shared Bazel component target is matched
                 separately under every containing parent design path.'''
-                derived_from = [UseCases.Validate_Architecture_Specification_Documents]
+                derived_from = [rules_score.Validate_Architecture_Specification_Documents]
                 satisfied_by = Verifier
             }
 
@@ -97,7 +97,7 @@ section "Tool Requirements" {
                 into zero nested `component` or `unit` targets, even when the
                 corresponding PlantUML entity likewise shows no nested
                 elements.'''
-                derived_from = [UseCases.Validate_Architecture_Specification_Documents]
+                derived_from = [rules_score.Validate_Architecture_Specification_Documents]
                 satisfied_by = Verifier
             }
 
@@ -111,7 +111,7 @@ section "Tool Requirements" {
                 report an error if the declarations disagree on stereotype or
                 element type, and shall otherwise merge their relations into
                 a single entity.'''
-                derived_from = [UseCases.Validate_Architecture_Specification_Documents]
+                derived_from = [rules_score.Validate_Architecture_Specification_Documents]
                 satisfied_by = Verifier
             }
 
@@ -120,7 +120,7 @@ section "Tool Requirements" {
                 entity's children are declared across more than one `static`
                 PlantUML file and no single file declares the full set of
                 children declared for that entity anywhere.'''
-                derived_from = [UseCases.Validate_Architecture_Specification_Documents]
+                derived_from = [rules_score.Validate_Architecture_Specification_Documents]
                 satisfied_by = Verifier
             }
 
@@ -129,7 +129,7 @@ section "Tool Requirements" {
                 `<<component>>` or `<<unit>>` is not nested directly under a
                 `<<SEooC>>` or a `<<component>>`, naming its source location
                 and any other declaration of the same name.'''
-                derived_from = [UseCases.Validate_Architecture_Specification_Documents]
+                derived_from = [rules_score.Validate_Architecture_Specification_Documents]
                 satisfied_by = Verifier
             }
 
@@ -147,7 +147,7 @@ section "Tool Requirements" {
                 ambiguously. A participant that matches a component or SEooC
                 is a black box and shall not count as a reference to the
                 units it contains.'''
-                derived_from = [UseCases.Validate_Architecture_Specification_Documents]
+                derived_from = [rules_score.Validate_Architecture_Specification_Documents]
                 satisfied_by = Verifier
             }
 
@@ -163,7 +163,7 @@ section "Tool Requirements" {
                 a call with a component or SEooC participant shall not count
                 as a function-call interaction between the units it
                 contains.'''
-                derived_from = [UseCases.Validate_Architecture_Specification_Documents]
+                derived_from = [rules_score.Validate_Architecture_Specification_Documents]
                 satisfied_by = Verifier
             }
 
@@ -183,7 +183,7 @@ section "Tool Requirements" {
                 actor in one place and as `<<external>>` in another, or when
                 an environment participant uses the uid of a unit, component
                 or SEooC of the component diagram.'''
-                derived_from = [UseCases.Validate_Architecture_Specification_Documents]
+                derived_from = [rules_score.Validate_Architecture_Specification_Documents]
                 satisfied_by = Verifier
             }
 
@@ -195,7 +195,7 @@ section "Tool Requirements" {
                 (`**`) or delete (`!!`) marker shall not be matched against an
                 API and shall not count for interface coverage. A `create`
                 statement shall not change the kind of a message.'''
-                derived_from = [UseCases.Validate_Architecture_Specification_Documents]
+                derived_from = [rules_score.Validate_Architecture_Specification_Documents]
                 satisfied_by = Verifier
             }
 
@@ -209,7 +209,7 @@ section "Tool Requirements" {
                 only when it does. A message to such an environment shall not
                 be checked against an API and shall not count for interface
                 coverage.'''
-                derived_from = [UseCases.Validate_Architecture_Specification_Documents]
+                derived_from = [rules_score.Validate_Architecture_Specification_Documents]
                 satisfied_by = Verifier
             }
 
@@ -225,7 +225,7 @@ section "Tool Requirements" {
                 roles in the component diagram; without a component diagram or
                 a bound public interface, the whole public API shall be used by
                 name.'''
-                derived_from = [UseCases.Validate_Architecture_Specification_Documents]
+                derived_from = [rules_score.Validate_Architecture_Specification_Documents]
                 satisfied_by = Verifier
             }
 
@@ -243,7 +243,7 @@ section "Tool Requirements" {
                 internal API or the public API, on an interface shared by both
                 ends; the interface roles of such a call shall not be
                 checked.'''
-                derived_from = [UseCases.Validate_Architecture_Specification_Documents]
+                derived_from = [rules_score.Validate_Architecture_Specification_Documents]
                 satisfied_by = Verifier
             }
 
@@ -255,7 +255,7 @@ section "Tool Requirements" {
                 the component diagram: the caller shall require and the callee
                 shall provide an interface on which the called method is
                 declared.'''
-                derived_from = [UseCases.Validate_Architecture_Specification_Documents]
+                derived_from = [rules_score.Validate_Architecture_Specification_Documents]
                 satisfied_by = Verifier
             }
 
@@ -266,7 +266,7 @@ section "Tool Requirements" {
                 called in any sequence interaction. Self-calls count as valid
                 usage; calls with an actor or external system, calls to a
                 gate and rejected gate messages do not.'''
-                derived_from = [UseCases.Validate_Architecture_Specification_Documents]
+                derived_from = [rules_score.Validate_Architecture_Specification_Documents]
                 satisfied_by = Verifier
             }
 
@@ -275,7 +275,7 @@ section "Tool Requirements" {
                 one internal API file, the validator shall treat it as one
                 interface holding the union of the methods declared in all
                 of its declarations.'''
-                derived_from = [UseCases.Validate_Architecture_Specification_Documents]
+                derived_from = [rules_score.Validate_Architecture_Specification_Documents]
                 satisfied_by = Verifier
             }
 
@@ -287,7 +287,7 @@ section "Tool Requirements" {
                 description = '''The validator shall report an error when an
                 interface declared in the component diagram is not declared as
                 an interface in the internal API diagram.'''
-                derived_from = [UseCases.Validate_Architecture_Specification_Documents]
+                derived_from = [rules_score.Validate_Architecture_Specification_Documents]
                 satisfied_by = Verifier
             }
 
@@ -299,7 +299,7 @@ section "Tool Requirements" {
                 description = '''The validator shall report an error when a
                 public API interface declared in the component diagram is not
                 declared as an interface in the public API class diagram.'''
-                derived_from = [UseCases.Validate_Architecture_Specification_Documents]
+                derived_from = [rules_score.Validate_Architecture_Specification_Documents]
                 satisfied_by = Verifier
             }
 
@@ -308,7 +308,7 @@ section "Tool Requirements" {
                 public API interface declared in the component diagram is not
                 connected by an interface-binding relationship from the SEooC
                 in the component diagram.'''
-                derived_from = [UseCases.Validate_Architecture_Specification_Documents]
+                derived_from = [rules_score.Validate_Architecture_Specification_Documents]
                 satisfied_by = Verifier
             }
 
@@ -324,7 +324,7 @@ section "Tool Requirements" {
                 type. Consistency of type aliases, variables, methods, enum
                 literals, relationships, and template parameters is specified
                 by the dedicated requirements below.'''
-                derived_from = [UseCases.Validate_Unit_Specification_Documents]
+                derived_from = [rules_score.Validate_Unit_Specification_Documents]
                 satisfied_by = Verifier
             }
 
@@ -335,7 +335,7 @@ section "Tool Requirements" {
                 at most one of them has a body, and shall report an error when
                 two declarations have a body or when their entity type or
                 stereotype differs.'''
-                derived_from = [UseCases.Validate_Unit_Specification_Documents]
+                derived_from = [rules_score.Validate_Unit_Specification_Documents]
                 satisfied_by = Verifier
             }
 
@@ -356,7 +356,7 @@ section "Tool Requirements" {
                 including template-parameter mismatches. Ordinary non-template
                 classes are not subject to this primary-template filtering
                 rule.'''
-                derived_from = [UseCases.Validate_Unit_Specification_Documents]
+                derived_from = [rules_score.Validate_Unit_Specification_Documents]
                 satisfied_by = Verifier
             }
 
@@ -365,7 +365,7 @@ section "Tool Requirements" {
                 type alias modeled in a unit design entity is missing from the
                 matching implementation entity, or when the matching
                 implementation type alias differs in original type.'''
-                derived_from = [UseCases.Validate_Unit_Specification_Documents]
+                derived_from = [rules_score.Validate_Unit_Specification_Documents]
                 satisfied_by = Verifier
             }
 
@@ -375,7 +375,7 @@ section "Tool Requirements" {
                 matching implementation entity, or when the matching
                 implementation variable differs in data type, visibility, or
                 static flag.'''
-                derived_from = [UseCases.Validate_Unit_Specification_Documents]
+                derived_from = [rules_score.Validate_Unit_Specification_Documents]
                 satisfied_by = Verifier
             }
 
@@ -387,7 +387,7 @@ section "Tool Requirements" {
                 parameters, or method modifiers (`static`, `virtual`,
                 `abstract`, `override`, constructor, destructor, or
                 `noexcept`).'''
-                derived_from = [UseCases.Validate_Unit_Specification_Documents]
+                derived_from = [rules_score.Validate_Unit_Specification_Documents]
                 satisfied_by = Verifier
             }
 
@@ -396,7 +396,7 @@ section "Tool Requirements" {
                 enum literal modeled in a unit design enum is missing from the
                 matching implementation enum, or when the matching
                 implementation enum literal data differs from the unit design.'''
-                derived_from = [UseCases.Validate_Unit_Specification_Documents]
+                derived_from = [rules_score.Validate_Unit_Specification_Documents]
                 satisfied_by = Verifier
             }
 
@@ -406,7 +406,7 @@ section "Tool Requirements" {
                 the matching implementation entity, or when the matching
                 implementation relationship differs in source, target, or
                 relationship type.'''
-                derived_from = [UseCases.Validate_Unit_Specification_Documents]
+                derived_from = [rules_score.Validate_Unit_Specification_Documents]
                 satisfied_by = Verifier
             }
 
@@ -416,7 +416,7 @@ section "Tool Requirements" {
                 implementation, or when the matching implementation free
                 function differs in return type, parameters, or template
                 parameters.'''
-                derived_from = [UseCases.Validate_Unit_Specification_Documents]
+                derived_from = [rules_score.Validate_Unit_Specification_Documents]
                 satisfied_by = Verifier
             }
 
@@ -425,7 +425,7 @@ section "Tool Requirements" {
                 separators, the `std::` type prefix, and pointer or reference
                 spacing before comparing entity references and type names
                 between unit design and implementation class diagrams.'''
-                derived_from = [UseCases.Validate_Unit_Specification_Documents]
+                derived_from = [rules_score.Validate_Unit_Specification_Documents]
                 satisfied_by = Verifier
             }
 
@@ -437,7 +437,7 @@ section "Tool Requirements" {
                 `const int*` versus `int*`). The validator shall not ignore
                 top-level `const` on return types, variable data types, or
                 type alias original types.'''
-                derived_from = [UseCases.Validate_Unit_Specification_Documents]
+                derived_from = [rules_score.Validate_Unit_Specification_Documents]
                 satisfied_by = Verifier
             }
 
@@ -451,7 +451,7 @@ section "Tool Requirements" {
                 element has no matching class in the unit design class
                 diagram, or when the participant matches multiple design
                 classes ambiguously.'''
-                derived_from = [UseCases.Validate_Unit_Specification_Documents]
+                derived_from = [rules_score.Validate_Unit_Specification_Documents]
                 satisfied_by = Verifier
             }
 
@@ -463,7 +463,7 @@ section "Tool Requirements" {
                 comparison shall match at least the operation name and may
                 additionally compare parameter arity and normalized parameter
                 types when both diagrams provide that information.'''
-                derived_from = [UseCases.Validate_Unit_Specification_Documents]
+                derived_from = [rules_score.Validate_Unit_Specification_Documents]
                 satisfied_by = Verifier
             }
 

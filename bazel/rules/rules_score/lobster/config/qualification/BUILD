@@ -12,12 +12,18 @@
 # *******************************************************************************
 
 # Lobster configuration files for tool-qualification traceability.
-# Used by the lobster_trlc, lobster_test, and lobster_report_rst targets in
-# //bazel/rules/rules_score/docs/requirements.
+# lobster.conf: full chain incl. tool tests (checked from the test module).
+# lobster-requirements.conf: requirements chain only (rendered in the docs).
 
 filegroup(
     name = "lobster_conf",
     srcs = ["lobster.conf"],
+    visibility = ["//bazel/rules/rules_score/docs/requirements:__pkg__"],
+)
+
+filegroup(
+    name = "lobster_requirements_conf",
+    srcs = ["lobster-requirements.conf"],
     visibility = ["//bazel/rules/rules_score/docs/requirements:__pkg__"],
 )
 

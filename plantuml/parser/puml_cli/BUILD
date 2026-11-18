@@ -53,6 +53,8 @@ rust_test(
     name = "puml_cli_test",
     srcs = _SRCS,
     crate_root = "src/main.rs",
+    tags = ["lobster-tracing=rules_score.Reject_Invalid_PlantUML"],
+    visibility = ["//visibility:public"],
     deps = [
         "//plantuml/parser/puml_api",
         "//plantuml/parser/puml_fta",

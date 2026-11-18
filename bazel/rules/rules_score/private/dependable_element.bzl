@@ -2167,7 +2167,6 @@ _dependable_element_test = rule(
 # ============================================================================
 # Public Macro
 # ============================================================================
-# lobster-trace: Tools.ArchitectureModelingDependableElement
 def dependable_element(
         name,
         requirements,

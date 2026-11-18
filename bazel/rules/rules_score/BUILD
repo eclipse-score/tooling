@@ -324,10 +324,7 @@ lobster_linker(
         ":py_srcs",
         "//bazel/rules/rules_score/private:bzl_srcs",
     ],
-    visibility = [
-        "//bazel/rules/rules_score/docs/requirements:__pkg__",
-        "//docs/processes:__pkg__",
-    ],
+    visibility = ["//bazel/rules/rules_score/docs/requirements:__pkg__"],
 )
 
 # ---------------------------------------------------------------------------
