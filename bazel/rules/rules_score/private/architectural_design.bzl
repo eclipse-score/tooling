@@ -28,6 +28,7 @@ and one per free function), which `FailureMode.interface` references.
 load("@lobster//:lobster.bzl", "subrule_lobster_trlc")
 load("@trlc//:trlc.bzl", "TrlcProviderInfo")
 load("//bazel/rules/rules_score:providers.bzl", "ArchitecturalDesignInfo", "SphinxSourcesInfo")
+load("//bazel/rules/rules_score/private:lobster_config.bzl", "RELOCATE_LOBSTER_ITEMS_ATTR", "relocate_lobster_file")
 load("//bazel/rules/rules_score/private:puml_parser.bzl", "disambiguated_stems", "run_puml_parser")
 load("//bazel/rules/rules_score/private:puml_utils.bzl", "emit_view_navigation", "plan_view_layout")
 load("//bazel/rules/rules_score/private:validation.bzl", "PROFILES", "VALIDATION_ATTRS", "run_validation")
@@ -221,8 +222,16 @@ def _architectural_design_impl(ctx):
     # `ApiMethod` traceability exists only with public API diagrams.
     public_api_lobster = []
     if api_trlc:
-        api_lobster, _ = subrule_lobster_trlc([api_trlc] + ctx.files._spec, ctx.file._api_methods_lobster_config)
-        public_api_lobster = [api_lobster]
+        api_methods_lobster, _ = subrule_lobster_trlc([api_trlc] + ctx.files._spec, ctx.file._api_methods_lobster_config)
+
+        # puml_cli names a diagram by its short path in the origin comments.
+        public_api_lobster = [relocate_lobster_file(
+            ctx,
+            api_methods_lobster,
+            api_trlc,
+            {f.short_path: f for f in ctx.files.public_api if f.extension == "puml"},
+            "{}/api_methods.lobster".format(ctx.label.name),
+        )]
 
     all_source_files = depset(transitive = view_source_files)
 
@@ -354,6 +363,7 @@ def _architectural_design_attrs():
     }
     attrs.update(VALIDATION_ATTRS)
     attrs.update(VERBOSITY_ATTR)
+    attrs.update(RELOCATE_LOBSTER_ITEMS_ATTR)
     return attrs
 
 _architectural_design = rule(

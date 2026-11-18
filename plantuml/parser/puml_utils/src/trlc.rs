@@ -49,6 +49,8 @@ pub struct TrlcRecord {
     pub record_type: String,
     pub name: String,
     /// Where the record comes from (`<diagram>:<line>`), emitted as a comment.
+    /// The `relocate_lobster_items` tool of `rules_score` reads that comment to
+    /// point the lobster item of the record at the diagram, so keep its format.
     pub origin: String,
     pub fields: Vec<(&'static str, TrlcValue)>,
 }

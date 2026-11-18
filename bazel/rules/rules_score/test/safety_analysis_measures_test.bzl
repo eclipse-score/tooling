@@ -90,6 +90,26 @@ fta_default_package_test = analysistest.make(
     attrs = {"expected_package": attr.string(mandatory = True)},
 )
 
+def _fta_root_causes_at_diagrams_test_impl(ctx):
+    env = analysistest.begin(ctx)
+
+    # lobster-trlc locates the root causes in the generated fta_events.trlc;
+    # they are relocated to the authored diagrams, which a report can link to.
+    relocated = analysistest.target_under_test(env)[FaultTreesInfo].lobster_files["fta_root_causes.lobster"]
+    action = _action_with_output(env, relocated.basename)
+    if action == None:
+        asserts.true(env, False, "relocation action not found")
+        return analysistest.end(env)
+    asserts.equals(env, "RelocateLobsterItems", action.mnemonic)
+    asserts.equals(env, ["fta_events.trlc"], _basenames(_flag_values(action.argv, "--generated-trlc")))
+    asserts.equals(env, ctx.attr.expected_sources, _flag_values(action.argv, "--source"))
+    return analysistest.end(env)
+
+fta_root_causes_at_diagrams_test = analysistest.make(
+    _fta_root_causes_at_diagrams_test_impl,
+    attrs = {"expected_sources": attr.string_list(mandatory = True)},
+)
+
 def _aou_in_aou_deps_fails_test_impl(ctx):
     env = analysistest.begin(ctx)
     asserts.expect_failure(env, "deps must not hold the assumptions_of_use target")

@@ -131,7 +131,7 @@ architectural_design(
 
 `lobster-trlc` runs on `public_api.trlc` and the result flows through
 `public_api_lobster_files` for failure-mode traceability. Reports show the
-generated `public_api.trlc` as item location, not the `.puml` source.
+`.puml` diagram and line of a method as its location.
 
 ---
 
@@ -229,7 +229,8 @@ records.
 
 **`bazel build` (`fault_trees`)** — extracts FTA events from `.puml` diagrams
 into `fta_events.trlc` (generated `RootCause` records, usable via the target's
-`TrlcProviderInfo`) and runs `lobster-trlc` on the root causes.
+`TrlcProviderInfo`), runs `lobster-trlc` on the root causes and points them at
+their diagram and line.
 
 **`bazel build` (`safety_analysis`)** — generates `safety_analysis.rst` (failure
 modes with their root causes, assessments and measures, fault trees) and runs

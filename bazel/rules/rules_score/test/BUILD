@@ -131,6 +131,7 @@ load(
     ":safety_analysis_measures_test.bzl",
     "aou_in_aou_deps_fails_test",
     "fta_default_package_test",
+    "fta_root_causes_at_diagrams_test",
     "measure_deps_are_context_only_test",
     "measure_spec_is_merged_test",
 )
@@ -765,6 +766,12 @@ fault_trees(
     srcs = ["fixtures/aou_root_cause/fta.puml"],
     fta_package = "AouRootCauseFta",
     deps = [":aou_root_cause_failure_modes"],
+)
+
+fta_root_causes_at_diagrams_test(
+    name = "fta_root_causes_at_diagrams_test",
+    expected_sources = ["fta.puml=fixtures/aou_root_cause/fta.puml"],
+    target_under_test = ":aou_root_cause_fault_trees",
 )
 
 assumptions_of_use(
@@ -2624,11 +2631,12 @@ dependable_element(
 lobster_ci_report_test(
     name = "unassessed_root_cause_ci_report_test",
     contains = [
-        "fta_events.trlc",
+        "fixtures/aou_root_cause/fta.puml",
         "missing reference to Root Cause Assessments",
     ],
     expect_ci_failure = True,
     index = ":unassessed_root_cause_example_lib_index",
+    lacks = ["fta_events.trlc"],
 )
 
 safety_analysis(
@@ -3002,6 +3010,16 @@ py_test(
 )
 
 py_test(
+    name = "test_relocate_lobster_items",
+    size = "small",
+    srcs = ["test_relocate_lobster_items.py"],
+    deps = [
+        "@lobster//lobster/common",
+        "@score_tooling//bazel/rules/rules_score:relocate_lobster_items",
+    ],
+)
+
+py_test(
     name = "test_sphinx_html_merge",
     size = "small",
     srcs = ["test_sphinx_html_merge.py"],
@@ -3065,6 +3083,7 @@ test_suite(
         ":assessment_config_own_aou_test",
         ":comp_req_measure_builds",
         ":fta_default_package_test",
+        ":fta_root_causes_at_diagrams_test",
         ":lobster_config_tests",
         ":measure_deps_are_context_only_test",
         ":measure_spec_is_merged_test",
@@ -3083,6 +3102,7 @@ test_suite(
         ":test_aou_forwarding_to_lobster",
         ":test_bazel_sphinx_needs",
         ":test_merge_lobster_items",
+        ":test_relocate_lobster_items",
         ":test_rst_to_trlc",
         ":test_safety_analysis_assembler",
         ":test_sphinx_html_merge",

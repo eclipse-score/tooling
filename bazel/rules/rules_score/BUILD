@@ -124,6 +124,16 @@ py_binary(
     deps = ["@lobster//lobster/common"],
 )
 
+# Points the lobster items of a generated TRLC file at the diagram it was generated from
+py_binary(
+    name = "relocate_lobster_items",
+    srcs = ["src/relocate_lobster_items.py"],
+    imports = ["src"],
+    main = "src/relocate_lobster_items.py",
+    visibility = ["//visibility:public"],
+    deps = ["@lobster//lobster/common"],
+)
+
 # HTML merge tool
 py_library(
     name = "sphinx_html_merge_lib",

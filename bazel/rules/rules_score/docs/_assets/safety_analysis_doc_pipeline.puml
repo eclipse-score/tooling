@@ -60,10 +60,11 @@ package "failure_modes rule action" {
     component "lobster-trlc" <<tool>> as ltrlc_fm
 }
 
-' ── fault_trees rule: two tool actions ──────────────────────────────────────
+' ── fault_trees rule: three tool actions ────────────────────────────────────
 package "fault_trees rule actions" {
     component "puml_cli  (FTA mode)\n--fta-output-dir\n[crate: puml_fta]" <<tool>> as puml
     component "lobster-trlc"                                              <<tool>> as ltrlc_ft
+    component "relocate_lobster_items"                                    <<tool>> as reloc_ft
 }
 
 ' ── safety_analysis rule: two tool actions ──────────────────────────────────
@@ -78,7 +79,7 @@ package "Generated files" {
     rectangle "fta_events.trlc\n(RootCause stubs)" <<gen>> as fta_events
     rectangle "safety_analysis.rst"               <<gen>> as safety_analysis_rst
     rectangle "failure_modes lobster"                        <<gen>> as fm_lob
-    rectangle "<fault_trees>.lobster" <<gen>> as ft_lob
+    rectangle "<fault_trees>/fta_root_causes.lobster" <<gen>> as ft_lob
     rectangle "<safety_analysis>.lobster" <<gen>> as sm_lob
 }
 
@@ -102,6 +103,8 @@ fm_trlc  --> ltrlc_ft : import context
 fta_events --> ltrlc_ft
 rsl      --> ltrlc_ft
 lcfg     --> ltrlc_ft
+fta_events --> reloc_ft : origin comments
+fta_puml --> reloc_ft : diagram paths
 
 fta_events --> asm
 fta_puml --> asm : diagram names\n(one .. uml:: each)
@@ -124,7 +127,8 @@ meta     --> stage : on PlantUML include path
 puml  --> fta_events
 asm   --> safety_analysis_rst
 ltrlc_fm --> fm_lob
-ltrlc_ft --> ft_lob
+ltrlc_ft --> reloc_ft : root causes at\nfta_events.trlc
+reloc_ft --> ft_lob
 ltrlc --> sm_lob
 
 ' ── Edges: generated -> providers ────────────────────────────────────────────

@@ -74,7 +74,7 @@ Both rules are **build-only**.  The combined traceability *test* is owned by the
 load("@lobster//:lobster.bzl", "subrule_lobster_trlc")
 load("@trlc//:trlc.bzl", "TrlcProviderInfo")
 load("//bazel/rules/rules_score:providers.bzl", "AnalysisInfo", "AssumptionsOfUseInfo", "ComponentRequirementsInfo", "FailureModesInfo", "FaultTreesInfo", "SafetyAnalysisProviderInfo", "SphinxSourcesInfo")
-load("//bazel/rules/rules_score/private:lobster_config.bzl", "MERGE_LOBSTER_ITEMS_ATTR", "merge_lobster_files")
+load("//bazel/rules/rules_score/private:lobster_config.bzl", "MERGE_LOBSTER_ITEMS_ATTR", "RELOCATE_LOBSTER_ITEMS_ATTR", "merge_lobster_files", "relocate_lobster_file")
 load("//bazel/rules/rules_score/private:verbosity.bzl", "VERBOSITY_ATTR", "get_log_level")
 
 _LETTERS = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
@@ -188,9 +188,18 @@ def _fault_trees_impl(ctx):
 
     lobster_files = {}
     if diagrams:
-        lobster_files["fta_root_causes.lobster"], _ = subrule_lobster_trlc(
+        root_causes_lobster, _ = subrule_lobster_trlc(
             [fta_events_trlc] + fm_files.to_list() + spec.to_list(),
             ctx.file._rc_lobster_config,
+        )
+
+        # puml_cli names a diagram by its basename in the origin comments.
+        lobster_files["fta_root_causes.lobster"] = relocate_lobster_file(
+            ctx,
+            root_causes_lobster,
+            fta_events_trlc,
+            {diagram.basename: diagram for diagram in diagrams},
+            "{}/fta_root_causes.lobster".format(ctx.label.name),
         )
 
     return [
@@ -370,7 +379,7 @@ _fault_trees = rule(
                 doc = "lobster-trlc YAML config for generated RootCause records.",
             ),
         },
-        **VERBOSITY_ATTR
+        **dict(VERBOSITY_ATTR, **RELOCATE_LOBSTER_ITEMS_ATTR)
     ),
     subrules = [subrule_lobster_trlc],
 )
