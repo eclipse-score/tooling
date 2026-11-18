@@ -1,0 +1,133 @@
+{
+  "grouping_containers.puml": {
+    "name": "grouping_containers",
+    "entities": [
+      {
+        "id": "outer.inner.Foo",
+        "name": "F",
+        "enclosing_namespace_id": "outer.inner",
+        "stereotypes": [],
+        "entity_type": "Class",
+        "type_aliases": [],
+        "variables": [],
+        "methods": [],
+        "template_parameters": null,
+        "enum_literals": [],
+        "relationships": [
+          {
+            "source": "outer.inner.Foo",
+            "target": "api.Client",
+            "relation_type": "Dependency",
+            "source_multiplicity": null,
+            "target_multiplicity": null,
+            "source_location": { "file": "", "line": 48 }
+          }
+        ],
+        "source_location": { "file": "", "line": 21 }
+      },
+      {
+        "id": "outer.inner.Base",
+        "name": "B",
+        "enclosing_namespace_id": "outer.inner",
+        "stereotypes": [],
+        "entity_type": "Class",
+        "type_aliases": [],
+        "variables": [],
+        "methods": [],
+        "template_parameters": null,
+        "enum_literals": [],
+        "relationships": [],
+        "source_location": { "file": "", "line": 22 }
+      },
+      {
+        "id": "api.Client",
+        "name": "C",
+        "enclosing_namespace_id": "api",
+        "stereotypes": [],
+        "entity_type": "Class",
+        "type_aliases": [],
+        "variables": [],
+        "methods": [],
+        "template_parameters": null,
+        "enum_literals": [],
+        "relationships": [
+          {
+            "source": "api.Client",
+            "target": "outer.inner.Base",
+            "relation_type": "Inheritance",
+            "source_multiplicity": null,
+            "target_multiplicity": null,
+            "source_location": { "file": "", "line": 33 }
+          }
+        ],
+        "source_location": { "file": "", "line": 33 }
+      },
+      {
+        "id": "RootUnit",
+        "name": "RootUnit",
+        "enclosing_namespace_id": null,
+        "stereotypes": [],
+        "entity_type": "Class",
+        "type_aliases": [],
+        "variables": [],
+        "methods": [],
+        "template_parameters": null,
+        "enum_literals": [],
+        "relationships": [],
+        "source_location": { "file": "", "line": 40 }
+      },
+      {
+        "id": "RootComponent",
+        "name": "RootComponent",
+        "enclosing_namespace_id": null,
+        "stereotypes": [],
+        "entity_type": "Class",
+        "type_aliases": [],
+        "variables": [],
+        "methods": [],
+        "template_parameters": null,
+        "enum_literals": [],
+        "relationships": [],
+        "source_location": { "file": "", "line": 44 }
+      },
+      {
+        "id": "real.scope.Dotted.Name",
+        "name": "DN",
+        "enclosing_namespace_id": "real.scope",
+        "stereotypes": [],
+        "entity_type": "Class",
+        "type_aliases": [],
+        "variables": [],
+        "methods": [],
+        "template_parameters": null,
+        "enum_literals": [],
+        "relationships": [
+          {
+            "source": "real.scope.Dotted.Name",
+            "target": "real.scope.Peer",
+            "relation_type": "Association",
+            "source_multiplicity": null,
+            "target_multiplicity": null,
+            "source_location": { "file": "", "line": 57 }
+          }
+        ],
+        "source_location": { "file": "", "line": 55 }
+      },
+      {
+        "id": "real.scope.Peer",
+        "name": "DP",
+        "enclosing_namespace_id": "real.scope",
+        "stereotypes": [],
+        "entity_type": "Class",
+        "type_aliases": [],
+        "variables": [],
+        "methods": [],
+        "template_parameters": null,
+        "enum_literals": [],
+        "relationships": [],
+        "source_location": { "file": "", "line": 56 }
+      }
+    ],
+    "free_functions": []
+  }
+}

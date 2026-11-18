@@ -13,6 +13,8 @@
 
 @startuml class_diagram_overview
 
-class Engine
+namespace EngineUnit <<unit>> {
+	class Engine
+}
 
 @enduml

@@ -220,6 +220,8 @@ pub struct EnumItem {
 #[derive(Debug, Default, Serialize, Deserialize, PartialEq)]
 pub struct Namespace {
     pub name: Name,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub stereotypes: Vec<String>,
     pub source_location: SourceLocation,
     pub types: Vec<TypeDefinition>,
     pub relationships: Vec<Relationship>,
@@ -229,6 +231,8 @@ pub struct Namespace {
 #[derive(Debug, Default, Serialize, Deserialize, PartialEq)]
 pub struct Package {
     pub name: Name,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub stereotypes: Vec<String>,
     pub source_location: SourceLocation,
     pub types: Vec<TypeDefinition>,
     pub relationships: Vec<Relationship>,
@@ -240,6 +244,23 @@ pub struct ClassUmlFile {
     pub name: String,
     pub elements: Vec<ClassUmlTopLevel>,
     pub relationships: Vec<Relationship>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub namespace_separators: Vec<NamespaceSeparator>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct NamespaceSeparator {
+    pub value: String,
+    pub line: u32,
+}
+impl NamespaceSeparator {
+    pub fn disabled_at(settings: &[Self], line: u32) -> bool {
+        settings
+            .iter()
+            .rev()
+            .find(|setting| setting.line <= line)
+            .is_some_and(|setting| setting.value.eq_ignore_ascii_case("none"))
+    }
 }
 impl ClassUmlFile {
     pub fn is_empty(&self) -> bool {
@@ -508,6 +529,7 @@ mod tests {
             name: "x".into(),
             elements: vec![],
             relationships: vec![],
+            ..Default::default()
         };
 
         assert!(file.is_empty());

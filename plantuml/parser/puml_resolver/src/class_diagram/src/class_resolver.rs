@@ -10,7 +10,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 // *******************************************************************************
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::rc::Rc;
 
 use class_diagram::Visibility as ResolverVisibility;
@@ -18,7 +18,7 @@ use class_diagram::*;
 use class_parser::Visibility as ParserVisibility;
 use class_parser::{
     Attribute, ClassLikeDef, ClassLikeKind, ClassUmlFile, ClassUmlTopLevel, EnumDef, EnumValue,
-    Method as ParserMethod, Name, Namespace, Package, Param as ParserParam,
+    Method as ParserMethod, Name, Namespace, NamespaceSeparator, Package, Param as ParserParam,
     Relationship as ParserRelationship, TypeAlias as ParserTypeAlias, TypeDefinition,
 };
 use group_resolution::{
@@ -36,6 +36,9 @@ use uid_normalization::{
 pub enum ClassPumlResolverError {
     #[error("Class Resolver: Unresolved reference: {reference}")]
     UnresolvedReference { reference: String },
+
+    #[error("Root marker is not allowed with separator none: {name} (line {line})")]
+    RootMarkerWithSeparatorNone { name: String, line: u32 },
 
     #[error(
         "Class Resolver: {reference} is the name of an element declared with alias {alias}; \
@@ -122,15 +125,25 @@ struct ReferenceTable {
 
 impl ReferenceTable {
     /// Rule C at the root; the id `raw` resolves to.
-    fn resolve(&self, raw: &str) -> Option<String> {
+    fn resolve(&self, raw: &str, separator_disabled: bool) -> Option<String> {
         let exists = |path: &str| self.declared.contains_key(path);
-        let resolution = uid_normalization::resolve_reference(
-            &InternalScope::default(),
-            raw,
-            exists,
-            exists,
-            |leaf| self.name_map.get(leaf).cloned().unwrap_or_default(),
-        );
+        let leaves = |leaf: &str| self.name_map.get(leaf).cloned().unwrap_or_default();
+        let resolution = if separator_disabled {
+            uid_normalization::resolve_literal_reference(
+                &InternalScope::default(),
+                raw,
+                exists,
+                leaves,
+            )
+        } else {
+            uid_normalization::resolve_reference(
+                &InternalScope::default(),
+                raw,
+                exists,
+                exists,
+                leaves,
+            )
+        };
         match resolution {
             Resolution::Resolved(path) => Some(self.declared[&path].id.clone()),
             _ => None,
@@ -149,11 +162,12 @@ struct Endpoint {
 
 pub struct ClassResolver {
     pub logic: ClassDiagram,
+    namespace_separators: Vec<NamespaceSeparator>,
     // reference path -> declaration; also the reference existence check
     declared: HashMap<String, Declared>,
     // entity leaf (last reference segment) -> every reference path registered under it
     name_map: HashMap<String, Vec<String>>,
-    ids: HashSet<String>,
+    identity_scopes: HashMap<String, InternalScope>,
     // reference path of every package and namespace -> its id path
     scopes: HashMap<String, String>,
     // id path of every aliased entity, package and namespace -> its alias
@@ -178,9 +192,10 @@ impl ClassResolver {
                 entities: Vec::new(),
                 free_functions: Vec::new(),
             },
+            namespace_separators: Vec::new(),
             declared: HashMap::new(),
             name_map: HashMap::new(),
-            ids: HashSet::new(),
+            identity_scopes: HashMap::new(),
             scopes: HashMap::new(),
             aliased: HashMap::new(),
             implicit_parents: HashMap::new(),
@@ -194,6 +209,7 @@ impl ClassResolver {
     }
 
     fn declare_entities(&mut self, file: &ClassUmlFile) -> Result<(), ClassPumlResolverError> {
+        self.namespace_separators = file.namespace_separators.clone();
         let root = DeclarationScope::default();
 
         for elem in &file.elements {
@@ -250,10 +266,27 @@ impl ClassResolver {
     ) -> Result<(DeclarationScope, String), ClassPumlResolverError> {
         let text = Self::identity(name, kind, source_location)?;
 
-        let mut declared = scope.declare(&text, name.alias.as_deref());
-        if scope.id.is_empty() {
+        let separator_disabled = NamespaceSeparator::disabled_at(
+            &self.namespace_separators,
+            source_location.map_or(0, |location| location.line),
+        );
+        let line = source_location.map_or(0, |location| location.line);
+        Self::check_root_marker(&text, separator_disabled, line)?;
+        if let Some(alias) = &name.alias {
+            Self::check_root_marker(alias, separator_disabled, line)?;
+        }
+        let mut declared = if separator_disabled {
+            scope.declare_literal(&text, name.alias.as_deref())
+        } else {
+            scope.declare(&text, name.alias.as_deref())
+        };
+        if scope.id.is_empty() && strip_root_marker(&text) == text {
             if let Some(parent) = self.implicit_parents.get(&declared.id.id()) {
-                declared.id = parent.child(&declared.id.id());
+                declared.id = if separator_disabled {
+                    parent.child_literal(&declared.id.id())
+                } else {
+                    parent.child(&declared.id.id())
+                };
             }
         }
         Ok((declared, text))
@@ -271,6 +304,27 @@ impl ClassResolver {
                 source_location: source_location.cloned(),
             }
         })
+    }
+
+    fn is_grouping_container(stereotypes: &[String]) -> bool {
+        stereotypes.iter().any(|stereotype| {
+            stereotype.eq_ignore_ascii_case("unit") || stereotype.eq_ignore_ascii_case("component")
+        })
+    }
+
+    fn declare_container(
+        &self,
+        name: &Name,
+        stereotypes: &[String],
+        scope: &DeclarationScope,
+        source_location: &SourceLocation,
+    ) -> Result<DeclarationScope, ClassPumlResolverError> {
+        let (mut declared, _) =
+            self.declare(name, IdentityKind::Other, scope, Some(source_location))?;
+        if Self::is_grouping_container(stereotypes) {
+            declared.id = scope.id.clone();
+        }
+        Ok(declared)
     }
 
     fn enclosing_namespace_id(&self, declared: &DeclarationScope) -> Option<String> {
@@ -302,7 +356,7 @@ impl ClassResolver {
     ) -> Result<(), ClassPumlResolverError> {
         let reference_path = declared.reference.id();
 
-        if self.ids.contains(&entity.id) {
+        if self.identity_scopes.contains_key(&entity.id) {
             return Err(ClassPumlResolverError::DuplicateEntity {
                 entity_id: entity.id,
                 source_location: entity.source_location,
@@ -316,7 +370,8 @@ impl ClassResolver {
             });
         }
 
-        self.ids.insert(entity.id.clone());
+        self.identity_scopes
+            .insert(entity.id.clone(), declared.id.clone());
         self.declared.insert(
             reference_path.clone(),
             Declared {
@@ -325,13 +380,27 @@ impl ClassResolver {
             },
         );
         self.name_map
-            .entry(leaf_key(&reference_path))
+            .entry(declared.reference.leaf().to_string())
             .or_default()
             .push(reference_path);
         if let Some(alias) = alias {
             self.aliased.insert(entity.id.clone(), alias.to_string());
         }
         self.logic.entities.push(entity);
+        Ok(())
+    }
+
+    fn check_root_marker(
+        name: &str,
+        separator_disabled: bool,
+        line: u32,
+    ) -> Result<(), ClassPumlResolverError> {
+        if separator_disabled && strip_root_marker(name) != name {
+            return Err(ClassPumlResolverError::RootMarkerWithSeparatorNone {
+                name: name.to_string(),
+                line,
+            });
+        }
         Ok(())
     }
 
@@ -343,17 +412,31 @@ impl ClassResolver {
         scope: &DeclarationScope,
         reference_line: u32,
     ) -> Result<String, ClassPumlResolverError> {
-        let resolution = uid_normalization::resolve_reference(
-            &scope.reference,
-            raw,
-            |path| self.declared.contains_key(path),
-            |path| self.declared_before(path, reference_line),
-            |leaf| self.leaf_candidates(leaf, reference_line),
-        );
+        let separator_disabled =
+            NamespaceSeparator::disabled_at(&self.namespace_separators, reference_line);
+        Self::check_root_marker(raw, separator_disabled, reference_line)?;
+        let local_exists = |path: &str| self.declared.contains_key(path);
+        let leaves = |leaf: &str| self.leaf_candidates(leaf, reference_line);
+        let resolution = if separator_disabled {
+            uid_normalization::resolve_literal_reference(
+                &scope.reference,
+                raw,
+                local_exists,
+                leaves,
+            )
+        } else {
+            uid_normalization::resolve_reference(
+                &scope.reference,
+                raw,
+                local_exists,
+                |path| self.declared_before(path, reference_line),
+                leaves,
+            )
+        };
 
         match resolution {
             Resolution::Resolved(path) => Ok(self.declared[&path].id.clone()),
-            Resolution::Unresolved => Err(self.unresolved(raw, scope)),
+            Resolution::Unresolved => Err(self.unresolved(raw, scope, separator_disabled)),
             Resolution::Ambiguous(paths) => {
                 let mut candidates: Vec<String> = paths
                     .iter()
@@ -382,10 +465,15 @@ impl ClassResolver {
             Err(error) => return Err(error),
         };
 
-        let matches = self
-            .peers
-            .iter()
-            .filter_map(|peer| Some((peer.resolve(raw)?, ())));
+        let matches = self.peers.iter().filter_map(|peer| {
+            Some((
+                peer.resolve(
+                    raw,
+                    NamespaceSeparator::disabled_at(&self.namespace_separators, reference_line),
+                )?,
+                (),
+            ))
+        });
         match unique_peer_match(matches) {
             Ok(Some((id, ()))) => Ok(Endpoint { id, local: false }),
             Ok(None) => Err(error),
@@ -399,24 +487,33 @@ impl ClassResolver {
     /// `raw` names an aliased element by its name instead of its alias, or
     /// nothing at all. A path also hides its name behind an aliased package
     /// or namespace.
-    fn unresolved(&self, raw: &str, scope: &DeclarationScope) -> ClassPumlResolverError {
-        let through_scopes = is_identifier_path(raw);
+    fn unresolved(
+        &self,
+        raw: &str,
+        scope: &DeclarationScope,
+        separator_disabled: bool,
+    ) -> ClassPumlResolverError {
+        let through_scopes = !separator_disabled && is_identifier_path(raw);
         let hidden = |id: &str| {
-            self.ids.contains(id)
+            self.identity_scopes.contains_key(id)
                 && if through_scopes {
                     self.alias_on_path(id).is_some()
                 } else {
                     self.aliased.contains_key(id)
                 }
         };
-        let by_name =
-            uid_normalization::resolve_reference(&scope.id, raw, hidden, hidden, |leaf| {
-                self.ids
-                    .iter()
-                    .filter(|id| leaf_key(id) == leaf && self.aliased.contains_key(*id))
-                    .cloned()
-                    .collect()
-            });
+        let leaves = |leaf: &str| {
+            self.identity_scopes
+                .iter()
+                .filter(|(id, identity)| identity.leaf() == leaf && self.aliased.contains_key(*id))
+                .map(|(id, _)| id.clone())
+                .collect()
+        };
+        let by_name = if separator_disabled {
+            uid_normalization::resolve_literal_reference(&scope.id, raw, hidden, leaves)
+        } else {
+            uid_normalization::resolve_reference(&scope.id, raw, hidden, hidden, leaves)
+        };
 
         match by_name {
             Resolution::Resolved(id) => ClassPumlResolverError::NameOfAliasedElement {
@@ -431,7 +528,7 @@ impl ClassResolver {
 
     /// Alias of the nearest aliased element on `id`'s path, `id` included.
     fn alias_on_path(&self, id: &str) -> Option<&String> {
-        let mut scope = InternalScope::from_path(id);
+        let mut scope = self.identity_scopes.get(id)?.clone();
         loop {
             if let Some(alias) = self.aliased.get(&scope.id()) {
                 return Some(alias);
@@ -449,6 +546,7 @@ impl ClassResolver {
         &mut self,
         declared: &DeclarationScope,
         name: &Name,
+        stereotypes: &[String],
         source_location: &SourceLocation,
     ) -> Result<(), ClassPumlResolverError> {
         let reference_path = declared.reference.id();
@@ -467,8 +565,10 @@ impl ClassResolver {
             }
         }
 
-        if let Some(alias) = &name.alias {
-            self.aliased.insert(id, alias.clone());
+        if !Self::is_grouping_container(stereotypes) {
+            if let Some(alias) = &name.alias {
+                self.aliased.insert(id, alias.clone());
+            }
         }
         Ok(())
     }
@@ -485,7 +585,6 @@ impl ClassResolver {
             ClassUmlTopLevel::Namespace(ns) => {
                 self.process_namespace(ns, scope)?;
             }
-
             ClassUmlTopLevel::Package(pkg) => {
                 self.process_package(pkg, scope)?;
             }
@@ -518,13 +617,9 @@ impl ClassResolver {
         pkg: &Package,
         scope: &DeclarationScope,
     ) -> Result<(), ClassPumlResolverError> {
-        let (nested, _) = self.declare(
-            &pkg.name,
-            IdentityKind::Other,
-            scope,
-            Some(&pkg.source_location),
-        )?;
-        self.register_scope(&nested, &pkg.name, &pkg.source_location)?;
+        let nested =
+            self.declare_container(&pkg.name, &pkg.stereotypes, scope, &pkg.source_location)?;
+        self.register_scope(&nested, &pkg.name, &pkg.stereotypes, &pkg.source_location)?;
 
         for t in &pkg.types {
             self.process_element(t, &nested)?;
@@ -542,13 +637,9 @@ impl ClassResolver {
         ns: &Namespace,
         scope: &DeclarationScope,
     ) -> Result<(), ClassPumlResolverError> {
-        let (nested, _) = self.declare(
-            &ns.name,
-            IdentityKind::Other,
-            scope,
-            Some(&ns.source_location),
-        )?;
-        self.register_scope(&nested, &ns.name, &ns.source_location)?;
+        let nested =
+            self.declare_container(&ns.name, &ns.stereotypes, scope, &ns.source_location)?;
+        self.register_scope(&nested, &ns.name, &ns.stereotypes, &ns.source_location)?;
 
         for t in &ns.types {
             self.process_element(t, &nested)?;
@@ -567,12 +658,8 @@ impl ClassResolver {
         pkg: &Package,
         scope: &DeclarationScope,
     ) -> Result<(), ClassPumlResolverError> {
-        let (nested, _) = self.declare(
-            &pkg.name,
-            IdentityKind::Other,
-            scope,
-            Some(&pkg.source_location),
-        )?;
+        let nested =
+            self.declare_container(&pkg.name, &pkg.stereotypes, scope, &pkg.source_location)?;
 
         for t in &pkg.types {
             self.process_declared_relations_element(t, &nested)?;
@@ -594,12 +681,8 @@ impl ClassResolver {
         ns: &Namespace,
         scope: &DeclarationScope,
     ) -> Result<(), ClassPumlResolverError> {
-        let (nested, _) = self.declare(
-            &ns.name,
-            IdentityKind::Other,
-            scope,
-            Some(&ns.source_location),
-        )?;
+        let nested =
+            self.declare_container(&ns.name, &ns.stereotypes, scope, &ns.source_location)?;
 
         for t in &ns.types {
             self.process_declared_relations_element(t, &nested)?;
@@ -771,10 +854,10 @@ impl ClassResolver {
         let template_parameters = &def.template_parameters;
         let source_location = &def.declaration.source_location;
 
-        let (declared, text) =
+        let (declared, _) =
             self.declare(name, IdentityKind::ClassLike, scope, Some(source_location))?;
         let id = declared.id.id();
-        let owner_name = leaf_key(&text);
+        let owner_name = declared.id.leaf().to_string();
 
         let template_parameters =
             Self::convert_class_template_parameters(template_parameters, methods);
@@ -1153,7 +1236,7 @@ impl DiagramResolver for ClassResolver {
     fn resolve(&mut self, document: &Self::Document) -> Result<Self::Output, Self::Error> {
         self.name_map.clear();
         self.declared.clear();
-        self.ids.clear();
+        self.identity_scopes.clear();
         self.aliased.clear();
         self.implicit_parents.clear();
         self.peers.clear();
@@ -1232,6 +1315,7 @@ impl ClassResolver {
         let mut collector = CandidateCollector::default();
         for (file_idx, document) in documents.iter().enumerate() {
             collector.file_idx = file_idx;
+            collector.namespace_separators = document.document.namespace_separators.clone();
             for element in &document.document.elements {
                 collector.collect_top_level(element);
             }
@@ -1253,6 +1337,7 @@ impl ClassResolver {
 #[derive(Default)]
 struct CandidateCollector {
     file_idx: usize,
+    namespace_separators: Vec<NamespaceSeparator>,
     top_level: Vec<TopLevelCandidate<EntityKind>>,
     nested: Vec<NestedCandidate<EntityKind>>,
 }
@@ -1263,6 +1348,7 @@ struct Decl<'a> {
     identity_kind: IdentityKind,
     kind: EntityKind,
     has_body: bool,
+    grouping: bool,
     source_location: &'a SourceLocation,
 }
 
@@ -1289,11 +1375,27 @@ impl CandidateCollector {
             identity_kind,
             kind,
             has_body,
+            grouping,
             source_location,
         } = decl;
         let text = ClassResolver::identity(name, identity_kind, None).ok()?;
+        let separator_disabled =
+            NamespaceSeparator::disabled_at(&self.namespace_separators, source_location.line);
+        ClassResolver::check_root_marker(&text, separator_disabled, source_location.line).ok()?;
+        if let Some(alias) = &name.alias {
+            ClassResolver::check_root_marker(alias, separator_disabled, source_location.line)
+                .ok()?;
+        }
         let rooted = strip_root_marker(&text) != text;
-        let declared = scope.declare(&text, name.alias.as_deref());
+        let mut declared = if separator_disabled {
+            scope.declare_literal(&text, name.alias.as_deref())
+        } else {
+            scope.declare(&text, name.alias.as_deref())
+        };
+        if grouping {
+            declared.id = scope.id.clone();
+            return Some((declared, root_id.unwrap_or_default().to_string()));
+        }
         let id = declared.id.id();
 
         let root = match root_id {
@@ -1314,6 +1416,7 @@ impl CandidateCollector {
                 self.nested.push(NestedCandidate {
                     id,
                     own: InternalScope::from_path(&text).id(),
+                    parent_scope: scope.id.clone(),
                     root_id: root.to_string(),
                     file_idx: self.file_idx,
                     kind,
@@ -1367,12 +1470,14 @@ impl CandidateCollector {
             identity_kind: IdentityKind::ClassLike,
             kind: (kind, declaration.stereotypes.clone()),
             has_body,
+            grouping: false,
             source_location: &declaration.source_location,
         };
         self.record(decl, scope, root_id);
     }
 
     fn collect_package(&mut self, pkg: &Package, scope: &DeclarationScope, root_id: Option<&str>) {
+        let grouping = ClassResolver::is_grouping_container(&pkg.stereotypes);
         let decl = Decl {
             name: &pkg.name,
             identity_kind: IdentityKind::Other,
@@ -1380,17 +1485,22 @@ impl CandidateCollector {
             has_body: !(pkg.types.is_empty()
                 && pkg.packages.is_empty()
                 && pkg.relationships.is_empty()),
+            grouping,
             source_location: &pkg.source_location,
         };
         let Some((declared, root)) = self.record(decl, scope, root_id) else {
             return;
         };
-
+        let child_root = if grouping {
+            root_id
+        } else {
+            Some(root.as_str())
+        };
         for element in &pkg.types {
-            self.collect_type(element, &declared, Some(&root));
+            self.collect_type(element, &declared, child_root);
         }
         for sub in &pkg.packages {
-            self.collect_package(sub, &declared, Some(&root));
+            self.collect_package(sub, &declared, child_root);
         }
     }
 
@@ -1400,6 +1510,7 @@ impl CandidateCollector {
         scope: &DeclarationScope,
         root_id: Option<&str>,
     ) {
+        let grouping = ClassResolver::is_grouping_container(&ns.stereotypes);
         let decl = Decl {
             name: &ns.name,
             identity_kind: IdentityKind::Other,
@@ -1407,17 +1518,22 @@ impl CandidateCollector {
             has_body: !(ns.types.is_empty()
                 && ns.namespaces.is_empty()
                 && ns.relationships.is_empty()),
+            grouping,
             source_location: &ns.source_location,
         };
         let Some((declared, root)) = self.record(decl, scope, root_id) else {
             return;
         };
-
+        let child_root = if grouping {
+            root_id
+        } else {
+            Some(root.as_str())
+        };
         for element in &ns.types {
-            self.collect_type(element, &declared, Some(&root));
+            self.collect_type(element, &declared, child_root);
         }
         for sub in &ns.namespaces {
-            self.collect_namespace(sub, &declared, Some(&root));
+            self.collect_namespace(sub, &declared, child_root);
         }
     }
 }
@@ -1503,6 +1619,210 @@ mod tests {
     // ----------------------------
     // process_class
     // ----------------------------
+    #[test]
+    fn test_separator_none_keeps_the_full_name_as_a_leaf() {
+        let mut resolver = ClassResolver::new();
+        resolver.namespace_separators = vec![NamespaceSeparator {
+            value: "none".to_string(),
+            line: 0,
+        }];
+        let root = DeclarationScope::default();
+        resolver.process_element(&make_class("A.B"), &root).unwrap();
+        resolver
+            .process_element(&make_class("D::E"), &root)
+            .unwrap();
+
+        assert_eq!(resolver.logic.entities[0].id, "A.B");
+        assert_eq!(resolver.logic.entities[0].enclosing_namespace_id, None);
+        assert_eq!(resolver.logic.entities[1].id, "D.E");
+        assert_eq!(resolver.logic.entities[1].enclosing_namespace_id, None);
+        assert_eq!(resolver.resolve_reference("A.B", &root, 10).unwrap(), "A.B");
+        assert_eq!(
+            resolver.resolve_reference("D::E", &root, 10).unwrap(),
+            "D.E"
+        );
+        assert!(matches!(
+            resolver.resolve_reference("B", &root, 10),
+            Err(ClassPumlResolverError::UnresolvedReference { .. })
+        ));
+        assert!(matches!(
+            resolver.resolve_reference("E", &root, 10),
+            Err(ClassPumlResolverError::UnresolvedReference { .. })
+        ));
+    }
+
+    #[test]
+    fn test_rooted_declaration_ignores_same_id_implicit_parent() {
+        for name in ["::A", ".A"] {
+            let mut resolver = ClassResolver::new();
+            resolver
+                .implicit_parents
+                .insert("A".to_string(), InternalScope::from_path("P"));
+            let root = DeclarationScope::default();
+            resolver
+                .process_element(&make_class_at(name, 1), &root)
+                .unwrap();
+
+            assert_eq!(resolver.logic.entities[0].id, "A");
+            assert_eq!(resolver.logic.entities[0].enclosing_namespace_id, None);
+            assert!(matches!(
+                resolver.process_element(&make_class_at("A", 2), &root),
+                Err(ClassPumlResolverError::DuplicateAlias { alias, .. }) if alias == "A"
+            ));
+        }
+    }
+
+    #[test]
+    fn test_separator_none_rejects_root_markers() {
+        let mut resolver = ClassResolver::new();
+        resolver.namespace_separators = vec![
+            NamespaceSeparator {
+                value: "none".to_string(),
+                line: 2,
+            },
+            NamespaceSeparator {
+                value: "::".to_string(),
+                line: 4,
+            },
+        ];
+        let root = DeclarationScope::default();
+        resolver
+            .process_element(&make_class_at("A", 0), &root)
+            .unwrap();
+
+        for name in ["::A", ".A"] {
+            assert!(matches!(
+                resolver.process_element(&make_class_at(name, 3), &root),
+                Err(ClassPumlResolverError::RootMarkerWithSeparatorNone { name: rejected, line: 3 })
+                    if rejected == name
+            ));
+            assert!(matches!(
+                resolver.resolve_endpoint(name, &root, 3),
+                Err(ClassPumlResolverError::RootMarkerWithSeparatorNone { name: rejected, line: 3 })
+                    if rejected == name
+            ));
+            assert_eq!(resolver.resolve_reference(name, &root, 1).unwrap(), "A");
+            assert_eq!(resolver.resolve_reference(name, &root, 5).unwrap(), "A");
+            let (declared, _) = resolver
+                .declare(
+                    &make_name(name),
+                    IdentityKind::ClassLike,
+                    &DeclarationScope::from_path("P"),
+                    Some(&SourceLocation::new("test.puml", 5)),
+                )
+                .unwrap();
+            assert_eq!(declared.id.id(), "A");
+        }
+    }
+
+    #[test]
+    fn test_separator_none_preserves_explicit_namespace_nesting() {
+        let mut resolver = ClassResolver::new();
+        resolver.namespace_separators = vec![NamespaceSeparator {
+            value: "none".to_string(),
+            line: 0,
+        }];
+        let root = DeclarationScope::default();
+        let (namespace, _) = resolver
+            .declare(
+                &make_name("A.B"),
+                IdentityKind::Other,
+                &root,
+                Some(&SourceLocation::new("test.puml", 1)),
+            )
+            .unwrap();
+        resolver
+            .process_element(&make_class("C.D"), &namespace)
+            .unwrap();
+
+        assert_eq!(namespace.id.parent(), InternalScope::default());
+        assert_eq!(resolver.logic.entities[0].id, "A.B.C.D");
+        assert_eq!(
+            resolver.logic.entities[0].enclosing_namespace_id.as_deref(),
+            Some("A.B")
+        );
+        assert_eq!(
+            resolver.resolve_reference("C.D", &root, 10).unwrap(),
+            "A.B.C.D"
+        );
+        assert!(resolver.resolve_reference("D", &root, 10).is_err());
+    }
+
+    #[test]
+    fn test_separator_none_settings_apply_in_source_order() {
+        let mut resolver = ClassResolver::new();
+        resolver.namespace_separators = vec![
+            NamespaceSeparator {
+                value: "none".to_string(),
+                line: 2,
+            },
+            NamespaceSeparator {
+                value: "::".to_string(),
+                line: 4,
+            },
+        ];
+        let root = DeclarationScope::default();
+        resolver
+            .process_element(&make_class_at("A.B", 1), &root)
+            .unwrap();
+        resolver
+            .process_element(&make_class_at("C.D", 3), &root)
+            .unwrap();
+        resolver
+            .process_element(&make_class_at("E.F", 5), &root)
+            .unwrap();
+
+        assert_eq!(
+            resolver.logic.entities[0].enclosing_namespace_id.as_deref(),
+            Some("A")
+        );
+        assert_eq!(resolver.logic.entities[1].enclosing_namespace_id, None);
+        assert_eq!(
+            resolver.logic.entities[2].enclosing_namespace_id.as_deref(),
+            Some("E")
+        );
+        assert_eq!(resolver.resolve_reference("C.D", &root, 3).unwrap(), "C.D");
+        assert!(resolver.resolve_reference("D", &root, 3).is_err());
+        assert_eq!(resolver.resolve_reference("F", &root, 6).unwrap(), "E.F");
+    }
+
+    #[test]
+    fn test_separator_none_reparenting_keeps_the_full_name_as_a_leaf() {
+        let mut resolver = ClassResolver::new();
+        resolver.namespace_separators = vec![NamespaceSeparator {
+            value: "none".to_string(),
+            line: 0,
+        }];
+        resolver
+            .implicit_parents
+            .insert("A.B".to_string(), InternalScope::from_path("pkg"));
+        resolver
+            .process_element(&make_class("A.B"), &DeclarationScope::default())
+            .unwrap();
+
+        assert_eq!(resolver.logic.entities[0].id, "pkg.A.B");
+        assert_eq!(
+            resolver.logic.entities[0].enclosing_namespace_id.as_deref(),
+            Some("pkg")
+        );
+    }
+
+    #[test]
+    fn test_separator_none_rejects_canonical_id_collisions() {
+        let mut resolver = ClassResolver::new();
+        resolver.namespace_separators = vec![NamespaceSeparator {
+            value: "none".to_string(),
+            line: 0,
+        }];
+        resolver
+            .process_element(&make_class("A.B"), &DeclarationScope::default())
+            .unwrap();
+        assert!(matches!(
+            resolver.process_element(&make_class("B"), &DeclarationScope::from_path("A")),
+            Err(ClassPumlResolverError::DuplicateEntity { entity_id, .. }) if entity_id == "A.B"
+        ));
+    }
+
     #[test]
     fn test_process_class() {
         let mut resolver = ClassResolver::new();
@@ -1816,6 +2136,7 @@ mod tests {
         package_name.alias = alias.map(str::to_string);
         Package {
             name: package_name,
+            stereotypes: Vec::new(),
             source_location: SourceLocation::new("test.puml", 3),
             types,
             relationships: vec![],
@@ -1879,6 +2200,71 @@ mod tests {
 
         assert!(matches!(
             resolver.resolve_reference("C", &root, 5),
+            Err(ClassPumlResolverError::UnresolvedReference { .. })
+        ));
+    }
+
+    #[test]
+    fn test_separator_none_alias_on_path_preserves_literal_segments() {
+        let mut resolver = ClassResolver::new();
+        resolver.namespace_separators = vec![NamespaceSeparator {
+            value: "none".to_string(),
+            line: 0,
+        }];
+        let root = DeclarationScope::default();
+        resolver
+            .process_package(&make_package("a", Some("A"), vec![]), &root)
+            .unwrap();
+        resolver
+            .process_package(&make_package("a.b", None, vec![make_class("C.D")]), &root)
+            .unwrap();
+
+        assert_eq!(resolver.alias_on_path("a.b.C.D"), None);
+
+        resolver
+            .process_package(
+                &make_package("x.y", Some("XY"), vec![make_class("C.D")]),
+                &root,
+            )
+            .unwrap();
+        assert_eq!(
+            resolver.alias_on_path("x.y.C.D").map(String::as_str),
+            Some("XY")
+        );
+    }
+
+    #[test]
+    fn test_separator_none_alias_diagnostic_uses_the_full_literal_leaf() {
+        let mut resolver = ClassResolver::new();
+        resolver.namespace_separators = vec![NamespaceSeparator {
+            value: "none".to_string(),
+            line: 0,
+        }];
+        let root = DeclarationScope::default();
+        let scope = DeclarationScope::from_path("pkg");
+        resolver
+            .process_element(&make_aliased_class("A::B", "AB"), &scope)
+            .unwrap();
+
+        for raw in ["A.B", "A::B"] {
+            assert!(
+                matches!(
+                    resolver.resolve_reference(raw, &root, 100),
+                    Err(ClassPumlResolverError::NameOfAliasedElement { alias, .. }) if alias == "AB"
+                ),
+                "{raw}"
+            );
+        }
+        assert!(matches!(
+            resolver.resolve_reference("B", &root, 100),
+            Err(ClassPumlResolverError::UnresolvedReference { .. })
+        ));
+        resolver.namespace_separators.push(NamespaceSeparator {
+            value: "::".to_string(),
+            line: 200,
+        });
+        assert!(matches!(
+            resolver.resolve_reference("A.B", &root, 300),
             Err(ClassPumlResolverError::UnresolvedReference { .. })
         ));
     }
@@ -2045,6 +2431,7 @@ mod tests {
 
         let ns = Namespace {
             name: make_name("core::geometry"),
+            stereotypes: Vec::new(),
             source_location: SourceLocation::new("test.puml", 1),
             types: vec![make_class("User")],
             relationships: vec![],
@@ -2072,6 +2459,7 @@ mod tests {
             name: "test".to_string(),
             elements: vec![ClassUmlTopLevel::Type(make_class("User"))],
             relationships: vec![],
+            ..Default::default()
         };
 
         let logic = resolver.resolve(&file).unwrap();
@@ -2100,6 +2488,7 @@ mod tests {
             })),
             ClassUmlTopLevel::Namespace(Namespace {
                 name: make_name("ns"),
+                stereotypes: Vec::new(),
                 source_location: SourceLocation::new("test.puml", 1),
                 types: vec![],
                 relationships: vec![],

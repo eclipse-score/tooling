@@ -77,6 +77,21 @@ fn test_group_implicit_parent_across_files() {
 }
 
 #[test]
+fn test_group_rooted_and_relative_same_name() {
+    run_class_resolver_group_case("group_rooted_and_relative_same_name");
+}
+
+#[test]
+fn test_group_separator_none_root_marker_reparenting() {
+    run_class_resolver_group_case("group_separator_none_root_marker_reparenting");
+}
+
+#[test]
+fn test_group_literal_parent_alias_diagnostic() {
+    run_class_resolver_group_case("group_literal_parent_alias_diagnostic");
+}
+
+#[test]
 fn test_group_bodyless_stays_top_level() {
     run_class_resolver_group_case("group_bodyless_stays_top_level");
 }
@@ -89,6 +104,11 @@ fn test_group_kind_mismatch_stays_top_level() {
 #[test]
 fn test_group_ambiguous_implicit_parent() {
     run_class_resolver_group_case("group_ambiguous_implicit_parent");
+}
+
+#[test]
+fn test_group_literal_and_nested_parent_same_id() {
+    run_class_resolver_group_case("group_literal_and_nested_parent_same_id");
 }
 
 #[test]
@@ -379,4 +399,34 @@ fn test_namespace_relationship() {
 #[test]
 fn test_invalid_namespace_unresolved_relationship() {
     run_class_resolver_case("invalid_namespace_unresolved_relationship");
+}
+
+#[test]
+fn test_namespace_separator_none() {
+    run_class_resolver_case("namespace_separator_none");
+}
+
+#[test]
+fn test_grouping_containers() {
+    run_class_resolver_case("grouping_containers");
+}
+
+#[test]
+fn test_grouping_containers_group() {
+    run_class_resolver_group_case("grouping_containers_group");
+}
+
+#[test]
+fn test_grouping_containers_duplicate_entity() {
+    run_class_resolver_case("grouping_containers_duplicate_entity");
+}
+
+#[test]
+fn test_grouping_containers_same_name_across_units() {
+    run_class_resolver_group_case("grouping_containers_same_name_across_units");
+}
+
+#[test]
+fn test_grouping_containers_overview_dependencies() {
+    run_class_resolver_group_case("grouping_containers_overview_dependencies");
 }

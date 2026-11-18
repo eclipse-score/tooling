@@ -1,0 +1,60 @@
+' *******************************************************************************
+' Copyright (c) 2026 Contributors to the Eclipse Foundation
+'
+' See the NOTICE file(s) distributed with this work for additional
+' information regarding copyright ownership.
+'
+' This program and the accompanying materials are made available under the
+' terms of the Apache License Version 2.0 which is available at
+' https://www.apache.org/licenses/LICENSE-2.0
+'
+' SPDX-License-Identifier: Apache-2.0
+' *******************************************************************************
+
+@startuml grouping_containers
+' Grouping namespaces do not contribute to FQNs; ordinary namespaces do.
+' Foo and Base have IDs outer.inner.Foo and outer.inner.Base.
+namespace outer {
+  namespace "Module" as M <<component>> {
+    namespace "Unit" as U <<unit>> {
+      namespace inner {
+        class "Foo" as F
+        class "Base" as B
+      }
+    }
+  }
+}
+
+' Grouping packages do not contribute to FQNs: Client has ID api.Client.
+' Inheritance resolves outer.M.U.inner.B through grouping aliases.
+package "PackageModule" as PM <<component>> {
+  package "PackageUnit" as PU <<unit>> {
+    package api {
+      class "Client" as C extends outer.M.U.inner.B
+    }
+  }
+}
+
+' A root-level unit namespace leaves RootUnit in the root identity scope.
+namespace NamespaceUnit <<unit>> {
+  class RootUnit
+}
+' A root-level component package leaves RootComponent in the root identity scope.
+package PackageComponent <<component>> {
+  class RootComponent
+}
+
+' Qualified aliases across grouping containers resolve to outer.inner.Foo and api.Client.
+outer.M.U.inner.F ..> PM.PU.api.C
+
+' With separator none, dotted names remain literal segments; grouping still applies.
+' DN resolves to real.scope.Dotted.Name with enclosing namespace real.scope.
+set separator none
+namespace "Unit.Block" as DU <<unit>> {
+  namespace "real.scope" as RS {
+    class "Dotted.Name" as DN
+    class "Peer" as DP
+    DN --> DP
+  }
+}
+@enduml

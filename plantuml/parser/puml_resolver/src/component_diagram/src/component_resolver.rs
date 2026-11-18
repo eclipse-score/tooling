@@ -917,6 +917,7 @@ impl ComponentResolver {
                     nested.push(NestedCandidate {
                         id,
                         own: InternalScope::from_path(&text).id(),
+                        parent_scope: scope.id.clone(),
                         root_id: root.to_string(),
                         file_idx,
                         kind: (element_type, stereotype),

@@ -12,13 +12,14 @@
 // *******************************************************************************
 use crate::class_ast::{
     Arrow, Attribute, ClassLikeDef, ClassLikeKind, ClassUmlFile, ClassUmlTopLevel,
-    DeclarationCommon, EntityDef, EnumDef, EnumItem, EnumValue, Method, Name, Namespace, Package,
-    Param, Relationship, TemplateParameter, TypeAlias, TypeDefinition, Visibility,
+    DeclarationCommon, EntityDef, EnumDef, EnumItem, EnumValue, Method, Name, Namespace,
+    NamespaceSeparator, Package, Param, Relationship, TemplateParameter, TypeAlias, TypeDefinition,
+    Visibility,
 };
 use crate::source_map::{
     normalize_multiline_member_signatures, remap_syntax_error_to_original_source, NormalizedContent,
 };
-use log::{debug, trace};
+use log::{debug, trace, warn};
 use parser_core::common_parser::{parse_arrow, PlantUmlCommonParser, Rule};
 use parser_core::{
     find_note_alias, format_parse_tree, pest_to_syntax_error, BaseParseError, DiagramParser,
@@ -1112,6 +1113,9 @@ impl ClassParseSession<'_> {
                 Rule::named => {
                     Self::parse_named(inner, &mut namespace.name);
                 }
+                Rule::stereotype => {
+                    namespace.stereotypes = Self::extract_stereotypes(inner);
+                }
                 Rule::top_level => {
                     for top_level_inner in Self::flatten_top_level(inner) {
                         match top_level_inner.as_rule() {
@@ -1161,7 +1165,9 @@ impl ClassParseSession<'_> {
                 Rule::named => {
                     Self::parse_named(inner, &mut package.name);
                 }
-
+                Rule::stereotype => {
+                    package.stereotypes = Self::extract_stereotypes(inner);
+                }
                 Rule::top_level => {
                     for t in Self::flatten_top_level(inner) {
                         match t.as_rule() {
@@ -1192,6 +1198,31 @@ impl ClassParseSession<'_> {
         );
 
         Ok((package, ignored_objects))
+    }
+
+    fn parse_namespace_separator(&self, pair: pest::iterators::Pair<Rule>) -> NamespaceSeparator {
+        let line = self.original_source_location(&pair).line;
+        let parsed_value = pair
+            .into_inner()
+            .next()
+            .unwrap()
+            .into_inner()
+            .next()
+            .unwrap();
+        let value = match parsed_value.as_rule() {
+            Rule::namespace_separator_none => "none".to_string(),
+            Rule::namespace_separator_custom => {
+                let value = parsed_value.as_str().to_string();
+                warn!(
+                    "Class Parser: custom separator value '{}' is not supported yet (line {}); \
+                     using default namespace separator behaviour",
+                    value, line,
+                );
+                value
+            }
+            _ => unreachable!(),
+        };
+        NamespaceSeparator { value, line }
     }
 }
 
@@ -1313,6 +1344,11 @@ impl DiagramParser for PumlClassParser {
 
                 for pair in inner {
                     match pair.as_rule() {
+                        Rule::namespace_separator_stmt => {
+                            uml_file
+                                .namespace_separators
+                                .push(session.parse_namespace_separator(pair));
+                        }
                         Rule::top_level => {
                             for inner_pair in ClassParseSession::flatten_top_level(pair) {
                                 let mut elements = session.parse_top_level_element(inner_pair)?;

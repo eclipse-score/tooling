@@ -359,6 +359,12 @@ impl ErrorView for ActivityResolverError {
 impl ErrorView for ClassPumlResolverError {
     fn project(&self, _base_dir: &Path) -> ProjectedError {
         match self {
+            ClassPumlResolverError::RootMarkerWithSeparatorNone { name, line } => {
+                ProjectedError::new("RootMarkerWithSeparatorNone")
+                    .with_field("name", name.clone())
+                    .with_field("line", line.to_string())
+            }
+
             ClassPumlResolverError::UnresolvedReference { reference } => {
                 ProjectedError::new("UnresolvedReference")
                     .with_field("reference", reference.clone())

@@ -116,6 +116,10 @@ fn is_path_like(text: &str) -> bool {
     is_identifier_path(text) && !text.chars().any(char::is_whitespace)
 }
 
+/// `InternalScope` stores a resolver path as a `Vec<String>` of name segments.
+/// `["A", "B"]` means `B` within `A`, while `["A.B"]` is one literal name.
+/// Both produce ID `A.B`, but have different parents and leaves.
+/// An empty sequence represents the root scope.
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct InternalScope(Vec<String>);
 
@@ -146,6 +150,22 @@ impl InternalScope {
         let mut parts = self.0.clone();
         parts.extend(normalized_segments(leaf));
         Self(parts)
+    }
+
+    pub fn child_literal(&self, name: &str) -> Self {
+        let mut parts = self.0.clone();
+        parts.push(normalize(name));
+        Self(parts)
+    }
+
+    pub fn child_scope(&self, scope: &Self) -> Self {
+        let mut parts = self.0.clone();
+        parts.extend(scope.0.iter().cloned());
+        Self(parts)
+    }
+
+    pub fn leaf(&self) -> &str {
+        self.0.last().map(String::as_str).unwrap_or_default()
     }
 
     /// Scope of a declaration named `name`: a leading `.` or `::` is rooted,
@@ -203,6 +223,13 @@ impl DeclarationScope {
             reference: self.reference.declare(alias.unwrap_or(name)),
         }
     }
+
+    pub fn declare_literal(&self, name: &str, alias: Option<&str>) -> Self {
+        Self {
+            id: self.id.child_literal(name),
+            reference: self.reference.child_literal(alias.unwrap_or(name)),
+        }
+    }
 }
 
 /// A leading `.` or `::` roots a name.
@@ -230,6 +257,31 @@ pub enum Resolution {
     Resolved(String),
     Unresolved,
     Ambiguous(Vec<String>),
+}
+
+pub fn resolve_literal_reference<A, L>(
+    scope: &InternalScope,
+    raw: &str,
+    local_exists: A,
+    leaf_entries: L,
+) -> Resolution
+where
+    A: Fn(&str) -> bool,
+    L: FnOnce(&str) -> Vec<String>,
+{
+    let local = scope.child_literal(raw).id();
+    if local_exists(&local) {
+        return Resolution::Resolved(local);
+    }
+
+    let mut candidates = leaf_entries(&normalize(raw));
+    candidates.sort();
+    candidates.dedup();
+    match candidates.len() {
+        0 => Resolution::Unresolved,
+        1 => Resolution::Resolved(candidates.remove(0)),
+        _ => Resolution::Ambiguous(candidates),
+    }
 }
 
 /// Rule C reference lookup. `local_exists` checks the literal `S.r`
@@ -450,6 +502,19 @@ mod tests {
         let scope = InternalScope::from_path("core").child("geometry::shapes");
 
         assert_eq!(scope, InternalScope::from_path("core.geometry.shapes"));
+    }
+
+    #[test]
+    fn internal_scope_child_literal_appends_one_normalized_segment() {
+        let scope = InternalScope::from_path("core").child_literal("geometry::shapes");
+
+        assert_eq!(
+            scope,
+            InternalScope(vec!["core".to_string(), "geometry.shapes".to_string()])
+        );
+        assert_eq!(scope.id(), "core.geometry.shapes");
+        assert_eq!(scope.leaf(), "geometry.shapes");
+        assert_eq!(scope.parent(), InternalScope::from_path("core"));
     }
 
     #[test]

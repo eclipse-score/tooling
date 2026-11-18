@@ -178,11 +178,19 @@ scale_stmt = _{
     )
 }
 
-namespace_separator_stmt = @{
+namespace_separator_stmt = ${
   ^"set" ~ INLINE_WS+
-  ~ ^"namespaceSeparator" ~ INLINE_WS+
-  ~ (!EOL ~ ANY)+
+  ~ (^"namespaceSeparator" | ^"separator") ~ INLINE_WS+
+  ~ namespace_separator_value ~ (!EOL ~ ANY)*
 }
+
+namespace_separator_value = {
+    namespace_separator_none
+  | namespace_separator_custom
+}
+
+namespace_separator_none = @{ ^"none" ~ &(INLINE_WS | EOL | EOI) }
+namespace_separator_custom = @{ (!(INLINE_WS | EOL) ~ ANY)+ }
 
 ////////////////////////////////////////////////////////////////////////////////
 // Stereotype

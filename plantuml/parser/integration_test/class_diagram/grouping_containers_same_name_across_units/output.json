@@ -1,0 +1,118 @@
+{
+  "detail.puml": {
+    "name": "detail",
+    "entities": [
+      {
+        "id": "Worker",
+        "name": "Worker",
+        "enclosing_namespace_id": null,
+        "stereotypes": [],
+        "entity_type": "Class",
+        "type_aliases": [],
+        "variables": [],
+        "methods": [
+          {
+            "name": "run",
+            "return_type": null,
+            "visibility": "public",
+            "parameters": [],
+            "template_parameters": null,
+            "modifiers": [],
+            "source_location": { "file": "", "line": 17 }
+          }
+        ],
+        "template_parameters": null,
+        "enum_literals": [],
+        "relationships": [],
+        "source_location": { "file": "", "line": 16 }
+      }
+    ],
+    "free_functions": []
+  },
+  "module.puml": {
+    "name": "module",
+    "entities": [
+      {
+        "id": "Worker",
+        "name": "Worker",
+        "enclosing_namespace_id": null,
+        "stereotypes": [],
+        "entity_type": "Class",
+        "type_aliases": [],
+        "variables": [],
+        "methods": [],
+        "template_parameters": null,
+        "enum_literals": [],
+        "relationships": [
+          {
+            "source": "Worker",
+            "target": "ModuleClient",
+            "relation_type": "Dependency",
+            "source_multiplicity": null,
+            "target_multiplicity": null,
+            "source_location": { "file": "", "line": 19 }
+          }
+        ],
+        "source_location": { "file": "", "line": 17 }
+      },
+      {
+        "id": "ModuleClient",
+        "name": "ModuleClient",
+        "enclosing_namespace_id": null,
+        "stereotypes": [],
+        "entity_type": "Class",
+        "type_aliases": [],
+        "variables": [],
+        "methods": [],
+        "template_parameters": null,
+        "enum_literals": [],
+        "relationships": [],
+        "source_location": { "file": "", "line": 18 }
+      }
+    ],
+    "free_functions": []
+  },
+  "other.puml": {
+    "name": "other",
+    "entities": [
+      {
+        "id": "Worker",
+        "name": "Worker",
+        "enclosing_namespace_id": null,
+        "stereotypes": [],
+        "entity_type": "Class",
+        "type_aliases": [],
+        "variables": [],
+        "methods": [],
+        "template_parameters": null,
+        "enum_literals": [],
+        "relationships": [
+          {
+            "source": "Worker",
+            "target": "OtherClient",
+            "relation_type": "Dependency",
+            "source_multiplicity": null,
+            "target_multiplicity": null,
+            "source_location": { "file": "", "line": 19 }
+          }
+        ],
+        "source_location": { "file": "", "line": 17 }
+      },
+      {
+        "id": "OtherClient",
+        "name": "OtherClient",
+        "enclosing_namespace_id": null,
+        "stereotypes": [],
+        "entity_type": "Class",
+        "type_aliases": [],
+        "variables": [],
+        "methods": [],
+        "template_parameters": null,
+        "enum_literals": [],
+        "relationships": [],
+        "source_location": { "file": "", "line": 18 }
+      }
+    ],
+    "free_functions": []
+  }
+}

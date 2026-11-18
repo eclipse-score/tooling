@@ -73,10 +73,14 @@ class_start = {
     ~ (COMMENT | empty_line)*
     ~ startuml
     ~ EOL*
-    ~ (top_level ~ EOL* | ignored_block ~ EOL* | ignored_stmt ~ EOL+ | class_ignored_stmt ~ EOL+)*
+    ~ (top_level ~ EOL* | class_accepted_stmt ~ EOL+ | ignored_block ~ EOL* | ignored_stmt ~ EOL+ | class_ignored_stmt ~ EOL+)*
     ~ EOL*
     ~ enduml
     ~ EOI
+}
+
+class_accepted_stmt = _{
+    namespace_separator_stmt
 }
 
 class_ignored_stmt = _{
