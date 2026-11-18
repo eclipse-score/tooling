@@ -150,18 +150,20 @@ and `rules_score` collects that input into the generated traceability
 configuration and report. The artifact must also be present in the target's
 `DefaultInfo.files`; otherwise Bazel analysis fails.
 
-The generated `Manual Analysis` activity traces to Component Requirements and
-Feature Requirements. For Component Requirements, Manual Analysis can provide
-traceability coverage as an alternative to Unit Test and Test Case Coverage.
-Architecture remains a separate traceability coverage requirement.
+The generated `Manual Analysis` activity traces only to the `Received AoUs`
+level: the `requirements` of the analysis must name received AoUs. Manual
+Analysis is one of three ways to cover a received AoU, next to a Component
+Requirement (`derived_from`) and chain-forwarding (`aou_forwarding`). It does
+not trace to Component or Feature Requirements and is no substitute for Unit
+Test or Test Case Coverage.
 
 Traceability coverage does not establish that verification passed. An activity
 can have `tracing_status: "OK"` because its tracing links are complete while
 its verification `status` is `"fail"`. The current RST traceability report uses
 `tracing_status` for activity card titles, colours, and coverage summaries; it
-does not display the activity's verification status. Run the manual-analysis
-test target to check the lock and final assertion rather than treating a green
-traceability card as a passing verification result.
+does not display the activity's verification status. `bazel test` of the
+manual-analysis target checks the lock and final assertion; a failing or stale
+review fails that test even though the traceability card stays green.
 
 ---
 

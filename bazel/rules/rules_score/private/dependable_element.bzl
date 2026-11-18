@@ -1704,14 +1704,11 @@ def _dependable_element_index_impl(ctx):
             template = ctx.file._lobster_de_template,
             output = lobster_config,
             substitutions = {
-                "{FEAT_REQ_BLOCK}": format_lobster_block(
-                    "requirements",
-                    "Feature Requirements",
-                    feat_req_list,
-                ),
+                "{FEAT_REQ_BLOCK}": format_lobster_block("requirements", "Feature Requirements", feat_req_list),
                 # Target level: every item here must be covered, either by a
-                # Manual Analysis or further chain-forwarding (Forwarded AoUs,
-                # below). Without the `requires` override, LOBSTER would instead
+                # Component Requirement (`derived_from`), by a Manual Analysis,
+                # or by being further chain-forwarded (Forwarded AoUs, below).
+                # Without the `requires` override, LOBSTER would instead
                 # require ALL sources to independently cover every item (its
                 # default AND-across-sources behaviour for multiple `trace to:`
                 # declarations), which no single AoU could ever satisfy.
@@ -1720,6 +1717,7 @@ def _dependable_element_index_impl(ctx):
                     "Received AoUs",
                     received_aou_list,
                     requires = [_cond_names(
+                        (has_comp_req, "Component Requirements"),
                         (manual_analysis_files, "Manual Analysis"),
                         (forwarded_aou_markers_list or strict, "Forwarded AoUs"),
                     )],
@@ -1745,6 +1743,7 @@ def _dependable_element_index_impl(ctx):
                     comp_req_list,
                     trace_to = _cond_names(
                         (has_feat_req, "Feature Requirements"),
+                        (has_received_aou, "Received AoUs"),
                     ),
                 ),
                 "{UNIT_TEST_BLOCK}": format_lobster_block(

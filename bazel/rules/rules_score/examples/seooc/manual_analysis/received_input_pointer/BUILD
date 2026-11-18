@@ -22,6 +22,5 @@ manual_analysis(
     ],
     lock_file = "manual.lock",
     results_file = "results.json",
-    tags = ["manual"],
     visibility = ["//:__pkg__"],
 )

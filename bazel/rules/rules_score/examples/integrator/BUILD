@@ -13,10 +13,12 @@
 #
 # Example: System integrator SEooC that depends on safety_software_seooc_example.
 #
-# This illustrates the full AoU forwarding chain, and the two ways a
-# dependable element can cover an AoU it receives:
+# This illustrates the full AoU forwarding chain, and the ways a dependable
+# element can cover an AoU it receives (component requirement, manual analysis,
+# chain-forwarding):
 #
-#   other_seooc               defines AoU: OtherLibrary.TimingConstraint
+#   other_seooc               defines AoUs: OtherLibrary.TimingConstraint, SpaceConstraint,
+#                             ValidInputPointer
 #       ↑ (deps)
 #   safety_software_seooc_example
 #       - defines own AoU: SampleType.SampleAoU  (auto-forwarded here)
@@ -25,7 +27,12 @@
 #   integrator_seooc (this target)
 #       - receives SampleType.SampleAoU          (auto-forwarded from seooc)
 #       - receives OtherLibrary.TimingConstraint  (chain-forwarded through seooc)
-#       - reviews both received AoUs directly with manual analysis
+#       - also depends on other_seooc directly: SpaceConstraint and
+#         ValidInputPointer arrive from there, TimingConstraint a second time
+#         (merged into one received AoU)
+#       - HANDLES SampleAoU, SpaceConstraint and ValidInputPointer locally with
+#         component requirements (COMP_INT_001, COMP_INT_005)
+#       - REVIEWS TimingConstraint with manual analysis (received_timing)
 #
 
 load(
@@ -105,7 +112,6 @@ dependable_element(
     dependability_analysis = [],
     integrity_level = "B",
     manual_analysis = [
-        "//manual_analysis/received_shared_memory:review",
         "//manual_analysis/received_timing:review",
     ],
     maturity = "development",
@@ -115,5 +121,6 @@ dependable_element(
     tests = [],
     deps = [
         "@seooc//:safety_software_seooc_example",
+        "@some_other_library//:other_seooc",
     ],
 )

@@ -12,7 +12,8 @@
 # *******************************************************************************
 """Analysis tests for manual_analysis Bazel rules."""
 
-load("@bazel_skylib//lib:unittest.bzl", "analysistest", "asserts")
+load("@bazel_skylib//lib:unittest.bzl", "analysistest", "asserts", "unittest")
+load("//manual_analysis:lock_identity.bzl", "lock_rule_entry", "normalize_repo_name")
 load(
     "//manual_analysis:manual_analysis.bzl",
     "ManualAnalysisContextInfo",
@@ -177,7 +178,8 @@ def _manual_analysis_update_env_test_impl(ctx):
             asserts.equals(env, expected, display, "Same-repository lock paths must be repository-relative")
             asserts.false(env, display.startswith("../"))
         else:
-            asserts.equals(env, file.short_path, display, "Dependency lock paths must retain their repository identity")
+            repo, _, relative_path = file.short_path[3:].partition("/")
+            asserts.equals(env, "../{}/{}".format(normalize_repo_name(repo), relative_path), display, "Dependency lock paths must use the normalized repository name")
 
     rule_manifests = [
         action
@@ -261,7 +263,42 @@ def _manual_analysis_test_env_test_impl(ctx):
 manual_analysis_test_env_test = analysistest.make(_manual_analysis_test_env_test_impl)
 manual_analysis_macro_test_env_test = manual_analysis_test_env_test
 
+def _normalize_repo_name_test_impl(ctx):
+    env = unittest.begin(ctx)
+    cases = {
+        "": "",
+        "seooc+": "seooc",
+        "seooc~": "seooc",
+        "seooc~1.0": "seooc",
+        "rules_foo++ext+repo": "rules_foo+ext+repo",
+        "rules_foo~~ext~repo": "rules_foo+ext+repo",
+        "bazel_tools": "bazel_tools",
+        "+ext+repo": "+ext+repo",
+    }
+    for repo, expected in cases.items():
+        asserts.equals(env, expected, normalize_repo_name(repo), "repo " + repo)
+    return unittest.end(env)
+
+normalize_repo_name_test = unittest.make(_normalize_repo_name_test_impl)
+
+def _lock_rule_entry_test_impl(ctx):
+    env = unittest.begin(ctx)
+    cases = {
+        "@@//a:b": "@@//a:b",
+        "@@seooc+//a:b": "@seooc//a:b",
+        "@@seooc~//a:b": "@seooc//a:b",
+        "@@rules_foo++ext+repo//a:b": "@rules_foo+ext+repo//a:b",
+    }
+    for label, expected in cases.items():
+        asserts.equals(env, expected + "\t{}", lock_rule_entry(label + "\t{}", "@@"))
+    asserts.equals(env, "@@//a:b\t{}", lock_rule_entry("@@seooc+//a:b\t{}", "@@seooc+"))
+    return unittest.end(env)
+
+lock_rule_entry_test = unittest.make(_lock_rule_entry_test_impl)
+
 def manual_analysis_rules_test_suite(name):
+    normalize_repo_name_test(name = "normalize_repo_name_test")
+    lock_rule_entry_test(name = "lock_rule_entry_test")
     native.test_suite(
         name = name,
         tests = [
@@ -269,5 +306,7 @@ def manual_analysis_rules_test_suite(name):
             ":context_from_cc_library_provider_test",
             ":manual_analysis_macro_update_env_test",
             ":manual_analysis_macro_test_env_test",
+            ":normalize_repo_name_test",
+            ":lock_rule_entry_test",
         ],
     )

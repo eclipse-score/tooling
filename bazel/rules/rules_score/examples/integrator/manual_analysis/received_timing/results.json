@@ -4,7 +4,7 @@
     {
       "type": "action",
       "description": "Review OtherLibrary.TimingConstraint@1 and identify the required invocation period, timing interpretation, deployment scope, and scheduler evidence.",
-      "result": "The received AoU constrains invocation cycle time to 10 ms. Clarification is needed on the interval measurement and allowed jitter. This is a coding-assistant gap assessment, not independent human safety approval."
+      "result": "The received AoU constrains invocation cycle time to 10 ms. Clarification is needed on the interval measurement and allowed jitter. Example evidence, not a safety approval."
     },
     {
       "type": "action",

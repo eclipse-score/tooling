@@ -4,7 +4,7 @@
     {
       "type": "action",
       "description": "Read OtherLibrary.ValidInputPointer@1 and record how the reviewed implementation covers non-nullness, lifetime, and absence of concurrent modification.",
-      "result": "OtherLibrary.ValidInputPointer@1 requires a non-null pointer to an object that remains alive and is not concurrently modified during Compute. Taking the address of a call-local const uint8_t supplies a non-null pointer, a lifetime enclosing the synchronous call, and an object without a mutable alias. This example evidence was reviewed by the coding assistant, not independently approved by a human reviewer."
+      "result": "OtherLibrary.ValidInputPointer@1 requires a non-null pointer to an object that remains alive and is not concurrently modified during Compute. Taking the address of a call-local const uint8_t supplies a non-null pointer, a lifetime enclosing the synchronous call, and an object without a mutable alias. Example evidence, not a safety approval."
     },
     {
       "type": "action",

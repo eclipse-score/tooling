@@ -203,6 +203,7 @@ lacks full up/down traceability.
       "Root Cause Assessments" [fillcolor="#2196F3", fontcolor="white"];
       "Forwarded AoUs" -> "Received AoUs";
       "Component Requirements" -> "Feature Requirements";
+      "Component Requirements" -> "Received AoUs";
       "Manual Analysis" -> "Received AoUs";
       "Unit Test" -> "Component Requirements";
       "Test Case Coverage" -> "Component Requirements";

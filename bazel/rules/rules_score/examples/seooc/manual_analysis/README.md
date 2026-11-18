@@ -18,11 +18,10 @@ Each review is an independent Bazel package with its own BUILD file defining a
 See the [Manual Analysis guide](../../../../../../manual_analysis/README.md)
 for general setup and usage.
 
-Both review targets are tagged `manual`, so wildcard test selections such as
-`bazel test //...` and `bazel test //manual_analysis/...` skip both review tests.
-Run each review explicitly using its target label, as shown below. The DE still
-consumes both reviews' generated LOBSTER evidence; the tag does not disable
-artifact generation through explicit dependencies.
+The review target is a regular test, so `bazel test //...` runs it and fails
+when the lock is out of date or the recorded assertion is negative. The DE
+consumes the review's generated LOBSTER evidence; tracing alone does not mean
+the review passed.
 
 ## Input Pointer Review
 
@@ -33,27 +32,13 @@ call-local const uint8_t to `OtherLibraryAPI::Compute`, which reads synchronousl
 without retaining the pointer. A returned-value test alone would not prove the
 object's lifetime, so this AoU uses source-review evidence instead.
 
-The committed source-review evidence was prepared by the coding assistant and is
-not an independent human safety approval. Run the interactive review to record
-your own findings.
+The committed evidence is example data, not a safety approval. Run the
+interactive review to record your own findings.
 
-## Space Constraint Review (Expected Failure)
-
-`received_space_constraint` reviews `OtherLibrary.SpaceConstraint@1` directly.
-The source review finds
-no dynamic allocation in Foo or Compute, but that is not a complete memory-budget
-proof. The original AoU does not define the accounting boundary or unit precisely,
-and deployment/concurrency evidence is missing. Its recorded conclusion is
-therefore **not demonstrated**, not a measured budget violation.
-
-`Foo.FootprintWithinBudget` checks only that `sizeof(Foo)` is below 10 MiB for
-the current build. It does not prove total runtime memory usage or resolve the
-AoU's MB/MiB ambiguity.
-
-Explicitly running `//manual_analysis/received_space_constraint:review` still
-fails on the committed negative assertion, even after its lock is refreshed.
-To close it, clarify the contract with its owner, obtain the relevant evidence,
-and repeat the review. Do not merely refresh the lock or change the answer.
+`OtherLibrary.SpaceConstraint@1` is not reviewed here: the DE covers it through
+component requirement `REQ_COMP_EXTRA_003`. The evidence behind it is
+placeholder: `Foo.FootprintWithinBudget` only checks `sizeof(Foo)` and neither
+proves a runtime memory bound nor resolves the AoU's MB/MiB ambiguity.
 
 ## Review Context
 
@@ -77,10 +62,7 @@ bazel run //manual_analysis/received_input_pointer:review.update
 bazel test //manual_analysis/received_input_pointer:review --test_output=errors
 ```
 
-Replace `received_input_pointer` with `received_space_constraint` to run the
-memory review; its committed result is expected to fail.
-
-Review and commit each review's `results.json` and `manual.lock` together. Do not
+Review and commit the review's `results.json` and `manual.lock` together. Do not
 refresh the lock merely to dismiss a changed-input failure. The test does not
 independently prove that the reviewer's reasoning is correct.
 
@@ -90,6 +72,5 @@ The DE includes this evidence through `dependable_element.manual_analysis`:
 bazel test //:safety_software_seooc_example --test_output=errors
 ```
 
-The example uses `maturity = "development"`, so the DE test may pass with warnings.
-Neither a passing DE test nor a green traceability card closes the memory AoU;
-traceability completeness is not verification success.
+The example uses `maturity = "development"`, so the DE test may pass with
+warnings. Traceability completeness is not verification success.

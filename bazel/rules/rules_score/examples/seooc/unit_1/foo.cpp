@@ -18,7 +18,7 @@ namespace unit_1 {
 
 // trace: SampleComponent.REQ_COMP_001 SampleLibraryAPI.GetNumber
 std::uint8_t Foo::GetNumber() const {
-	const std::uint8_t value{42u};
-	return other_seooc::OtherLibraryAPI::Compute(&value);
+  const std::uint8_t value{42u};
+  return other_seooc::OtherLibraryAPI::Compute(&value);
 }
 } // namespace unit_1

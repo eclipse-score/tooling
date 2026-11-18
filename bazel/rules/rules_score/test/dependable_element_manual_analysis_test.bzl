@@ -116,7 +116,7 @@ def manual_analysis_integration_test(name, passed = True, stale_lock = False, ex
         manual_analysis = [":" + name + "_review"],
         requirements = [],
         tests = [],
-        deps = [":aou_derived_example_lib"],
+        deps = ["//:aou_derived_example_lib"],
         tags = ["manual"],
     )
     _manual_analysis_integration_config(
@@ -196,11 +196,16 @@ def _manual_analysis_report_test_impl(ctx):
         asserts.equals(env, bool(received_block), 'trace to: "Received AoUs";' in manual_block)
         asserts.false(env, 'trace to: "Assumptions of Use";' in manual_block)
         if received_block:
+            sources = (['"Component Requirements"'] if component_block else []) + ['"Manual Analysis"', '"Forwarded AoUs"']
             asserts.true(
                 env,
-                'requires: "Manual Analysis" or "Forwarded AoUs";' in received_block,
+                "requires: {};".format(" or ".join(sources)) in received_block,
             )
-        asserts.false(env, 'trace to: "Received AoUs";' in component_block)
+        asserts.equals(
+            env,
+            bool(received_block and component_block),
+            'trace to: "Received AoUs";' in component_block,
+        )
         asserts.false(env, "requires:" in component_block)
         asserts.false(env, "requires:" in feature_block)
         reports = [
@@ -277,6 +282,29 @@ received_aou_manual_analysis_test = analysistest.make(
     },
 )
 
+def _received_aou_component_requirements_test_impl(ctx):
+    env = analysistest.begin(ctx)
+    configs = [
+        action
+        for action in analysistest.target_actions(env)
+        if any([output.basename == "de_traceability_config" for output in action.outputs.to_list()])
+    ]
+    asserts.equals(env, 1, len(configs))
+    substitutions = configs[0].substitutions
+    received_block = substitutions["{RECEIVED_AOU_BLOCK}"]
+    asserts.true(env, 'trace to: "Received AoUs";' in substitutions["{COMP_REQ_BLOCK}"])
+    asserts.equals(env, ctx.attr.expect_manual_analysis, 'trace to: "Received AoUs";' in substitutions["{MANUAL_ANALYSIS_BLOCK}"])
+    sources = ['"Component Requirements"'] + ([] if not ctx.attr.expect_manual_analysis else ['"Manual Analysis"'])
+    asserts.true(env, "  requires: {};".format(" or ".join(sources)) in received_block)
+    return analysistest.end(env)
+
+received_aou_component_requirements_test = analysistest.make(
+    _received_aou_component_requirements_test_impl,
+    attrs = {
+        "expect_manual_analysis": attr.bool(),
+    },
+)
+
 def manual_analysis_test_suite(name):
     native.test_suite(
         name = name,
@@ -292,5 +320,9 @@ def manual_analysis_test_suite(name):
             ":received_aou_manual_analysis_missing_test",
             ":received_aou_manual_analysis_pass_test",
             ":received_aou_manual_analysis_release_test",
+            ":received_aou_component_requirements_both_pass_test",
+            ":received_aou_component_requirements_both_test",
+            ":received_aou_component_requirements_only_pass_test",
+            ":received_aou_component_requirements_only_test",
         ],
     )

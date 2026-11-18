@@ -60,6 +60,8 @@ component_requirements(
     deps = [
         ":assumed_system_requirements",
         ":feature_requirements",
+        # AoU received from other_seooc and handled locally (SpaceConstraint).
+        "@some_other_library//:other_library_aous",
     ],
 )
 

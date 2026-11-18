@@ -19,12 +19,10 @@
 namespace other_seooc {
 
 class OtherLibraryAPI final {
-public:
-  static std::uint8_t Compute(const std::uint8_t* value) {
-    return *value;
-  }
+ public:
+  static std::uint8_t Compute(const std::uint8_t* value) { return *value; }
 };
 
-}
+}  // namespace other_seooc
 
-#endif
+#endif  // SOME_OTHER_LIBRARY_OTHER_LIBRARY_H

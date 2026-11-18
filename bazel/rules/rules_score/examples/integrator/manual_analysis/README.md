@@ -11,38 +11,39 @@
   SPDX-License-Identifier: Apache-2.0
 ----------------------------------------------------------------------------- -->
 
-# Integrator Manual Analysis Reviews
+# Integrator Manual Analysis Review
 
-The integrator reviews two received AoUs directly. Both committed reviews are
-expected to fail: the available sources do not demonstrate that the deployment
-contracts are satisfied. This records missing evidence, not a proven violation.
+The integrator reviews `OtherLibrary.TimingConstraint@1` directly. The
+committed review is expected to fail: the available sources do not demonstrate
+that the timing contract is satisfied. This records missing evidence, not a
+proven violation. `SampleType.SampleAoU@1`, `OtherLibrary.SpaceConstraint@1` and
+`OtherLibrary.ValidInputPointer@1` are covered by component requirements
+`COMP_INT_001` and `COMP_INT_005` instead.
 
 | Review | Received AoU | Unresolved evidence |
 | --- | --- | --- |
-| `received_shared_memory` | `SampleType.SampleAoU@1` | Shared-memory creation paths, naming validation, and deployment configuration |
 | `received_timing` | `OtherLibrary.TimingConstraint@1` | Timer configuration, scheduling, and worst-case timing for the cyclic call |
 
 Run from the integrator example root:
 
 ```sh
-bazel test //manual_analysis/received_shared_memory:review --test_output=errors
 bazel test //manual_analysis/received_timing:review --test_output=errors
 ```
 
-Both tests fail on the committed negative assertion even when their locks are
-current. The targets are tagged `manual`, so `bazel test //...` skips these review
-tests. The DE still consumes their generated LOBSTER evidence.
+The test fails on the committed negative assertion even when the lock is
+current. The target is tagged `manual`, so `bazel test //...` skips it. The DE
+still consumes its generated LOBSTER evidence.
 
 The example uses `maturity = "development"`, so the DE test may pass with
-warnings. A complete traceability link or passing DE test does not close either
-AoU. Explicit review tests check both lock freshness and the recorded assertion.
+warnings. A complete traceability link or passing DE test does not close the
+AoU. The review test checks both lock freshness and the recorded assertion.
 
-To close a review, obtain the missing evidence and repeat the interactive review:
+To close the review, obtain the missing evidence and repeat the interactive
+review:
 
 ```sh
-bazel run //manual_analysis/received_shared_memory:review.update
+bazel run //manual_analysis/received_timing:review.update
 ```
 
-Use `received_timing` for the timing review. Commit `results.json` and
-`manual.lock` together after reviewing the findings. Do not change the answer or
-refresh the lock merely to make a failing review pass.
+Commit `results.json` and `manual.lock` together after reviewing the findings.
+Do not change the answer or refresh the lock merely to make the review pass.

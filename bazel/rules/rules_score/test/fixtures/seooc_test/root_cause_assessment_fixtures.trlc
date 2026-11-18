@@ -55,10 +55,9 @@ ScoreReq.AoU SomeAoU {
     version     = 1
 }
 
-ScoreReq.AssumedSystemReq SomeSystemReq {
+ScoreReq.AoU ReceivedAoU {
     safety      = ScoreReq.Asil.B
-    description = "A system requirement refined by the component requirement"
-    rationale   = "System-level requirement backing the component control measure."
+    description = "An assumption of use received from another element"
     version     = 1
 }
 
@@ -66,7 +65,7 @@ ScoreReq.CompReq SomeCompReq {
     safety       = ScoreReq.Asil.B
     description  = "A component requirement that controls a root cause"
     version      = 1
-    derived_from = [TestRootCauseAssessment.SomeSystemReq@1]
+    derived_from = [TestRootCauseAssessment.ReceivedAoU@1]
 }
 
 ScoreReq.RootCauseAssessment PreventedAssessment {

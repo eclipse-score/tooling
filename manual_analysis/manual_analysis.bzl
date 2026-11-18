@@ -12,6 +12,7 @@
 # *******************************************************************************
 
 load("@lobster//:lobster.bzl", "LobsterProvider")
+load("//manual_analysis:lock_identity.bzl", "lock_file_id", "lock_rule_entry")
 
 """Bazel rule to create a manual verification analysis.
 
@@ -50,23 +51,6 @@ def _collect_inputs(ctx):
     results_files = ctx.attr.results_file[DefaultInfo].files
     return [depset(transitive = context_depsets + [analysis_files, results_files]).to_list(), rules]
 
-def _lock_file_id(file, repository):
-    # Bazel documents external File.short_path values as starting with ../<repo_name>/:
-    # https://bazel.build/rules/lib/builtins/File#short_path
-    # Strip only the analysis repository's prefix to keep its lock identities stable.
-    if file.owner != None and file.owner.repo_name == repository:
-        prefix = "../{}/".format(repository)
-        if file.short_path.startswith(prefix):
-            return file.short_path[len(prefix):]
-    return file.short_path
-
-def _lock_rule_entry(entry, repository_prefix):
-    label, canonical_form = entry.split("\t", 1)
-    prefix, relative_label = label.split("//", 1)
-    if prefix == repository_prefix:
-        label = "@@//" + relative_label
-    return "{}\t{}".format(label, canonical_form)
-
 def _runfiles_path(file):
     path = file.short_path
     return path[3:] if path.startswith("../") else path
@@ -76,7 +60,7 @@ def _make_manifests(ctx, input_files, input_rules):
     file_manifest = ctx.actions.declare_file("{}_file_manifest.tsv".format(ctx.label.name))
     ctx.actions.write(
         output = file_manifest,
-        content = "\n".join(["{}\t{}".format(_lock_file_id(f, ctx.label.repo_name), f.path) for f in input_files]) + "\n",
+        content = "\n".join(["{}\t{}".format(lock_file_id(f, ctx.label.repo_name), f.path) for f in input_files]) + "\n",
     )
     rule_manifest = ctx.actions.declare_file("{}_rule_manifest.tsv".format(ctx.label.name))
 
@@ -84,7 +68,7 @@ def _make_manifests(ctx, input_files, input_rules):
     flattened_rules = []
     for rule_set in input_rules:
         flattened_rules.extend([
-            _lock_rule_entry(entry, str(ctx.label).split("//", 1)[0])
+            lock_rule_entry(entry, str(ctx.label).split("//", 1)[0])
             for entry in rule_set.to_list()
         ])
     flattened_rules = sorted(flattened_rules)

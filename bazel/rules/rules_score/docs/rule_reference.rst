@@ -262,7 +262,7 @@ testable within that component.
    * - ``deps``
      - label list
      - no
-    - ``feature_requirements`` or ``assumed_system_requirements`` targets for ``derived_from`` resolution (default ``[]``)
+     - ``feature_requirements`` or ``assumed_system_requirements`` targets for ``derived_from`` resolution. Also list the ``assumptions_of_use`` target of a *received* AoU (default ``[]``)
    * - ``image_srcs``
      - label list
      - no
@@ -274,10 +274,15 @@ testable within that component.
 
 **Generated targets:** ``<name>`` (documentation), ``<name>_test`` (TRLC validation)
 
-A ``CompReq`` record's ``derived_from`` field (``CompReqSourceId``) accepts
-versioned ``FeatReq`` and ``AssumedSystemReq`` references. Received AoUs are
-covered by direct manual analysis references or chain-forwarding -- see
-:doc:`user_guide/assumptions_of_use`.
+A ``CompReq`` record's ``derived_from`` field (``CompReqSourceId``) may also
+reference an AoU *received* from another dependable element, alongside its usual
+``FeatReq``/``AssumedSystemReq`` references (e.g. ``[SampleType.SampleAoU@1]``).
+The element's own AoUs must not be a ``derived_from`` source (not enforced by
+the TRLC model). Referencing an AoU requires
+importing the AoU's package and listing the
+``assumptions_of_use`` target that defines it directly in this target's
+``deps`` — see :doc:`user_guide/assumptions_of_use`. A received AoU can also be
+covered by manual analysis or chain-forwarding instead.
 
 .. _rule-assumptions-of-use:
 

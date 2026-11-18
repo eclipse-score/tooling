@@ -102,10 +102,14 @@ paths in the lock file. Rule labels from that repository use `@@//package:target
 These identities remain unchanged whether the repository is built independently
 or as an external dependency of an integrator.
 
-Files and rule labels from other repositories retain their repository prefixes
-to distinguish dependencies with identical package or file names. An analysis
-defined in the integrator therefore does not necessarily share the lock file of
-an analysis defined in the SEooC.
+Files and rule labels from other repositories keep their repository name to
+distinguish dependencies with identical package or file names, for example
+`../seooc/docs/aous.trlc` and `@seooc//unit_1:unit_1_lib`. The name is the
+module name without Bazel's canonical-name suffix (`seooc+`, `seooc~1.0`), so a
+Bazel or dependency version change does not invalidate locks. An extension
+repository `rules_foo++ext+repo` is written as `rules_foo+ext+repo`. An
+analysis defined in the integrator therefore does not necessarily share the lock
+file of an analysis defined in the SEooC.
 
 ## Analysis YAML Schema
 
