@@ -45,7 +45,7 @@ jobs:
         with:
           level: 4
       - name: Setup Bazel with cache
-        uses: bazel-contrib/setup-bazel@0.19.1
+        uses: bazel-contrib/setup-bazel@0.19.2
         with:
           disk-cache: true
           repository-cache: true
