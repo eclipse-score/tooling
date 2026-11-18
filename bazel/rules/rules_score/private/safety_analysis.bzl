@@ -209,6 +209,38 @@ def _fault_trees_impl(ctx):
         ),
     ]
 
+def _assessments_from_needs(ctx, fault_trees):
+    """assessments.lobster derived from the sufficient FMEA needs of the failure_modes targets, or None."""
+    fm_infos = [fm[FailureModesInfo] for fm in ctx.attr.failure_modes if fm[FailureModesInfo].package]
+    rc_lobster = fault_trees.lobster_files.get("fta_root_causes.lobster")
+    if not fm_infos or not rc_lobster:
+        return None
+    if len({info.package: True for info in fm_infos}) > 1:
+        fail("{}: failure_modes from needs must share one package to derive assessments".format(ctx.label))
+    measure_lobster = depset(transitive = [
+        m[ComponentRequirementsInfo].srcs if ComponentRequirementsInfo in m else m[AssumptionsOfUseInfo].aou_lobster
+        for m in ctx.attr.safety_measures
+    ]).to_list()
+    needs_files = depset(transitive = [info.needs for info in fm_infos]).to_list()
+
+    out = ctx.actions.declare_file("{}/assessments.lobster".format(ctx.label.name))
+    args = ctx.actions.args()
+    args.add("--package", fm_infos[0].package)
+    args.add("--root-causes", rc_lobster)
+    args.add_all(measure_lobster, before_each = "--measures")
+    args.add("--out", out)
+    args.add("--log-level", get_log_level(ctx))
+    args.add_all(needs_files)
+    ctx.actions.run(
+        executable = ctx.executable._fmea_needs_assessments,
+        inputs = needs_files + measure_lobster + [rc_lobster],
+        outputs = [out],
+        arguments = [args],
+        mnemonic = "FmeaNeedsAssessments",
+        progress_message = "Deriving root-cause assessments from FMEA needs for %s" % ctx.label,
+    )
+    return out
+
 def _safety_analysis_impl(ctx):
     fault_trees = ctx.attr.fault_trees[FaultTreesInfo]
     fault_trees_trlc = ctx.attr.fault_trees[TrlcProviderInfo]
@@ -301,6 +333,10 @@ def _safety_analysis_impl(ctx):
             assessment_files + fta_and_fm_files + measure_files + context_files + spec_files,
             ctx.file._assessments_lobster_config,
         )
+    else:
+        needs_assessments = _assessments_from_needs(ctx, fault_trees)
+        if needs_assessments:
+            lobster_files["assessments.lobster"] = needs_assessments
 
     # The .puml diagrams are referenced inline via ``.. uml::`` but
     # must not be toctree documents, so they travel as aux_srcs (symlinked
@@ -422,6 +458,12 @@ _safety_analysis = rule(
                 default = Label("//bazel/rules/rules_score/lobster/config:assessments_config"),
                 allow_single_file = True,
                 doc = "lobster-trlc YAML config for RootCauseAssessment records.",
+            ),
+            "_fmea_needs_assessments": attr.label(
+                default = Label("//bazel/rules/rules_score:fmea_needs_assessments"),
+                executable = True,
+                cfg = "exec",
+                doc = "Derives the assessments of failure modes generated from FMEA needs.",
             ),
             "_template": attr.label(
                 default = Label("//bazel/rules/rules_score:templates/safety_analysis.template.rst"),

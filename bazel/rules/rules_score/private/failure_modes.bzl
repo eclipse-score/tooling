@@ -24,14 +24,22 @@ load("//bazel/rules/rules_score/private:requirements.bzl", "score_requirements_r
 
 def failure_modes(
         name,
-        srcs,
+        srcs = [],
         deps = [],
+        needs = [],
+        package = None,
         lobster_config = Label("//bazel/rules/rules_score/lobster/config:failuremodes_config"),
         **kwargs):
     """Define the failure modes of a safety analysis.
 
     Creates a target providing FailureModesInfo, TrlcProviderInfo and
     SphinxSourcesInfo, plus a validation test target ``<name>_test``.
+
+    The failure modes are either TRLC records (``srcs``) or the
+    ``comp_saf_fmea`` needs of a Sphinx-Needs FMEA (``needs``). The needs are
+    turned into generated ``FailureMode`` records named by the need ID, so a
+    fault tree references them as ``<package>.<need ID>``. A violated
+    ``real_arc_int_op`` need names the ``ApiMethod`` of its ``interface``.
 
     Args:
         name: The name of the target.
@@ -40,6 +48,10 @@ def failure_modes(
             records. List the ``architectural_design`` target whose
             ``public_api.trlc`` the ``interface`` field references, and any
             other target whose records are referenced.
+        needs: score_docs_as_code ``docs_bundle`` targets or ``needs.json``
+            files holding ``comp_saf_fmea`` needs.
+        package: TRLC package of the records generated from ``needs``.
+            Defaults to the target name.
         lobster_config: Lobster YAML configuration for FailureMode traceability
             extraction. Defaults to the standard S-CORE failure mode config.
         **kwargs: Additional arguments (e.g. ``visibility``, ``tags``).
@@ -60,6 +72,8 @@ def failure_modes(
         name = name,
         srcs = srcs,
         deps = deps,
+        needs = needs,
+        needs_package = package,
         req_kind = "failure_mode",
         lobster_config = lobster_config,
         **kwargs

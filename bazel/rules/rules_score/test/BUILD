@@ -868,6 +868,29 @@ dependable_element(
     tests = [],
 )
 
+# Same element without Sphinx HTML documentation; its test cases are exported
+# as needs.json for an external Sphinx-Needs build.
+dependable_element(
+    name = "needs_export_example_lib",
+    testonly = True,
+    architectural_design = [":arch_design_public_api_example"],
+    components = [":test_component"],
+    dependability_analysis = [":public_api_example_dependability_analysis"],
+    docs = False,
+    integrity_level = "B",
+    maturity = "development",
+    requirements = [":feat_req"],
+    tests = [],
+)
+
+py_test(
+    name = "test_dependable_element_needs_json",
+    size = "small",
+    srcs = ["test_dependable_element_needs_json.py"],
+    data = [":needs_export_example_lib_needs.json"],
+    env = {"NEEDS_JSON": "$(rootpath :needs_export_example_lib_needs.json)"},
+)
+
 # Live example of clickable_plantuml's "unit to class diagram" linking chain:
 # the *static* architecture (unit_overview.puml, a component diagram) shows
 # `unit_one` as a leaf unit (no children) - a reference - and

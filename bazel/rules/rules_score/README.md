@@ -105,6 +105,42 @@ that `:satisfies:` / `:derived_from:` resolve in.
 
 ---
 
+## Requirements from Sphinx-Needs (`needs`)
+
+```starlark
+component_requirements(
+    name = "my_comp_reqs",
+    needs = ["//my/component:docs"],  # score_docs_as_code docs_bundle or needs.json file
+    comp_id = "comp__my_component",
+)
+```
+
+**`bazel build`** — `assumed_system_requirements`, `feature_requirements`,
+`component_requirements` and `assumptions_of_use` also accept the `needs.json`
+export of a score_docs_as_code `docs_bundle` (or any `needs.json` file).
+`lobster_sphinx_needs`, the counterpart of `lobster-trlc`, converts the needs of
+the kind's need type (`stkh_req`, `feat_req`, `comp_req`, `aou_req`) into the
+same LOBSTER requirement items (kind `AssumedSystemReq`, `FeatReq`, `CompReq`,
+`AoU`; tag `req <need id>@<version>`; link fields as tracing targets, a
+`[version==N]` filter becomes `@N`). Needs with status `invalid` are skipped.
+The needs are listed on a plain RST page; TRLC rendering and `<name>_test` only
+apply to `srcs`, which can be combined with `needs`. Tests trace to these
+requirements by need id (`RecordProperty("lobster-tracing", "comp_req__...")`).
+`feature_requirements` and `component_requirements` require `feat_id` /
+`comp_id` with `needs`: only requirements whose `satisfied_by` link names that
+feature or component are converted, so a platform-wide `needs.json` can be
+passed as is. `stkh_req` and `aou_req` belong to the platform and are not
+filtered. All kinds share one conversion configuration
+(`lobster/config/lobster_sphinx_needs.yaml`).
+
+The way back: `dependable_element` writes `<name>_needs.json` with one
+`testcase` Need per test case of its LOBSTER report (`lobster_report_to_needs`,
+format of the score_docs_as_code test.xml parser), for
+`docs(dependable_elements = [...])` of score_docs_as_code. With `docs = False`
+the element builds no own Sphinx HTML documentation.
+
+---
+
 ## `architectural_design`
 
 ```starlark

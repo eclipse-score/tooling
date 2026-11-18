@@ -114,6 +114,50 @@ py_binary(
     ],
 )
 
+# Counterpart of lobster-trlc for requirements exported by Sphinx-Needs (needs.json)
+py_binary(
+    name = "lobster_sphinx_needs",
+    srcs = ["src/lobster_sphinx_needs.py"],
+    imports = ["src"],
+    main = "src/lobster_sphinx_needs.py",
+    visibility = ["//visibility:public"],
+    deps = [
+        "@lobster//lobster/common",
+        requirement("pyyaml"),
+    ],
+)
+
+# Exports the test cases of a dependable element's LOBSTER report as Sphinx-Needs testcase Needs
+py_binary(
+    name = "lobster_report_to_needs",
+    srcs = ["src/lobster_report_to_needs.py"],
+    imports = ["src"],
+    main = "src/lobster_report_to_needs.py",
+    visibility = ["//visibility:public"],
+)
+
+# Generates FailureMode records from the comp_saf_fmea Needs of a Sphinx-Needs FMEA
+py_binary(
+    name = "fmea_needs_to_trlc",
+    srcs = ["src/fmea_needs_to_trlc.py"],
+    imports = ["src"],
+    main = "src/fmea_needs_to_trlc.py",
+    visibility = ["//visibility:public"],
+)
+
+# Derives the root-cause assessments of failure modes generated from FMEA needs
+py_binary(
+    name = "fmea_needs_assessments",
+    srcs = ["src/fmea_needs_assessments.py"],
+    imports = ["src"],
+    main = "src/fmea_needs_assessments.py",
+    visibility = ["//visibility:public"],
+    deps = [
+        ":lobster_sphinx_needs",
+        "@lobster//lobster/common",
+    ],
+)
+
 # Merges lobster files, collapsing the same item arriving via several paths
 py_binary(
     name = "merge_lobster_items",
