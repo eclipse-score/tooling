@@ -99,8 +99,9 @@ analyses list it. An ``assumptions_of_use`` target that no ``safety_analysis``
 lists in ``safety_measures`` is neither rendered nor forwarded, and a
 ``dependable_element`` without a safety analysis has no own AoUs.
 
-An own AoU is never a ``derived_from`` source of a ``CompReq``; only AoUs
-received from another dependable element are (see `AoU Forwarding`_).
+An own AoU must not be a ``derived_from`` source of a ``CompReq``; only AoUs
+received from another dependable element are (see `AoU Forwarding`_). The TRLC
+model does not enforce this.
 
 AoU Forwarding
 --------------
@@ -149,11 +150,14 @@ covered by at least one of:
 - **Handling it locally**: a component requirement's ``derived_from`` field
   references the AoU it implements (see below). This shows up as "Component
   Requirements" coverage in the report.
+- **Reviewing it manually**: a ``manual_analysis`` target references the AoU
+  directly (see below). This shows up as "Manual Analysis" coverage in the
+  report.
 - **Chain-forwarding it further** (with justification) via ``aou_forwarding``,
   to be handled by this element's own dependees instead. This shows up as
   "Forwarded AoUs" coverage in the report.
 
-If a received AoU is neither handled nor forwarded, the ``bazel test``
+If a received AoU is neither handled, reviewed nor forwarded, the ``bazel test``
 traceability check fails.
 
 A single dependable element can do all three at once — receive AoUs from its
@@ -198,7 +202,6 @@ Two things are required for the reference to resolve:
    component_requirements(
        name = "component_requirements",
        srcs = ["component_requirements.trlc"],
-       testonly = True,
        deps = [
            ":feature_requirements",
            "@seooc//docs:sample_aous",
@@ -212,21 +215,59 @@ rejected) by the TRLC parser itself at build time, not by a later lobster-report
 matching step -- while the resulting lobster item is still tagged and traced
 exactly as before, so the coverage report is unaffected.
 
+**Handling a received AoU with manual analysis**
+Reference the received AoU directly in the review's ``requirements`` list and
+add the review target to ``dependable_element.manual_analysis``. The
+dependency's AoU records are already present in the "Received AoUs" report
+level; they need not be copied into component requirements.
+
+.. code-block:: yaml
+   :caption: examples/seooc/manual_analysis/received_input_pointer/analysis.yaml
+
+   requirements:
+     - "OtherLibrary.ValidInputPointer@1"
+
+.. code-block:: starlark
+   :caption: examples/seooc/BUILD
+
+   dependable_element(
+       name = "safety_software_seooc_example",
+       manual_analysis = [
+           "//manual_analysis/received_input_pointer:review",
+       ],
+       deps = ["@some_other_library//:other_seooc"],
+       # Other required attributes omitted.
+   )
+
+Include the original AoU source, implementation and relevant configuration in
+the review's contexts so changes invalidate its lock. LOBSTER coverage
+establishes the reference, not a successful or current verification result:
+``bazel test`` of the ``manual_analysis`` target checks the lock and the
+recorded assertions. This does not verify that the element's own AoUs have
+been fulfilled by its users.
+
 **Example: three-level forwarding chain** (the real working code for this
 example lives in ``examples/some_other_library``, ``examples/seooc``, and
 ``examples/integrator``)
 
 ::
 
-    other_seooc                     → defines AoUs: OtherLibrary.TimingConstraint, OtherLibrary.SpaceConstraint
+    other_seooc                     → defines AoUs: OtherLibrary.TimingConstraint,
+                                                    OtherLibrary.SpaceConstraint,
+                                                    OtherLibrary.ValidInputPointer
         ↑ (deps)
     safety_software_seooc_example   → defines own AoU: SampleType.SampleAoU (auto-forwarded)
-                                     → handles received SpaceConstraint locally via derived_from
-                                     → chain-forwards received TimingConstraint via aou_forwarding.yaml
+                                    → handles received SpaceConstraint locally via derived_from
+                                    → reviews received ValidInputPointer with manual analysis
+                                    → chain-forwards received TimingConstraint via aou_forwarding.yaml
         ↑ (deps)
     integrator_seooc                → receives SampleType.SampleAoU (auto-forwarded)
                                        and OtherLibrary.TimingConstraint (chain-forwarded)
-                                     → handles both locally via derived_from (no further dependees)
+                                    → also depends on other_seooc directly, so all three of its AoUs
+                                       arrive; TimingConstraint is merged into one received AoU
+                                    → handles SampleAoU, SpaceConstraint and ValidInputPointer
+                                       locally via derived_from
+                                    → reviews TimingConstraint with manual analysis
 
 .. code-block:: starlark
    :caption: examples/seooc/BUILD

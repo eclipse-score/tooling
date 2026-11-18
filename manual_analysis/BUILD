@@ -24,6 +24,11 @@ load(
     "manual_analysis_update_env_test",
 )
 
+exports_files(
+    ["docs/tool_requirements.trlc"],
+    visibility = ["//bazel/rules/rules_score/docs/requirements:__pkg__"],
+)
+
 filegroup(
     name = "readme_md",
     srcs = ["README.md"],
@@ -333,7 +338,10 @@ py_test(
     name = "lobster_generator_test",
     srcs = ["lobster_generator_test.py"],
     main = "lobster_generator_test.py",
-    deps = [":lobster_generator"],
+    deps = [
+        ":lobster_generator",
+        "@lobster//lobster/common",
+    ],
 )
 
 py_test(

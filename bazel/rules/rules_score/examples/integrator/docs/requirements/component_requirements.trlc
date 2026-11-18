@@ -27,7 +27,7 @@ ScoreReq.CompReq COMP_INT_001 {
 ScoreReq.CompReq COMP_INT_002 {
     description = "The cyclic task shall invoke the validation interface every 10ms using a hardware timer interrupt, satisfying the underlying library's timing constraint"
     safety = ScoreReq.Asil.B
-    derived_from = [Integrator.FEAT_INT_002@1, OtherLibrary.TimingConstraint@1]
+    derived_from = [Integrator.FEAT_INT_002@1]
     version = 1
 }
 
@@ -42,5 +42,12 @@ ScoreReq.CompReq COMP_INT_004 {
     description = "The diagnostic reporter shall provide a health status register readable via the diagnostic interface"
     safety = ScoreReq.Asil.B
     derived_from = [Integrator.FEAT_INT_004@1]
+    version = 1
+}
+
+ScoreReq.CompReq COMP_INT_005 {
+    description = "The startup module shall limit the memory used by SEooC invocations to 10 MB and shall pass only valid input pointers to the SEooC"
+    safety = ScoreReq.Asil.B
+    derived_from = [Integrator.FEAT_INT_001@1, OtherLibrary.SpaceConstraint@1, OtherLibrary.ValidInputPointer@1]
     version = 1
 }

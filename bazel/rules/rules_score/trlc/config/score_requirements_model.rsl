@@ -194,10 +194,11 @@ tuple CompReqSourceId {
 }
 
 type CompReq "Component-level requirement allocated to a specific software component. Acts as a control measure when a RootCauseAssessment lists it." extends RequirementSafety {
-    derived_from "Versioned references to the FeatReq, AssumedSystemReq or received AoU items this component requirement is derived from. An AoU reference is only for AoUs received from another dependable_element (listed in this target's deps); the element's own AoUs are never a derived_from source."
+    derived_from "Versioned references to the FeatReq, AssumedSystemReq or received AoU items this component requirement is derived from. An AoU reference is only for AoUs received from another dependable_element (listed in this target's deps); the element's own AoUs must not be a derived_from source (not enforced by this model)."
                 CompReqSourceId[1 .. *]
 }
 
+// RootCause has no ASIL, so a root-cause upstream imposes no constraint.
 checks CompReq {
     (forall upstream in derived_from =>
         not ((upstream.item.safety == Asil.B and safety == Asil.QM) or

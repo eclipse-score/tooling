@@ -10,7 +10,10 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  ********************************************************************************/
-package Tools
+package ManualAnalysisRequirements
+import ToolQualification
+import Tools
+import UseCases
 
 section "Tool Requirements" {
 
@@ -18,15 +21,21 @@ section "Tool Requirements" {
 
         section "Target Structure" {
 
-            ToolRequirement ManualAnalysisUpdateTargetName {
+            ToolQualification.ToolRequirement ManualAnalysisUpdateTargetName {
+                derived_from = [UseCases.Perform_Manual_Analysis]
+                satisfied_by = Tools.ManualAnalysis
                 description = '''The `manual_analysis` macro shall define a Bazel target named `<name>.update` that is invocable via `bazel run`, where `<name>` is the `name` attribute of the macro invocation.'''
             }
 
-            ToolRequirement ManualAnalysisTestTargetName {
+            ToolQualification.ToolRequirement ManualAnalysisTestTargetName {
+                derived_from = [UseCases.Perform_Manual_Analysis]
+                satisfied_by = Tools.ManualAnalysis
                 description = '''The `manual_analysis` macro shall define a Bazel target named `<name>` that is invocable via `bazel test`, where `<name>` is the `name` attribute of the macro invocation.'''
             }
 
-            ToolRequirement ManualAnalysisContextProviderContract {
+            ToolQualification.ToolRequirement ManualAnalysisContextProviderContract {
+                derived_from = [UseCases.Detect_Stale_Manual_Analysis]
+                satisfied_by = Tools.ManualAnalysis
                 description = '''The manual-analysis tooling shall reject any `contexts` entry from a target that does not provide `ManualAnalysisContextInfo`, during Bazel analysis.'''
             }
 
@@ -34,23 +43,33 @@ section "Tool Requirements" {
 
         section "Lock-File Integrity" {
 
-            ToolRequirement ManualAnalysisLockFileInputCoverage {
+            ToolQualification.ToolRequirement ManualAnalysisLockFileInputCoverage {
+                derived_from = [UseCases.Detect_Stale_Manual_Analysis]
+                satisfied_by = Tools.ManualAnalysis
                 description = '''The manual-analysis tooling shall include a SHA-256 hash of the byte content of each file collected from all provided `ManualAnalysisContextInfo.files` depsets, the analysis YAML file, and the results file when computing the lock file.'''
             }
 
-            ToolRequirement ManualAnalysisLockRuleInputCoverage {
+            ToolQualification.ToolRequirement ManualAnalysisLockRuleInputCoverage {
+                derived_from = [UseCases.Detect_Stale_Manual_Analysis]
+                satisfied_by = Tools.ManualAnalysis
                 description = '''The manual-analysis tooling shall include a SHA-256 hash of each JSON-encoded rule attribute string collected from all provided `ManualAnalysisContextInfo.rules` depsets when computing the lock file.'''
             }
 
-            ToolRequirement ManualAnalysisLockDeterminism {
+            ToolQualification.ToolRequirement ManualAnalysisLockDeterminism {
+                derived_from = [UseCases.Detect_Stale_Manual_Analysis]
+                satisfied_by = Tools.ManualAnalysis
                 description = '''The manual-analysis tooling shall write lock entries in ascending lexicographic order of their sort key, where the sort key is the workspace-relative path for file entries and the rule label for rule entries.'''
             }
 
-            ToolRequirement ManualAnalysisLockMismatchDetection {
+            ToolQualification.ToolRequirement ManualAnalysisLockMismatchDetection {
+                derived_from = [UseCases.Detect_Stale_Manual_Analysis]
+                satisfied_by = Tools.ManualAnalysis
                 description = '''The manual-analysis test target shall fail when the computed lock file content is not byte-identical to the committed lock file content.'''
             }
 
-            ToolRequirement ManualAnalysisLockFilesExistForVerification {
+            ToolQualification.ToolRequirement ManualAnalysisLockFilesExistForVerification {
+                derived_from = [UseCases.Detect_Stale_Manual_Analysis]
+                satisfied_by = Tools.ManualAnalysis
                 description = '''The manual-analysis tooling shall fail lock-file verification when the computed lock file or the committed lock file does not exist.'''
             }
 
@@ -58,43 +77,63 @@ section "Tool Requirements" {
 
         section "Analysis Schema" {
 
-            ToolRequirement ManualAnalysisRequirementsFieldPresent {
+            ToolQualification.ToolRequirement ManualAnalysisRequirementsFieldPresent {
+                derived_from = [UseCases.Trace_Manual_Analysis_Evidence]
+                satisfied_by = Tools.ManualAnalysis
                 description = '''The manual-analysis tooling shall reject an analysis YAML file when the `requirements` field is missing.'''
             }
 
-            ToolRequirement ManualAnalysisRequirementsFieldListType {
+            ToolQualification.ToolRequirement ManualAnalysisRequirementsFieldListType {
+                derived_from = [UseCases.Trace_Manual_Analysis_Evidence]
+                satisfied_by = Tools.ManualAnalysis
                 description = '''The manual-analysis tooling shall reject an analysis YAML file when `requirements` is not a list.'''
             }
 
-            ToolRequirement ManualAnalysisRequirementsFieldNonEmpty {
+            ToolQualification.ToolRequirement ManualAnalysisRequirementsFieldNonEmpty {
+                derived_from = [UseCases.Trace_Manual_Analysis_Evidence]
+                satisfied_by = Tools.ManualAnalysis
                 description = '''The manual-analysis tooling shall reject an analysis YAML file when `requirements` is an empty list.'''
             }
 
-            ToolRequirement ManualAnalysisRequirementIdentifierStringType {
+            ToolQualification.ToolRequirement ManualAnalysisRequirementIdentifierStringType {
+                derived_from = [UseCases.Trace_Manual_Analysis_Evidence]
+                satisfied_by = Tools.ManualAnalysis
                 description = '''The manual-analysis tooling shall reject an analysis YAML file when any entry in `requirements` is not a string.'''
             }
 
-            ToolRequirement ManualAnalysisRequirementIdentifierNonEmpty {
+            ToolQualification.ToolRequirement ManualAnalysisRequirementIdentifierNonEmpty {
+                derived_from = [UseCases.Trace_Manual_Analysis_Evidence]
+                satisfied_by = Tools.ManualAnalysis
                 description = '''The manual-analysis tooling shall reject an analysis YAML file when any string entry in `requirements` is empty after trimming whitespace.'''
             }
 
-            ToolRequirement ManualAnalysisSupportedStepTypes {
+            ToolQualification.ToolRequirement ManualAnalysisSupportedStepTypes {
+                derived_from = [UseCases.Perform_Manual_Analysis]
+                satisfied_by = Tools.ManualAnalysis
                 description = '''The manual-analysis tooling shall reject an analysis YAML file when any `steps` entry uses a step type other than `action`, `automated_action`, `decision`, `assertion`, or `repeat`.'''
             }
 
-            ToolRequirement ManualAnalysisStepsFieldPresent {
+            ToolQualification.ToolRequirement ManualAnalysisStepsFieldPresent {
+                derived_from = [UseCases.Perform_Manual_Analysis]
+                satisfied_by = Tools.ManualAnalysis
                 description = '''The manual-analysis tooling shall reject an analysis YAML file when the `steps` field is missing.'''
             }
 
-            ToolRequirement ManualAnalysisStepsFieldListType {
+            ToolQualification.ToolRequirement ManualAnalysisStepsFieldListType {
+                derived_from = [UseCases.Perform_Manual_Analysis]
+                satisfied_by = Tools.ManualAnalysis
                 description = '''The manual-analysis tooling shall reject an analysis YAML file when `steps` is not a list.'''
             }
 
-            ToolRequirement ManualAnalysisStepsNonEmpty {
+            ToolQualification.ToolRequirement ManualAnalysisStepsNonEmpty {
+                derived_from = [UseCases.Perform_Manual_Analysis]
+                satisfied_by = Tools.ManualAnalysis
                 description = '''The manual-analysis tooling shall reject an analysis YAML file when `steps` is an empty list.'''
             }
 
-            ToolRequirement ManualAnalysisFinalStepAssertionType {
+            ToolQualification.ToolRequirement ManualAnalysisFinalStepAssertionType {
+                derived_from = [UseCases.Perform_Manual_Analysis]
+                satisfied_by = Tools.ManualAnalysis
                 description = '''The manual-analysis tooling shall reject an analysis YAML file when the last entry in `steps` does not use the `assertion` step type.'''
             }
 
@@ -102,63 +141,93 @@ section "Tool Requirements" {
 
         section "Execution And Verdict" {
 
-            ToolRequirement ManualAnalysisUpdateRunsInteractiveFlow {
+            ToolQualification.ToolRequirement ManualAnalysisUpdateRunsInteractiveFlow {
+                derived_from = [UseCases.Perform_Manual_Analysis]
+                satisfied_by = Tools.ManualAnalysis
                 description = '''The manual-analysis update target shall guide the user through each step defined in the analysis YAML file in sequence.'''
             }
 
-            ToolRequirement ManualAnalysisUpdateRefreshesLockInSameInvocation {
+            ToolQualification.ToolRequirement ManualAnalysisUpdateRefreshesLockInSameInvocation {
+                derived_from = [UseCases.Detect_Stale_Manual_Analysis]
+                satisfied_by = Tools.ManualAnalysis
                 description = '''The manual-analysis update target shall recompute and write the lock file after completing the guided step execution, within the same invocation.'''
             }
 
-            ToolRequirement ManualAnalysisResultsFileWrittenAfterEachStep {
+            ToolQualification.ToolRequirement ManualAnalysisResultsFileWrittenAfterEachStep {
+                derived_from = [UseCases.Perform_Manual_Analysis]
+                satisfied_by = Tools.ManualAnalysis
                 description = '''The manual-analysis update target shall write all step outcomes recorded so far to the results file after each step completes.'''
             }
 
-            ToolRequirement ManualAnalysisResultsFilePartialRunOnInterrupt {
+            ToolQualification.ToolRequirement ManualAnalysisResultsFilePartialRunOnInterrupt {
+                derived_from = [UseCases.Perform_Manual_Analysis]
+                satisfied_by = Tools.ManualAnalysis
                 description = '''The manual-analysis update target shall append a failing assertion entry with `partial_run = true` to the results list and write the results file when the process receives an interrupt signal or the input stream is closed before all steps complete.'''
             }
 
-            ToolRequirement ManualAnalysisResultsAnalysisPathWritten {
+            ToolQualification.ToolRequirement ManualAnalysisResultsAnalysisPathWritten {
+                derived_from = [UseCases.Perform_Manual_Analysis]
+                satisfied_by = Tools.ManualAnalysis
                 description = '''The manual-analysis update target shall write the top-level `analysis` field in the results file as the workspace-relative path of the analysis YAML file.'''
             }
 
-            ToolRequirement ManualAnalysisResultsFileExists {
+            ToolQualification.ToolRequirement ManualAnalysisResultsFileExists {
+                derived_from = [UseCases.Perform_Manual_Analysis]
+                satisfied_by = Tools.ManualAnalysis
                 description = '''The manual-analysis tooling shall reject a results file when the results file does not exist.'''
             }
 
-            ToolRequirement ManualAnalysisResultsFileReadable {
+            ToolQualification.ToolRequirement ManualAnalysisResultsFileReadable {
+                derived_from = [UseCases.Perform_Manual_Analysis]
+                satisfied_by = Tools.ManualAnalysis
                 description = '''The manual-analysis tooling shall reject a results file when the results file cannot be read.'''
             }
 
-            ToolRequirement ManualAnalysisResultsFileValidJson {
+            ToolQualification.ToolRequirement ManualAnalysisResultsFileValidJson {
+                derived_from = [UseCases.Perform_Manual_Analysis]
+                satisfied_by = Tools.ManualAnalysis
                 description = '''The manual-analysis tooling shall reject a results file when the results file content is not valid JSON.'''
             }
 
-            ToolRequirement ManualAnalysisResultsPayloadType {
+            ToolQualification.ToolRequirement ManualAnalysisResultsPayloadType {
+                derived_from = [UseCases.Perform_Manual_Analysis]
+                satisfied_by = Tools.ManualAnalysis
                 description = '''The manual-analysis tooling shall reject a results file when the top-level JSON value is not an object.'''
             }
 
-            ToolRequirement ManualAnalysisResultsKeyPresent {
+            ToolQualification.ToolRequirement ManualAnalysisResultsKeyPresent {
+                derived_from = [UseCases.Perform_Manual_Analysis]
+                satisfied_by = Tools.ManualAnalysis
                 description = '''The manual-analysis tooling shall reject a results file when the `results` key is absent from the top-level JSON object.'''
             }
 
-            ToolRequirement ManualAnalysisResultsListType {
+            ToolQualification.ToolRequirement ManualAnalysisResultsListType {
+                derived_from = [UseCases.Perform_Manual_Analysis]
+                satisfied_by = Tools.ManualAnalysis
                 description = '''The manual-analysis tooling shall reject a results file when `results` is not a list.'''
             }
 
-            ToolRequirement ManualAnalysisResultsListNonEmpty {
+            ToolQualification.ToolRequirement ManualAnalysisResultsListNonEmpty {
+                derived_from = [UseCases.Perform_Manual_Analysis]
+                satisfied_by = Tools.ManualAnalysis
                 description = '''The manual-analysis tooling shall reject a results file when `results` is an empty list.'''
             }
 
-            ToolRequirement ManualAnalysisResultsFinalEntryAssertionType {
+            ToolQualification.ToolRequirement ManualAnalysisResultsFinalEntryAssertionType {
+                derived_from = [UseCases.Perform_Manual_Analysis]
+                satisfied_by = Tools.ManualAnalysis
                 description = '''The manual-analysis tooling shall reject a results file when the final entry in `results` is not a JSON object with `type` equal to `"assertion"`.'''
             }
 
-            ToolRequirement ManualAnalysisResultsFinalAssertionPassedTrue {
+            ToolQualification.ToolRequirement ManualAnalysisResultsFinalAssertionPassedTrue {
+                derived_from = [UseCases.Perform_Manual_Analysis]
+                satisfied_by = Tools.ManualAnalysis
                 description = '''The manual-analysis tooling shall evaluate a results file as passing only when the final entry in `results` has `passed` equal to the boolean value `true`.'''
             }
 
-            ToolRequirement ManualAnalysisTestVerdictRule {
+            ToolQualification.ToolRequirement ManualAnalysisTestVerdictRule {
+                derived_from = [UseCases.Perform_Manual_Analysis, UseCases.Detect_Stale_Manual_Analysis]
+                satisfied_by = Tools.ManualAnalysis
                 description = '''The manual-analysis test runner shall, if invoked without the `--allow-check-failures` flag, return a passing verdict only when both lock-file verification and results-file verification pass.'''
             }
 
@@ -166,27 +235,39 @@ section "Tool Requirements" {
 
         section "Traceability Artifact" {
 
-            ToolRequirement ManualAnalysisLobsterArtifactGenerated {
+            ToolQualification.ToolRequirement ManualAnalysisLobsterArtifactGenerated {
+                derived_from = [UseCases.Trace_Manual_Analysis_Evidence]
+                satisfied_by = Tools.ManualAnalysis
                 description = '''The manual-analysis test target shall generate one LOBSTER artifact file in `lobster-act-trace` format version 3.'''
             }
 
-            ToolRequirement ManualAnalysisLobsterSingleActivityItem {
+            ToolQualification.ToolRequirement ManualAnalysisLobsterSingleActivityItem {
+                derived_from = [UseCases.Trace_Manual_Analysis_Evidence]
+                satisfied_by = Tools.ManualAnalysis
                 description = '''The generated LOBSTER artifact shall contain exactly one activity item identified by the Bazel label of the `manual_analysis` target.'''
             }
 
-            ToolRequirement ManualAnalysisLobsterRefsFromRequirements {
+            ToolQualification.ToolRequirement ManualAnalysisLobsterRefsFromRequirements {
+                derived_from = [UseCases.Trace_Manual_Analysis_Evidence]
+                satisfied_by = Tools.ManualAnalysis
                 description = '''The generated LOBSTER activity item `refs` list shall contain one entry of the form `req <identifier>` for each identifier in the analysis YAML `requirements` list.'''
             }
 
-            ToolRequirement ManualAnalysisLobsterStatusOk {
+            ToolQualification.ToolRequirement ManualAnalysisLobsterStatusOk {
+                derived_from = [UseCases.Trace_Manual_Analysis_Evidence]
+                satisfied_by = Tools.ManualAnalysis
                 description = '''The manual-analysis tooling shall set the LOBSTER activity `status` to `ok` when both lock-file verification and results-file verification pass.'''
             }
 
-            ToolRequirement ManualAnalysisLobsterStatusFail {
+            ToolQualification.ToolRequirement ManualAnalysisLobsterStatusFail {
+                derived_from = [UseCases.Trace_Manual_Analysis_Evidence]
+                satisfied_by = Tools.ManualAnalysis
                 description = '''The manual-analysis tooling shall set the LOBSTER activity `status` to `fail` when lock-file verification or results-file verification does not pass.'''
             }
 
-            ToolRequirement ManualAnalysisLobsterNotGeneratedOnRequirementsParseFailure {
+            ToolQualification.ToolRequirement ManualAnalysisLobsterNotGeneratedOnRequirementsParseFailure {
+                derived_from = [UseCases.Trace_Manual_Analysis_Evidence]
+                satisfied_by = Tools.ManualAnalysis
                 description = '''The manual-analysis test runner shall not generate a LOBSTER artifact when parsing the analysis YAML requirements fails.'''
             }
 

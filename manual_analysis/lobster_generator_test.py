@@ -12,12 +12,54 @@
 # *******************************************************************************
 
 import json
+from pathlib import Path
+from tempfile import TemporaryDirectory
 import unittest
+
+from lobster.common.errors import Message_Handler
+from lobster.common.io import lobster_read
 
 from manual_analysis.lobster_generator import generate_lobster_json
 
 
 class LobsterGeneratorTest(unittest.TestCase):
+    def test_canonical_labels_produce_readable_distinct_tags(self) -> None:
+        cases = [
+            (
+                "@@//manual_analysis:received_input_pointer",
+                "manualanalysis //manual_analysis:received_input_pointer",
+            ),
+            (
+                "@@dependency+//manual_analysis:received_input_pointer",
+                "manualanalysis dependency+//manual_analysis:received_input_pointer",
+            ),
+        ]
+        items = {}
+        with TemporaryDirectory() as directory:
+            for index, (label, expected_tag) in enumerate(cases):
+                with self.subTest(label=label):
+                    json_content = generate_lobster_json(
+                        requirements=["REQ-1"],
+                        analysis_passed=True,
+                        results_file_path="results.json",
+                        analysis_label=label,
+                    )
+                    payload = json.loads(json_content)
+                    tag = payload["data"][0]["tag"]
+                    self.assertNotIn("@", tag)
+                    self.assertEqual(tag, expected_tag)
+                    self.assertIn(label, payload["data"][0]["name"])
+
+                    output = Path(directory) / f"analysis_{index}.lobster"
+                    output.write_text(json_content, encoding="utf-8")
+                    lobster_read(Message_Handler(), str(output), "Manual Analysis", items)
+
+        expected_keys = {expected_tag for label, expected_tag in cases}
+        self.assertEqual(set(items), expected_keys)
+        self.assertEqual(len(items), len(cases))
+        for item in items.values():
+            self.assertIsNone(item.tag.version)
+
     def test_generate_lobster_json_models_manual_verification(self) -> None:
         payload = json.loads(
             generate_lobster_json(

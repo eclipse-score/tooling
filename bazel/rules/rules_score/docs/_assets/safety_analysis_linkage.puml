@@ -63,6 +63,10 @@ package "This dependable_element" {
         class FeatReq <<authored>>
         class AssumedSystemReq <<authored>>
     }
+
+    package "Verification" {
+        class "Manual analysis" as ManualAnalysis <<authored>>
+    }
 }
 
 ' ── Generated from the public API class diagrams (public_api.trlc) ──────────
@@ -80,6 +84,7 @@ RootCauseAssessment "0..*" --> "0..*" CompReq : measures @version\n(control)
 CompReq --> FeatReq : derived_from
 CompReq --> AssumedSystemReq : derived_from
 CompReq --> RecvAoU : derived_from\n(received AoU only)
+ManualAnalysis --> RecvAoU : requirements @version
 FeatReq --> AssumedSystemReq : derived_from
 
 note bottom of RootCause

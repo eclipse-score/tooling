@@ -531,8 +531,14 @@ root cause itself — it must be forwarded to the integrating project (see
 
 A ``CompReq`` lists an ``AoU`` in ``derived_from`` only for an AoU *received*
 from another ``dependable_element`` (one of this element's ``deps``). The
-element's own AoUs are never a ``derived_from`` source; they close a root
-cause by being listed in an assessment.
+element's own AoUs must not be a ``derived_from`` source (the TRLC model does
+not enforce this); they close a root cause by being listed in an assessment.
+
+A received AoU can alternatively be covered by a ``manual_analysis`` target
+referencing it, or by chain-forwarding it (see :doc:`assumptions_of_use`).
+Traceability completeness does not imply that a manual analysis passed or that
+its lock is current; the ``manual_analysis`` test result is checked by
+``bazel test``.
 
 Step 4 — Wire the analysis into Bazel
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

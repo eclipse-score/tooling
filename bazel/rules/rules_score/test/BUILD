@@ -204,7 +204,10 @@ architecture_json_test(
 # Sphinx Toolchain — uses score_docs_as_code so score_metamodel is importable
 # ============================================================================
 
-exports_files(["template/conf.template.py"])
+exports_files([
+    "template/conf.template.py",
+    "test_dependable_element_manual_analysis.py",
+])
 
 score_sphinx_toolchain(
     name = "score_toolchain",
@@ -3087,6 +3090,7 @@ test_suite(
         ":test_trlc_rst_image_rendering",
         ":transitive_modules_dedup_test",
         ":unit_component_tests",
+        "//de_manual_analysis:manual_analysis_tests",
         "//fixtures/image_srcs:requirements_image_tests",
         "//fixtures/spec_extras:requirements_spec_extras_tests",
     ],

@@ -36,7 +36,10 @@ trlc_requirements(
 
 trlc_requirements(
     name = "tool_requirements",
-    srcs = ["tool_requirements.trlc"],
+    srcs = [
+        "tool_requirements.trlc",
+        "//manual_analysis:docs/tool_requirements.trlc",
+    ],
     spec = ["//bazel/rules/rules_score/trlc/config:qualification_model"],
     deps = [
         ":potential_errors",

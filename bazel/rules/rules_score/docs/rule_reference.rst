@@ -277,10 +277,12 @@ testable within that component.
 A ``CompReq`` record's ``derived_from`` field (``CompReqSourceId``) may also
 reference an AoU *received* from another dependable element, alongside its usual
 ``FeatReq``/``AssumedSystemReq`` references (e.g. ``[SampleType.SampleAoU@1]``).
-The element's own AoUs are never a ``derived_from`` source. This requires
+The element's own AoUs must not be a ``derived_from`` source (not enforced by
+the TRLC model). Referencing an AoU requires
 importing the AoU's package and listing the
 ``assumptions_of_use`` target that defines it directly in this target's
-``deps`` — see :doc:`user_guide/assumptions_of_use`.
+``deps`` — see :doc:`user_guide/assumptions_of_use`. A received AoU can also be
+covered by manual analysis or chain-forwarding instead.
 
 .. _rule-assumptions-of-use:
 
