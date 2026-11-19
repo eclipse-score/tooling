@@ -387,8 +387,10 @@ view:
 |------|--------|
 | One declaration has a body, the other has none | Merged; the declaration with the body wins |
 | Both declarations have a body | Merged; members are united, an identical redeclaration is kept once |
-| Same member (name and parameters) with a different definition | `re-declared with a conflicting definition of method "<name>"` (likewise attribute, type alias, enum literal) |
-| Both have a body but are spelled with different names | `class "<id>" is defined more than once` |
+| Same member (name and parameters) with a different definition | `re-declared with a conflicting definition of method "<name>"` (likewise attribute, type alias) |
+| Same method name and parameters, only the return type differs | Kept as overloads (`const` is not modelled) |
+| Both declare enum literals, lists differ | `re-declared with a conflicting list of enum literals`; declare all literals in one diagram |
+| Both have a body but are spelled with different names (case-sensitive, qualification ignored) | `class "<id>" is defined more than once` |
 | Same id, different element type, stereotype or template parameters | `re-declared with a conflicting entity type` / `stereotype` / `template parameters` |
 
 For reparenting, a body is any member, type alias, `extends` or `implements`

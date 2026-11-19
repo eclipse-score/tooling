@@ -53,9 +53,20 @@ merge: members, type aliases, enum literals and relationships of all
 declarations are united, and a member redeclared identically is kept once. A
 member redeclared with a different definition (same name and, for methods,
 parameter list), and a different entity type, stereotype or template parameter
-list, are failures naming both source locations. Two declarations with a body
-that are spelled with different names (e.g. different aliases of specializations
-sharing an id) are reported as a duplicate class.
+list, are failures naming both source locations. Two methods with the same
+name and parameter list that differ only in the return type are kept as
+overloads, because `const` is not part of the model (e.g. `T& data()` and
+`const T& data() const`). Enum literals cannot be split across diagrams, since
+implicit values are numbered per diagram: two enum declarations with literals
+must list identical literals. Two declarations with a body that are spelled with
+different names (e.g. different aliases of specializations sharing an id) are
+reported as a duplicate class; the comparison is case-sensitive and ignores only
+the qualification (`a::B`, `a.B` and `B` are the same name).
+
+This differs deliberately from the internal API view of `architectural_design`,
+which unites the methods of an interface by name without a conflict check; there
+a method split over several files is a silent union, here a differing
+redeclaration is an error.
 *(Requirement: {requirement:downstream-ref}`Tools.ClassDesignImplementationDeclarationMerge`)*
 
 ```text

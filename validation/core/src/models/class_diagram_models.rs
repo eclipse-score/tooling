@@ -46,6 +46,17 @@ fn is_bodyless(entity: &SimpleEntity) -> bool {
         && entity.enum_literals.is_empty()
 }
 
+/// Whether two spellings of an entity name denote the same class: the
+/// qualification (`a::B`, `a.B`, `B`) is ignored, template arguments and case are not.
+fn same_declared_name(a: &str, b: &str) -> bool {
+    fn unqualified(name: &str) -> String {
+        let (base, args) = name.split_at(name.find('<').unwrap_or(name.len()));
+        let base = base.rsplit(['.', ':']).next().unwrap_or(base);
+        format!("{base}{args}")
+    }
+    unqualified(a) == unqualified(b)
+}
+
 /// The first field on which two same-id declarations disagree.
 fn conflicting_declaration_field(
     prev: &SimpleEntity,
@@ -75,20 +86,31 @@ fn merge_members(merged: &mut SimpleEntity, other: SimpleEntity) -> Result<(), S
     }
 
     for method in other.methods {
-        match merged
+        let same_signature =
+            |m: &&class_diagram::Method| m.name == method.name && m.parameters == method.parameters;
+        // `const` is not part of the model, so `T& data()` and `const T& data() const`
+        // share a signature and differ only in the return type. Such pairs are kept as
+        // overloads; any other difference is a conflict.
+        let comparable = |m: &class_diagram::Method| {
+            let mut m = m.clone();
+            m.source_location = method.source_location.clone();
+            m.return_type = method.return_type.clone();
+            m
+        };
+        if merged.methods.iter().any(|m| {
+            same_signature(&m) && m.return_type == method.return_type && comparable(m) == method
+        }) {
+            continue;
+        }
+        let conflicts = merged
             .methods
             .iter()
-            .find(|m| m.name == method.name && m.parameters == method.parameters)
-        {
-            None => merged.methods.push(method),
-            Some(existing) => {
-                let mut a = existing.clone();
-                a.source_location = method.source_location.clone();
-                if a != method {
-                    return Err(format!("definition of method \"{}\"", method.name));
-                }
-            }
+            .filter(same_signature)
+            .any(|m| comparable(m) != method);
+        if conflicts {
+            return Err(format!("definition of method \"{}\"", method.name));
         }
+        merged.methods.push(method);
     }
     for variable in other.variables {
         match merged.variables.iter().find(|v| v.name == variable.name) {
@@ -109,11 +131,21 @@ fn merge_members(merged: &mut SimpleEntity, other: SimpleEntity) -> Result<(), S
             Some(_) => return Err(format!("definition of type alias \"{}\"", alias.alias)),
         }
     }
-    for literal in other.enum_literals {
-        match merged.enum_literals.iter().find(|l| l.name == literal.name) {
-            None => merged.enum_literals.push(literal),
-            Some(existing) if existing.value == literal.value => {}
-            Some(_) => return Err(format!("definition of enum literal \"{}\"", literal.name)),
+    // Implicit enum values are numbered per diagram, so literals declared in
+    // several diagrams cannot be combined reliably.
+    if !other.enum_literals.is_empty() {
+        if merged.enum_literals.is_empty() {
+            merged.enum_literals = other.enum_literals;
+        } else {
+            let key = |l: &class_diagram::EnumLiteral| (l.name.clone(), l.value);
+            let a: Vec<_> = merged.enum_literals.iter().map(key).collect();
+            let b: Vec<_> = other.enum_literals.iter().map(key).collect();
+            if a != b {
+                return Err(
+                    "list of enum literals (declare all literals of an enum in one diagram)"
+                        .to_string(),
+                );
+            }
         }
     }
     for relationship in other.relationships {
@@ -182,9 +214,10 @@ impl ClassEntityIndex {
                     // Declarations spelled differently (e.g. specializations sharing an id)
                     // stay duplicates unless one of them is a bodyless overview entry.
                     let can_merge = merges_declarations
+                        && prev.id == indexed_entity.id
                         && (is_bodyless(&indexed_entity)
                             || is_bodyless(prev)
-                            || prev.name.eq_ignore_ascii_case(&indexed_entity.name));
+                            || same_declared_name(&prev.name, &indexed_entity.name));
                     let mut merged_entity = None;
                     if conflicting_field.is_none() && can_merge {
                         let (mut merged, other) = if is_bodyless(prev) {
@@ -472,7 +505,7 @@ mod tests {
     #[test]
     fn class_entity_index_reports_conflicting_member_definitions() {
         let mut conflicting = with_method(entity("Unit.Sample", "design_b.puml", 34), "Run");
-        conflicting.methods[0].return_type = Some("int".to_string());
+        conflicting.methods[0].visibility = Visibility::Private;
         let diagrams = vec![ClassDiagram {
             name: "classes".to_string(),
             entities: vec![
@@ -489,6 +522,85 @@ mod tests {
         assert!(result.failures[0].contains(
             "is re-declared with a conflicting definition of method \"Run\" in another class diagram file"
         ));
+    }
+
+    fn index_failures(entities: Vec<SimpleEntity>) -> (ClassEntityIndex, Vec<String>) {
+        let diagrams = vec![ClassDiagram {
+            name: "classes".to_string(),
+            entities,
+            free_functions: Vec::new(),
+        }];
+        let mut result = ValidationResult::default();
+        let index = ClassEntityIndex::build_diagram_index(&diagrams, &mut result);
+        (
+            index,
+            result.failures.iter().map(|f| f.to_string()).collect(),
+        )
+    }
+
+    #[test]
+    fn class_entity_index_keeps_overloads_differing_only_in_return_type() {
+        let mut a = with_method(entity("Unit.Sample", "a.puml", 1), "data");
+        a.methods[0].return_type = Some("T&".to_string());
+        let mut b = with_method(entity("Unit.Sample", "b.puml", 1), "data");
+        b.methods[0].return_type = Some("const T&".to_string());
+
+        let (index, failures) = index_failures(vec![a, b]);
+
+        assert!(failures.is_empty(), "{failures:?}");
+        assert_eq!(index.find_by_id("Unit.Sample").unwrap().methods.len(), 2);
+    }
+
+    #[test]
+    fn class_entity_index_does_not_merge_names_differing_in_case() {
+        let mut a = with_method(entity("Unit.Engine", "a.puml", 1), "start");
+        a.name = "Engine".to_string();
+        let mut b = with_method(entity("Unit.Engine", "b.puml", 1), "stop");
+        b.name = "engine".to_string();
+
+        let (_, failures) = index_failures(vec![a, b]);
+
+        assert_eq!(failures.len(), 1);
+        assert!(failures[0].contains("defined more than once"));
+    }
+
+    #[test]
+    fn class_entity_index_merges_qualified_and_unqualified_names() {
+        let mut a = with_method(entity("a.B", "a.puml", 1), "start");
+        a.name = "a::B".to_string();
+        let mut b = with_method(entity("a.B", "b.puml", 1), "stop");
+        b.name = "B".to_string();
+
+        let (index, failures) = index_failures(vec![a, b]);
+
+        assert!(failures.is_empty(), "{failures:?}");
+        assert_eq!(index.find_by_id("a.B").unwrap().methods.len(), 2);
+    }
+
+    #[test]
+    fn class_entity_index_rejects_enum_literals_split_across_diagrams() {
+        let literal = |name: &str, value: i128| class_diagram::EnumLiteral {
+            name: name.to_string(),
+            value: Some(value),
+            source_location: SourceLocation::new("test.puml", 1),
+        };
+        let mut a = entity("Unit.State", "a.puml", 1);
+        a.entity_type = EntityType::Enum;
+        a.enum_literals = vec![
+            literal("Idle", 0),
+            literal("Running", 1),
+            literal("Stopped", 2),
+        ];
+        let mut b = entity("Unit.State", "b.puml", 1);
+        b.entity_type = EntityType::Enum;
+        b.enum_literals = vec![literal("Stopped", 0)];
+
+        let (_, failures) = index_failures(vec![a.clone(), b]);
+        assert_eq!(failures.len(), 1);
+        assert!(failures[0].contains("enum literals"));
+
+        let (_, failures) = index_failures(vec![a.clone(), a]);
+        assert!(failures.is_empty(), "{failures:?}");
     }
 
     #[test]
