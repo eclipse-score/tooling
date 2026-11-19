@@ -118,6 +118,7 @@ impl FunctionVisitor {
                 | FunctionKind::StaticMethod
                 | FunctionKind::Constructor
                 | FunctionKind::Destructor
+                | FunctionKind::ConversionFunction
         ) {
             return None;
         }
@@ -173,7 +174,13 @@ impl FunctionVisitor {
 
         let method = Method {
             name: id.name.clone(),
+            conversion_target: if Self::is_conversion(entity) {
+                parse_callable_return_type(entity)
+            } else {
+                None
+            },
             return_type,
+            return_multiplicity: None,
             visibility: parse_visibility(entity),
             parameters: parsed_parameters.parameters,
             template_parameters: parse_template_parameters(entity),
@@ -230,6 +237,7 @@ impl FunctionVisitor {
                 name: id.name.clone(),
                 enclosing_namespace_id: namespace_id(entity),
                 return_type: parse_callable_return_type(entity),
+                return_multiplicity: None,
                 parameters: parsed_parameters.parameters,
                 template_parameters: parse_template_parameters(entity),
                 source_location: parse_source_location(entity),
@@ -309,11 +317,26 @@ impl FunctionVisitor {
     fn extract_function_id(entity: &Entity) -> Option<FunctionId> {
         Some(FunctionId {
             scope: callable_scope(entity)?,
-            name: entity.get_name()?,
+            name: if Self::is_conversion(entity) {
+                // The semantic result spelling retains aliases and dependent parameter
+                // names, unlike get_name() on member-template conversion cursors.
+                format!("operator {}", parse_callable_return_type(entity)?)
+            } else {
+                entity.get_name()?
+            },
         })
     }
 
+    fn is_conversion(entity: &Entity) -> bool {
+        entity.get_kind() == EntityKind::ConversionFunction
+            || (entity.get_kind() == EntityKind::FunctionTemplate
+                && entity.get_template_kind() == Some(EntityKind::ConversionFunction))
+    }
+
     fn extract_function_kind(entity: &Entity, scope: &Scope) -> Option<FunctionKind> {
+        if Self::is_conversion(entity) {
+            return Some(FunctionKind::ConversionFunction);
+        }
         match entity.get_kind() {
             EntityKind::FunctionDecl => Some(FunctionKind::Free),
             EntityKind::FunctionTemplate => match scope {
@@ -323,7 +346,7 @@ impl FunctionVisitor {
             EntityKind::Method => Some(Self::method_function_kind(entity)),
             EntityKind::Constructor => Some(FunctionKind::Constructor),
             EntityKind::Destructor => Some(FunctionKind::Destructor),
-            EntityKind::ConversionFunction => Some(FunctionKind::Conversion),
+            EntityKind::ConversionFunction => Some(FunctionKind::ConversionFunction),
             _ => None,
         }
     }

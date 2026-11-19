@@ -21,8 +21,8 @@ use crate::models::ClassDiagramInputs;
 use crate::readers::{to_source_location, Reader};
 use class_diagram::{
     ClassDiagram, ClassTemplateKind, EntityType, EnumLiteral, FreeFunctionDecl, FunctionArgument,
-    MemberVariable, Method, MethodModifier, RelationType, Relationship, SimpleEntity,
-    TemplateParameter, TypeAlias, Visibility,
+    MemberVariable, Method, MethodModifier, ParameterDirection, RelationType, Relationship,
+    SimpleEntity, TemplateParameter, TypeAlias, Visibility,
 };
 
 pub struct ClassDiagramReader;
@@ -134,7 +134,10 @@ fn read_method(
     entity: fb_class::SimpleEntity<'_>,
     path: &str,
 ) -> Result<Method, String> {
-    let parameters = read_function_arguments(method.parameters());
+    let parameters = read_function_arguments(
+        method.parameters(),
+        &format!("{path}:entity:{}:method:{}", entity.id(), method.name()),
+    )?;
 
     let template_parameters = read_template_parameters(
         method.template_parameters(),
@@ -158,7 +161,9 @@ fn read_method(
 
     Ok(Method {
         name: method.name().to_string(),
+        conversion_target: method.conversion_target().map(str::to_string),
         return_type: method.return_type().map(|s| s.to_string()),
+        return_multiplicity: method.return_multiplicity().map(str::to_string),
         visibility: map_visibility(
             method.visibility(),
             &format!("{path}:entity:{}:method:{}", entity.id(), method.name()),
@@ -177,20 +182,38 @@ fn read_function_arguments(
     values: Option<
         flatbuffers::Vector<'_, flatbuffers::ForwardsUOffset<fb_class::FunctionArgument<'_>>>,
     >,
-) -> Vec<FunctionArgument> {
+    context: &str,
+) -> Result<Vec<FunctionArgument>, String> {
     values
         .map(|parameters| {
             parameters
                 .iter()
-                .map(|parameter| FunctionArgument {
-                    name: parameter.name().to_string(),
-                    param_type: parameter.param_type().map(|value| value.to_string()),
-                    is_variadic: parameter.is_variadic(),
-                    is_pack_expansion: parameter.is_pack_expansion(),
+                .map(|parameter| {
+                    Ok(FunctionArgument {
+                        name: parameter.name().to_string(),
+                        param_type: parameter.param_type().map(|value| value.to_string()),
+                        direction: match parameter.direction() {
+                            fb_class::ParameterDirection::Unspecified => None,
+                            fb_class::ParameterDirection::In => Some(ParameterDirection::In),
+                            fb_class::ParameterDirection::Out => Some(ParameterDirection::Out),
+                            fb_class::ParameterDirection::InOut => Some(ParameterDirection::InOut),
+                            value => {
+                                return Err(unsupported_enum(
+                                    context,
+                                    "parameter_direction",
+                                    value,
+                                ));
+                            }
+                        },
+                        multiplicity: parameter.multiplicity().map(|value| value.to_string()),
+                        is_variadic: parameter.is_variadic(),
+                        is_pack_expansion: parameter.is_pack_expansion(),
+                    })
                 })
-                .collect()
+                .collect::<Result<Vec<_>, String>>()
         })
-        .unwrap_or_default()
+        .transpose()
+        .map(|values| values.unwrap_or_default())
 }
 
 fn read_methods(entity: fb_class::SimpleEntity<'_>, path: &str) -> Result<Vec<Method>, String> {
@@ -305,7 +328,11 @@ fn read_free_functions(
                             .enclosing_namespace_id()
                             .map(uid_utils::normalize),
                         return_type: function.return_type().map(|value| value.to_string()),
-                        parameters: read_function_arguments(function.parameters()),
+                        return_multiplicity: function.return_multiplicity().map(str::to_string),
+                        parameters: read_function_arguments(
+                            function.parameters(),
+                            &format!("{path}:free_function:{}", function.name()),
+                        )?,
                         template_parameters: read_template_parameters(
                             function.template_parameters(),
                             &format!("{path}:free_function:{}", function.name()),

@@ -1,0 +1,50 @@
+{
+  "named_const_void_pointer_const.puml": {
+    "name": "named_const_void_pointer_const",
+    "elements": [
+      {
+        "Type": {
+          "ClassLikeDef": {
+            "name": {
+              "internal": "I",
+              "alias": null
+            },
+            "namespace": "",
+            "package": "",
+            "source_location": {
+              "file": "",
+              "line": 14
+            },
+            "type_aliases": [],
+            "attributes": [],
+            "methods": [
+              {
+                "visibility": "Public",
+                "name": "f",
+                "params": [
+                  {
+                    "name": "p",
+                    "param_type": "const void* const"
+                  }
+                ],
+                "type": "bool",
+                "template_parameters": null,
+                "modifiers": [],
+                "source_location": {
+                  "file": "",
+                  "line": 15
+                }
+              }
+            ],
+            "kind": {
+              "Interface": {
+                "extends": []
+              }
+            }
+          }
+        }
+      }
+    ],
+    "relationships": []
+  }
+}

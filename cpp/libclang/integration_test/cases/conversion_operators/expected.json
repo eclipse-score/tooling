@@ -1,0 +1,255 @@
+{
+  "types": {
+    "score::memory::shared::MemoryRegionBounds": {
+      "id": "score::memory::shared::MemoryRegionBounds",
+      "name": "MemoryRegionBounds",
+      "enclosing_namespace_id": "score::memory::shared",
+      "stereotypes": [],
+      "entity_type": "Struct",
+      "type_aliases": [],
+      "variables": [],
+      "methods": [],
+      "template_parameters": null,
+      "enum_literals": [],
+      "relationships": [],
+      "source_location": {
+        "file": "cpp/libclang/integration_test/cases/conversion_operators/conversion_operators.cpp",
+        "line": 31
+      }
+    },
+    "score::memory::shared::OffsetPtr": {
+      "id": "score::memory::shared::OffsetPtr",
+      "name": "OffsetPtr",
+      "enclosing_namespace_id": "score::memory::shared",
+      "stereotypes": [],
+      "entity_type": "Class",
+      "template_kind": "Primary",
+      "type_aliases": [
+        {
+          "alias": "pointer",
+          "original_type": "PointedType *",
+          "source_location": {
+            "file": "cpp/libclang/integration_test/cases/conversion_operators/conversion_operators.cpp",
+            "line": 36
+          }
+        },
+        {
+          "alias": "difference_type",
+          "original_type": "score::memory::shared::detail_offset_ptr::difference_type",
+          "source_location": {
+            "file": "cpp/libclang/integration_test/cases/conversion_operators/conversion_operators.cpp",
+            "line": 37
+          }
+        }
+      ],
+      "variables": [
+        {
+          "name": "offset_",
+          "data_type": "score::memory::shared::detail_offset_ptr::difference_type",
+          "visibility": "private",
+          "is_static": false,
+          "source_location": {
+            "file": "cpp/libclang/integration_test/cases/conversion_operators/conversion_operators.cpp",
+            "line": 63
+          }
+        },
+        {
+          "name": "memory_bounds_",
+          "data_type": "score::memory::shared::MemoryRegionBounds",
+          "visibility": "private",
+          "is_static": false,
+          "source_location": {
+            "file": "cpp/libclang/integration_test/cases/conversion_operators/conversion_operators.cpp",
+            "line": 64
+          }
+        }
+      ],
+      "methods": [
+        {
+          "name": "operator score::memory::shared::OffsetPtr::pointer",
+          "conversion_target": "score::memory::shared::OffsetPtr::pointer",
+          "return_type": "score::memory::shared::OffsetPtr::pointer",
+          "visibility": "public",
+          "parameters": [],
+          "template_parameters": [
+            {
+              "Type": {
+                "name": "T",
+                "is_pack": false
+              }
+            },
+            {
+              "Type": {
+                "name": "",
+                "is_pack": false
+              }
+            }
+          ],
+          "modifiers": [
+            "Const"
+          ],
+          "source_location": {
+            "file": "cpp/libclang/integration_test/cases/conversion_operators/conversion_operators.cpp",
+            "line": 40
+          }
+        },
+        {
+          "name": "operator bool",
+          "conversion_target": "bool",
+          "return_type": "bool",
+          "visibility": "public",
+          "parameters": [],
+          "template_parameters": null,
+          "modifiers": [
+            "Noexcept",
+            "Const"
+          ],
+          "source_location": {
+            "file": "cpp/libclang/integration_test/cases/conversion_operators/conversion_operators.cpp",
+            "line": 45
+          }
+        },
+        {
+          "name": "GetPointerWithBoundsCheck",
+          "return_type": "score::memory::shared::OffsetPtr::pointer",
+          "visibility": "private",
+          "parameters": [
+            {
+              "name": "offset_ptr_address",
+              "param_type": "const void *const",
+              "is_variadic": false
+            },
+            {
+              "name": "offset",
+              "param_type": "const difference_type",
+              "is_variadic": false
+            },
+            {
+              "name": "offset_ptr_memory_bounds_when_not_in_shm",
+              "param_type": "const MemoryRegionBounds &",
+              "is_variadic": false
+            },
+            {
+              "name": "pointed_type_size",
+              "param_type": "const std::size_t",
+              "is_variadic": false
+            }
+          ],
+          "template_parameters": null,
+          "modifiers": [
+            "Static"
+          ],
+          "source_location": {
+            "file": "cpp/libclang/integration_test/cases/conversion_operators/conversion_operators.cpp",
+            "line": 53
+          }
+        }
+      ],
+      "template_parameters": [
+        {
+          "Type": {
+            "name": "PointedType",
+            "is_pack": false
+          }
+        }
+      ],
+      "enum_literals": [],
+      "relationships": [
+        {
+          "source": "score::memory::shared::OffsetPtr",
+          "target": "score::memory::shared::MemoryRegionBounds",
+          "relation_type": "Composition",
+          "source_multiplicity": null,
+          "target_multiplicity": null,
+          "source_location": {
+            "file": "cpp/libclang/integration_test/cases/conversion_operators/conversion_operators.cpp",
+            "line": 64
+          }
+        },
+        {
+          "source": "score::memory::shared::OffsetPtr",
+          "target": "score::memory::shared::MemoryRegionBounds",
+          "relation_type": "Dependency",
+          "source_multiplicity": null,
+          "target_multiplicity": null,
+          "source_location": {
+            "file": "cpp/libclang/integration_test/cases/conversion_operators/conversion_operators.cpp",
+            "line": 53
+          }
+        }
+      ],
+      "source_location": {
+        "file": "cpp/libclang/integration_test/cases/conversion_operators/conversion_operators.cpp",
+        "line": 34
+      }
+    }
+  },
+  "functions": [
+    {
+      "id": {
+        "scope": {
+          "Type": {
+            "namespace": [
+              "score",
+              "memory",
+              "shared"
+            ],
+            "type_path": [
+              "OffsetPtr"
+            ]
+          }
+        },
+        "name": "operator score::memory::shared::OffsetPtr::pointer"
+      },
+      "kind": "ConversionFunction",
+      "return_type": {
+        "UserDefined": "score::memory::shared::OffsetPtr::pointer"
+      },
+      "body": []
+    },
+    {
+      "id": {
+        "scope": {
+          "Type": {
+            "namespace": [
+              "score",
+              "memory",
+              "shared"
+            ],
+            "type_path": [
+              "OffsetPtr"
+            ]
+          }
+        },
+        "name": "operator bool"
+      },
+      "kind": "ConversionFunction",
+      "return_type": {
+        "Builtin": "bool"
+      },
+      "body": []
+    },
+    {
+      "id": {
+        "scope": {
+          "Type": {
+            "namespace": [
+              "score",
+              "memory",
+              "shared"
+            ],
+            "type_path": [
+              "OffsetPtr"
+            ]
+          }
+        },
+        "name": "GetPointerWithBoundsCheck"
+      },
+      "kind": "StaticMethod",
+      "return_type": {
+        "UserDefined": "score::memory::shared::OffsetPtr::pointer"
+      },
+      "body": []
+    }
+  ]
+}

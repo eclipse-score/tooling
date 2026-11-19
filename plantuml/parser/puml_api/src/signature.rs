@@ -20,6 +20,8 @@ pub(crate) struct SignatureParts<'a> {
     /// Name including its scope (`ns::Cls<T>::method`).
     pub qualified_name: &'a str,
     pub return_type: Option<&'a str>,
+    pub return_multiplicity: Option<&'a str>,
+    pub conversion_target: Option<&'a str>,
     pub parameters: &'a [FunctionArgument],
     pub template_parameters: Option<&'a [TemplateParameter]>,
     pub modifiers: &'a [MethodModifier],
@@ -30,8 +32,14 @@ pub(crate) fn render_signature(parts: &SignatureParts) -> String {
     if parts.modifiers.contains(&MethodModifier::Static) {
         out.push_str("static ");
     }
-    if let Some(return_type) = parts.return_type {
+    if let Some(return_type) = parts
+        .return_type
+        .filter(|_| parts.conversion_target.is_none())
+    {
         out.push_str(return_type);
+        if let Some(multiplicity) = parts.return_multiplicity {
+            out.push_str(&format!("[{multiplicity}]"));
+        }
         out.push(' ');
     }
     out.push_str(parts.qualified_name);
@@ -45,6 +53,14 @@ pub(crate) fn render_signature(parts: &SignatureParts) -> String {
     }
     if parts.modifiers.contains(&MethodModifier::Noexcept) {
         out.push_str(" noexcept");
+    }
+    // Conversions omit the leading return type, but must not lose annotations.
+    if parts.conversion_target.is_some() {
+        if let (Some(return_type), Some(multiplicity)) =
+            (parts.return_type, parts.return_multiplicity)
+        {
+            out.push_str(&format!(" : {return_type}[{multiplicity}]"));
+        }
     }
     out
 }
@@ -66,10 +82,17 @@ fn render_template_parameter(parameter: &TemplateParameter) -> String {
 
 fn render_parameter(parameter: &FunctionArgument) -> String {
     let mut ty = parameter.param_type.clone().unwrap_or_default();
+    if let Some(multiplicity) = &parameter.multiplicity {
+        ty.push_str(&format!("[{multiplicity}]"));
+    }
     if parameter.is_variadic || parameter.is_pack_expansion {
         ty.push_str("...");
     }
-    [ty.as_str(), parameter.name.as_str()]
+    let direction = parameter
+        .direction
+        .map(|value| value.as_str())
+        .unwrap_or("");
+    [direction, ty.as_str(), parameter.name.as_str()]
         .iter()
         .filter(|part| !part.is_empty())
         .copied()

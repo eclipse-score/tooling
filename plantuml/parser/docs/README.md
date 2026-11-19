@@ -42,6 +42,215 @@ Each preprocessed file is parsed into an AST based on its diagram type. The diag
 - Auto-detected by trying parsers in order (Sequence → Class → Component) until one succeeds
 - If all parsers fail, the error with the longest match is reported
 
+##### Conversion operators
+
+Class operations support conversion to builtin, alias, qualified/template and
+pointer/reference types, including member-template conversions:
+
+```plantuml
+@startuml conversion_operators_demo
+class Example<class T> {
+    +using pointer = T*
+    +operator bool() const noexcept
+    +operator pointer() const
+    +operator ns::Value&()
+    +operator U*()<class U> const
+}
+@enduml
+```
+
+`pointer` aliases `T*`; `T` belongs to the class and `U` to the method template
+list after `()`. The parser does not check whether `ns::Value` exists.
+
+| UML operation | Method name in JSON | Conversion target in JSON | Return type in JSON |
+|---|---|---|---|
+| `operator bool() const noexcept` | `"operator bool"` | `"bool"` | `"bool"` |
+| `operator pointer() const` | `"operator pointer"` | `"pointer"` | `"pointer"` |
+| `operator ns::Value&()` | `"operator ns::Value&"` | `"ns::Value&"` | `"ns::Value&"` |
+| `operator U*()<class U> const` | `"operator U*"` | `"U*"` | `"U*"` |
+
+**Generated API signatures** preserve the UML target spelling without a separate
+leading return type:
+
+```text
+Example<T>::operator bool() const noexcept
+Example<T>::operator pointer() const
+Example<T>::operator ns::Value&()
+Example<T>::operator U*<U>() const
+```
+
+**Parsing and storage:** These are PlantUML declarations, not C++ source.
+Conversions must have no operation parameters and cannot be static or friend.
+Pointer layers may end in one `&` or `&&`; malformed ordering is rejected.
+An omitted return type is inferred from the target; an explicit `: type` is
+preserved and checked by validation. `conversion_target` retains the target
+spelling with surrounding whitespace trimmed and identifies conversions without
+name-prefix guessing. Ordinary JSON omits it; missing JSON/FlatBuffers fields
+read as `None`. C++ extraction uses libclang cursor kinds (`ConversionFunction`).
+Existing symbolic operators and ordinary methods are unchanged.
+
+**Validation:** Design and implementation are expected to use the same type names,
+including aliases such as `pointer`. Types are normalized without expanding aliases;
+owning-class qualification added by libclang is aligned with the local alias name.
+Each conversion target must match its return type. Type-alias declarations are checked separately.
+
+**API names:** Records use `operator_conversion_<target>`, e.g.
+`operator_conversion_bool` or `operator_conversion_T_ptr`. Namespace separators
+and whitespace become underscores; `*`, `&`, `&&`, `<`, `>` and `,` become
+`ptr`, `ref`, `rref`, `of`, `end` and `and` tokens. Repeated separators collapse.
+Different method origins with case/underscore-insensitive name collisions report
+`NameCollision`. This naming does not change type matching; references to old
+hexadecimal record names need updating when regenerating records.
+
+**Limitations:** `const`, bare `noexcept`, virtual/abstract, override and final
+metadata are retained where supported. C++ `explicit` is not stored or checked;
+UML `explicit` is rejected. Template defaults, SFINAE, conditional
+`explicit`/`noexcept` and method ref qualifiers are not modeled. Validation does
+not establish template instantiation or implicit-conversion eligibility.
+
+##### Class operation parameter directions
+
+Class operation parameters support explicit `in`, `out` and `inout` metadata.
+One operation demonstrates all three directions and an unspecified direction:
+
+```plantuml
+@startuml parameter_directions_demo
+class Example {
+    +transfer(in source : Buffer, out target : Buffer, inout state : State, count : int) : void
+}
+@enduml
+```
+
+| Parameter name | Base type | Direction in JSON |
+|---|---|---|
+| `source` | `Buffer` | `"in"` |
+| `target` | `Buffer` | `"out"` |
+| `state` | `State` | `"inout"` |
+| `count` | `int` | Field omitted (`None`) |
+
+**Generated API signature** retains the existing C++-style layout:
+
+```text
+void Example::transfer(in Buffer source, out Buffer target, inout State state, int count)
+```
+
+**Compatibility:** These are parameter declarations inside PlantUML, not C++
+source code. Direction is recognized only in `direction name : type` syntax.
+Existing `type name` syntax remains unchanged: `out value` means type `out`,
+name `value`, and no explicit direction. Likewise, `in : T` means name `in`,
+type `T`, and no explicit direction. The parser does not check type existence.
+
+**Storage and validation:** Direction is stored separately from name and base
+type as `Option<ParameterDirection>`. Explicit directions use lowercase JSON
+values; unspecified direction stays `None`, not explicit `in`. Direction is
+preserved in the logical model, FlatBuffers exports and API signatures, but
+does not affect C++ overload identity. Design/implementation validation does
+not infer or verify direction from pointers, references or `const` qualifiers.
+
+##### Class operation parameter multiplicity
+
+UML named parameters accept `x : T[0..1]`, `x : T[0..*]`,
+`x : T[1..*]`, and `x : T[*]`, with or without an explicit direction.
+One operation demonstrates all four annotations and an unspecified multiplicity:
+
+```plantuml
+@startuml parameter_multiplicity_demo
+class Example {
+    +transfer(in source : Buffer[0..1], out targets : Buffer[0..*], inout states : State[1..*], extras : Buffer[*], count : int) : void
+}
+@enduml
+```
+
+| Parameter name | Base type | Multiplicity in JSON |
+|---|---|---|
+| `source` | `Buffer` | `"0..1"` |
+| `targets` | `Buffer` | `"0..*"` |
+| `states` | `State` | `"1..*"` |
+| `extras` | `Buffer` | `"*"` |
+| `count` | `int` | Field omitted (`None`) |
+
+**Generated API signature** retains the annotations for documentation:
+
+```text
+void Example::transfer(in Buffer[0..1] source, out Buffer[0..*] targets, inout State[1..*] states, Buffer[*] extras, int count)
+```
+
+General nonnegative integer ranges are supported; finite bounds must fit in
+`u64`, and the lower bound must not exceed the upper bound. Missing, negative,
+or noninteger bounds are rejected.
+
+The bracket interior is stored independently as `multiplicity: Option<String>`.
+Spelling is preserved: `*` is not rewritten to `0..*`, and leading zeros or
+whitespace are not normalized. JSON omits absent multiplicity and defaults
+missing fields to `None`; older FlatBuffers exports also read as `None`.
+
+**Important: multiplicity is stored and displayed only. It is NOT compared
+against C++ implementations and does NOT verify parameter value counts.**
+A successful design/implementation validation does not establish that the C++
+implementation satisfies the declared multiplicity. API display signatures
+preserve the annotation for documentation; they are not C++ source or the input
+to C++ type comparison.
+
+Parameter multiplicity is supported only on UML **named method parameters**;
+multiplicity in C++-style parameter syntax is not implemented. Existing
+`T[1]`, `T[N]`, and `T[]` array syntax remains part of the type everywhere,
+including return types. Multiplicity is preserved through resolution and
+serialization, but does not participate in C++ parameter matching or overload
+identity; no container, pointer, reference, or optional mapping is inferred or
+verified.
+
+##### Operation return multiplicity
+
+Methods and free functions accept return annotations `: T[0..1]`, `: T[0..*]`,
+`: T[1..*]`, and `: T[*]`. General nonnegative integer ranges follow the same
+bound checks and raw-spelling policy as parameter multiplicity above.
+
+```plantuml
+@startuml return_multiplicity_demo
+class Example {
+    +find() : Value[0..1]
+    +all() : Value[0..*]
+    +required() : Value[1..*]
+    +extras() : Value[*]
+    +operator pointer() const noexcept : pointer[0..1]
+}
+@enduml
+```
+
+**Storage:** `return_type` remains the base type (`"Value"` in the first four
+operations). The bracket interior is stored independently on methods and free
+functions as `return_multiplicity: Option<String>`, for example `"0..1"` or
+`"*"`. Leading zeros and whitespace are preserved, and `*` is not rewritten
+to `0..*`. JSON omits absent return multiplicity; missing fields default to
+`None` for compatibility with older data.
+
+**Generated API signatures** append the annotation directly to the return type:
+
+```text
+Value[0..1] Example::find()
+Value[0..*] Example::all()
+Value[1..*] Example::required()
+Value[*] Example::extras()
+Value[0..1] ns::find()
+Example::operator pointer() const noexcept : pointer[0..1]
+```
+
+The namespaced free-function example uses the same display policy. Conversion
+operators normally omit the separate return type, as described above; when
+return multiplicity is present, a trailing ` : Type[multiplicity]` preserves
+the annotation **after** `const` and `noexcept`. Unannotated conversions retain
+their existing display, e.g. `Example::operator pointer() const noexcept`.
+Other unannotated return signatures are also unchanged. Return annotations
+affect display only, not API record names or identity.
+
+**Compatibility and semantics:** `T[1]`, `T[N]`, and `T[]` remain array types,
+not return multiplicity. These are PlantUML documentation annotations, not C++
+semantics: multiplicity is not part of C++ return-type comparison or overload
+identity and does not verify return value counts. No optional, container,
+pointer, or reference mapping is inferred or checked. A successful
+design/implementation validation does not establish that the C++ implementation
+satisfies the declared return multiplicity.
+
 #### 3. Semantic Resolution Phase
 
 The AST is resolved into a logical model by the `ComponentResolver`:

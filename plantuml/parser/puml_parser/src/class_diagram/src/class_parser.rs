@@ -13,7 +13,8 @@
 use crate::class_ast::{
     Arrow, Attribute, ClassLikeDef, ClassLikeKind, ClassUmlFile, ClassUmlTopLevel,
     DeclarationCommon, EntityDef, EnumDef, EnumItem, EnumValue, Method, Name, Namespace, Package,
-    Param, Relationship, TemplateParameter, TypeAlias, TypeDefinition, Visibility,
+    Param, ParameterDirection, Relationship, TemplateParameter, TypeAlias, TypeDefinition,
+    Visibility,
 };
 use crate::source_map::{
     normalize_multiline_member_signatures, remap_syntax_error_to_original_source, NormalizedContent,
@@ -40,12 +41,30 @@ pub enum ClassError {
     UnexpectedUsingAttribute,
     #[error("unexpected class member rule: {0}")]
     UnexpectedClassMember(String),
+    #[error("invalid parameter multiplicity [{value}] at {source_location}: {reason}")]
+    InvalidParameterMultiplicity {
+        value: String,
+        reason: String,
+        source_location: SourceLocation,
+    },
+    #[error("invalid return multiplicity [{value}] at {source_location}: {reason}")]
+    InvalidReturnMultiplicity {
+        value: String,
+        reason: String,
+        source_location: SourceLocation,
+    },
 }
 
 impl ErrorLocation for ClassError {
     fn error_location(&self) -> Option<(usize, usize)> {
         match self {
             Self::Base(b) => b.error_location(),
+            Self::InvalidParameterMultiplicity {
+                source_location, ..
+            }
+            | Self::InvalidReturnMultiplicity {
+                source_location, ..
+            } => Some((source_location.line as usize, 1)),
             _ => None,
         }
     }
@@ -394,7 +413,7 @@ impl ClassParseSession<'_> {
                 }
             }
             Rule::method => {
-                def.members.methods.push(self.parse_method(pair));
+                def.members.methods.push(self.parse_method(pair)?);
             }
             _ => Err(ClassError::UnexpectedClassMember(format!(
                 "{:?}",
@@ -448,6 +467,8 @@ impl ClassParseSession<'_> {
 
         let mut name: Option<String> = None;
         let mut ty: Option<String> = None;
+        let mut direction = None;
+        let mut multiplicity = None;
         let is_pack_expansion = pair.as_rule() == Rule::typed_param_pack;
 
         // param -> param_named | param_cpp_named | param_unnamed
@@ -463,11 +484,23 @@ impl ClassParseSession<'_> {
             Rule::param_named => {
                 for p in inner.into_inner() {
                     match p.as_rule() {
+                        Rule::param_direction => {
+                            direction = Some(match p.as_str() {
+                                "in" => ParameterDirection::In,
+                                "out" => ParameterDirection::Out,
+                                "inout" => ParameterDirection::InOut,
+                                _ => unreachable!(),
+                            });
+                        }
                         Rule::identifier => {
                             name = Some(p.as_str().to_string());
                         }
                         Rule::type_name => {
                             ty = Some(p.as_str().trim().to_string());
+                        }
+                        Rule::param_multiplicity => {
+                            let raw = p.as_str();
+                            multiplicity = Some(raw[1..raw.len() - 1].to_string());
                         }
                         _ => {}
                     }
@@ -508,12 +541,66 @@ impl ClassParseSession<'_> {
         Param {
             name,
             param_type: ty,
+            direction,
+            multiplicity,
             is_c_variadic: false,
             is_pack_expansion,
         }
     }
 
-    fn parse_method(&self, pair: pest::iterators::Pair<Rule>) -> Method {
+    fn validate_parameter_multiplicities(
+        &self,
+        pair: pest::iterators::Pair<Rule>,
+    ) -> Result<(), ClassError> {
+        if matches!(
+            pair.as_rule(),
+            Rule::param_multiplicity | Rule::return_multiplicity
+        ) {
+            let is_return = pair.as_rule() == Rule::return_multiplicity;
+            let raw = pair.as_str();
+            let value = &raw[1..raw.len() - 1];
+            if let Some((lower, upper)) = value.trim().split_once("..") {
+                let invalid = |reason: String| {
+                    let source_location = self.original_source_location(&pair);
+                    if is_return {
+                        ClassError::InvalidReturnMultiplicity {
+                            value: value.to_string(),
+                            reason,
+                            source_location,
+                        }
+                    } else {
+                        ClassError::InvalidParameterMultiplicity {
+                            value: value.to_string(),
+                            reason,
+                            source_location,
+                        }
+                    }
+                };
+                let bound = |text: &str, label: &str| {
+                    text.trim().parse::<u64>().map_err(|_| {
+                        invalid(format!(
+                            "{label} bound exceeds the supported u64 maximum ({})",
+                            u64::MAX
+                        ))
+                    })
+                };
+                let lower = bound(lower, "lower")?;
+                if upper.trim() != "*" && lower > bound(upper, "upper")? {
+                    return Err(invalid(
+                        "lower bound must not exceed upper bound".to_string(),
+                    ));
+                }
+            }
+        } else {
+            for inner in pair.into_inner() {
+                self.validate_parameter_multiplicities(inner)?;
+            }
+        }
+        Ok(())
+    }
+
+    fn parse_method(&self, pair: pest::iterators::Pair<Rule>) -> Result<Method, ClassError> {
+        self.validate_parameter_multiplicities(pair.clone())?;
         fn ensure_abstract_modifier(method: &mut Method) {
             if !method
                 .modifiers
@@ -527,6 +614,7 @@ impl ClassParseSession<'_> {
         let mut method = Method::default();
         let mut vis = None;
         let mut name = None;
+        let mut conversion_target = None;
         method.source_location = self.original_source_location(&pair);
 
         for p in pair.into_inner() {
@@ -542,7 +630,18 @@ impl ClassParseSession<'_> {
                 Rule::friend_specifier => method.is_friend = true,
                 Rule::pure_virtual_suffix => ensure_abstract_modifier(&mut method),
                 Rule::class_visibility => vis = Some(p),
-                Rule::method_name | Rule::identifier => name = Some(p.as_str().to_string()),
+                Rule::method_name | Rule::identifier => {
+                    name = Some(p.as_str().to_string());
+                    conversion_target = p
+                        .into_inner()
+                        .find(|inner| inner.as_rule() == Rule::conversion_operator_name)
+                        .and_then(|inner| {
+                            inner
+                                .into_inner()
+                                .find(|target| target.as_rule() == Rule::conversion_target)
+                        })
+                        .map(|target| target.as_str().trim().to_string());
+                }
                 Rule::param_list => {
                     for param_pair in p.into_inner() {
                         match param_pair.as_rule() {
@@ -552,6 +651,8 @@ impl ClassParseSession<'_> {
                             Rule::c_variadic_param => method.params.push(Param {
                                 name: None,
                                 param_type: None,
+                                direction: None,
+                                multiplicity: None,
                                 is_c_variadic: true,
                                 is_pack_expansion: false,
                             }),
@@ -570,6 +671,11 @@ impl ClassParseSession<'_> {
                             Rule::type_name => {
                                 method.r#type = Some(return_type_inner.as_str().trim().to_string());
                             }
+                            Rule::return_multiplicity => {
+                                let raw = return_type_inner.as_str();
+                                method.return_multiplicity =
+                                    Some(raw[1..raw.len() - 1].to_string());
+                            }
                             _ => {}
                         }
                     }
@@ -583,7 +689,27 @@ impl ClassParseSession<'_> {
         method.visibility = Self::parse_visibility(vis);
         method.name = name.unwrap_or_default();
 
-        method
+        if let Some(target) = conversion_target {
+            if !method.params.is_empty()
+                || method.is_friend
+                || method
+                    .modifiers
+                    .iter()
+                    .any(|modifier| modifier.contains("static"))
+            {
+                return Err(ClassError::UnexpectedClassMember(
+                    "conversion operators must be non-static members with no parameters".into(),
+                ));
+            }
+            // Preserve explicit return spelling; validation checks type consistency.
+            if method.r#type.is_none() {
+                method.r#type = Some(target.clone());
+            }
+            method.name = format!("operator {target}");
+            method.conversion_target = Some(target);
+        }
+
+        Ok(method)
     }
 
     fn walk_class_like_def_into(
@@ -1353,6 +1479,9 @@ impl DiagramParser for PumlClassParser {
 mod tests {
     use super::*;
 
+    /// Both separators and both root markers, for every qualified position.
+    const NAME_SPELLINGS: [&str; 6] = ["a.b.C", "a::b::C", "a.b::C", ".a.C", "::a::C", "::a.C"];
+
     fn make_test_session(normalized_content: &NormalizedContent) -> ClassParseSession<'_> {
         ClassParseSession {
             normalized_content,
@@ -1361,6 +1490,25 @@ mod tests {
             ignored_notes: IgnoredNoteRegistry::default(),
             relationships: Vec::new(),
         }
+    }
+
+    fn parse_single_class_member_file(member: &str) -> Result<ClassUmlFile, ClassError> {
+        let input = format!("@startuml\nclass A {{\n    {member}\n}}\n@enduml\n");
+        let mut parser = PumlClassParser;
+        parser.parse_file(
+            &std::rc::Rc::new(std::path::PathBuf::from("test.puml")),
+            &input,
+            LogLevel::Info,
+        )
+    }
+
+    fn parse_class_diagram_body(body: &str) -> Result<ClassUmlFile, ClassError> {
+        let input = format!("@startuml\n{body}\n@enduml\n");
+        PumlClassParser.parse_file(
+            &std::rc::Rc::new(std::path::PathBuf::from("test.puml")),
+            &input,
+            LogLevel::Info,
+        )
     }
 
     #[test]
@@ -1611,14 +1759,207 @@ mod tests {
         assert_eq!(class_def.members.attributes[0].source_location.line, 3);
     }
 
-    fn parse_single_class_member_file(member: &str) -> Result<ClassUmlFile, ClassError> {
-        let input = format!("@startuml\nclass A {{\n    {member}\n}}\n@enduml\n");
-        let mut parser = PumlClassParser;
-        parser.parse_file(
-            &std::rc::Rc::new(std::path::PathBuf::from("test.puml")),
-            &input,
-            LogLevel::Info,
-        )
+    #[test]
+    fn test_static_attribute_modifier_before_and_after_visibility() {
+        for modifier in ["static", "{static}", "<<static>>"] {
+            for (symbol, visibility) in [
+                ("-", Visibility::Private),
+                ("+", Visibility::Public),
+                ("#", Visibility::Protected),
+            ] {
+                for member in [
+                    format!("{modifier} {symbol} mock_ : A*"),
+                    format!("{symbol} {modifier} mock_ : A*"),
+                ] {
+                    let result = parse_single_class_member_file(&member).unwrap();
+                    let ClassUmlTopLevel::Type(TypeDefinition::ClassLikeDef(def)) =
+                        &result.elements[0]
+                    else {
+                        panic!("expected class element");
+                    };
+                    assert!(def.members.methods.is_empty(), "{member}");
+                    assert_eq!(def.members.attributes.len(), 1, "{member}");
+                    let attr = &def.members.attributes[0];
+                    assert_eq!(attr.visibility, visibility, "{member}");
+                    assert_eq!(attr.name, "mock_", "{member}");
+                    assert_eq!(attr.r#type.as_deref(), Some("A*"), "{member}");
+                    assert_eq!(attr.modifiers, vec![modifier.to_string()], "{member}");
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn test_class_body_separator_requires_matching_delimiters_on_one_line() {
+        for separator in [
+            ".. Accessors --\n",
+            "== Accessors __\n",
+            "-- Accessors\n",
+            ".. Accessors\n..\n",
+            "== Accessors == trailing\n",
+        ] {
+            assert!(
+                PlantUmlCommonParser::parse(Rule::class_body_separator, separator).is_err(),
+                "{separator}"
+            );
+        }
+    }
+
+    #[test]
+    fn test_parameter_direction_requires_a_valid_uml_named_parameter() {
+        for parameter in ["input x : T", "in out x : T", "out :", "inout x :"] {
+            let member = format!("+f({parameter}) : void");
+            assert!(parse_single_class_member_file(&member).is_err(), "{member}");
+        }
+    }
+
+    #[test]
+    fn keyword_operators_do_not_store_conversion_metadata() {
+        for (member, name, return_type, parameter_count) in [
+            ("+operator delete() : void", "operator delete", "void", 0),
+            (
+                "+operator co_await() : Awaiter",
+                "operator co_await",
+                "Awaiter",
+                0,
+            ),
+            (
+                "+operator new(std::size_t n) : void*",
+                "operator new",
+                "void*",
+                1,
+            ),
+            (
+                "+static operator new[](std::size_t n) : void*",
+                "operator new[]",
+                "void*",
+                1,
+            ),
+            (
+                "+operator delete[](void* p) : void",
+                "operator delete[]",
+                "void",
+                1,
+            ),
+        ] {
+            let result = parse_single_class_member_file(member).expect(member);
+            let ClassUmlTopLevel::Type(TypeDefinition::ClassLikeDef(def)) = &result.elements[0]
+            else {
+                panic!("expected class element");
+            };
+            let method = &def.members.methods[0];
+            assert_eq!(method.name, name, "{member}");
+            assert_eq!(method.conversion_target, None, "{member}");
+            assert_eq!(method.r#type.as_deref(), Some(return_type), "{member}");
+            assert_eq!(method.params.len(), parameter_count, "{member}");
+        }
+    }
+
+    #[test]
+    fn conversion_target_declarators_store_explicit_metadata() {
+        for target in [
+            "bool",
+            "ns::Value<T>",
+            "const T*",
+            "T**&",
+            "T* const&&",
+            "new_type",
+            "delete_type",
+            "co_await_type",
+        ] {
+            let member = format!("+operator {target}()");
+            let result = parse_single_class_member_file(&member).unwrap();
+            let ClassUmlTopLevel::Type(TypeDefinition::ClassLikeDef(def)) = &result.elements[0]
+            else {
+                panic!("expected class element");
+            };
+            assert_eq!(
+                def.members.methods[0].conversion_target.as_deref(),
+                Some(target)
+            );
+            assert_eq!(def.members.methods[0].r#type.as_deref(), Some(target));
+        }
+        for target in ["T&*", "T&&&", "T&&*", "T& &"] {
+            assert!(
+                parse_single_class_member_file(&format!("+operator {target}()")).is_err(),
+                "{target}"
+            );
+        }
+        for member in ["+operator()() : int", "+operatorX() : bool", "+f() : int"] {
+            let result = parse_single_class_member_file(member).unwrap();
+            let ClassUmlTopLevel::Type(TypeDefinition::ClassLikeDef(def)) = &result.elements[0]
+            else {
+                panic!("expected class element");
+            };
+            assert_eq!(def.members.methods[0].conversion_target, None);
+        }
+    }
+
+    #[test]
+    fn test_parameter_multiplicity_rejects_invalid_inputs() {
+        for value in [
+            "-1..2", "1..-2", "*..1", "0..", "..1", "..*", "1...2", "1..2..3", "0..1.5", "0..N",
+            "**",
+        ] {
+            assert!(
+                parse_single_class_member_file(&format!("+f(x : T[{value}]) : void")).is_err(),
+                "{value}"
+            );
+        }
+        for member in [
+            "+f(T[0..1] x) : void",
+            "+f(T[*]) : void",
+            "+x : T[0..1]",
+            "+f(x : T[0..1][*]) : void",
+        ] {
+            assert!(parse_single_class_member_file(member).is_err(), "{member}");
+        }
+
+        for (value, reason) in [
+            ("2..1", "lower bound must not exceed upper bound"),
+            ("18446744073709551616..*", "lower bound exceeds"),
+            ("0..18446744073709551616", "upper bound exceeds"),
+        ] {
+            let error =
+                parse_single_class_member_file(&format!("+f(x : T[{value}]) : void")).unwrap_err();
+            assert!(matches!(
+                error,
+                ClassError::InvalidParameterMultiplicity { .. }
+            ));
+            assert!(error.to_string().contains(reason), "{error}");
+            assert!(error.to_string().contains(value), "{error}");
+            assert_eq!(error.error_location(), Some((3, 1)));
+        }
+    }
+
+    #[test]
+    fn return_multiplicity_rejects_invalid_ranges() {
+        for value in [
+            "-1..2", "1..-2", "*..1", "0..", "..1", "..*", "1...2", "1..2..3", "0..1.5", "0..N",
+            "**",
+        ] {
+            assert!(
+                parse_single_class_member_file(&format!("+f() : T[{value}]")).is_err(),
+                "{value}"
+            );
+        }
+        for member in ["+f() : T[0..1][*]", "+f() : T[*][0..1]"] {
+            assert!(parse_single_class_member_file(member).is_err(), "{member}");
+        }
+        for (value, reason) in [
+            ("2..1", "lower bound must not exceed upper bound"),
+            ("18446744073709551616..*", "lower bound exceeds"),
+            ("0..18446744073709551616", "upper bound exceeds"),
+        ] {
+            let error = parse_single_class_member_file(&format!("+f() : T[{value}]")).unwrap_err();
+            assert!(matches!(
+                error,
+                ClassError::InvalidReturnMultiplicity { .. }
+            ));
+            assert!(error.to_string().contains(reason), "{error}");
+            assert!(error.to_string().contains(value), "{error}");
+            assert_eq!(error.error_location(), Some((3, 1)));
+        }
     }
 
     #[test]
@@ -2334,18 +2675,6 @@ mod tests {
         assert_eq!(rel.left, "::a::A");
         assert_eq!(rel.right, "::b::B");
     }
-
-    fn parse_class_diagram_body(body: &str) -> Result<ClassUmlFile, ClassError> {
-        let input = format!("@startuml\n{body}\n@enduml\n");
-        PumlClassParser.parse_file(
-            &std::rc::Rc::new(std::path::PathBuf::from("test.puml")),
-            &input,
-            LogLevel::Info,
-        )
-    }
-
-    /// Both separators and both root markers, for every qualified position.
-    const NAME_SPELLINGS: [&str; 6] = ["a.b.C", "a::b::C", "a.b::C", ".a.C", "::a::C", "::a.C"];
 
     #[test]
     fn test_declaration_names_accept_both_separators_and_root_markers() {

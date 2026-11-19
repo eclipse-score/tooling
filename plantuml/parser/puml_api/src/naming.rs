@@ -66,11 +66,31 @@ fn operator_name(symbol: &str) -> Option<&'static str> {
 /// name (a `::` qualification becomes `_`).
 pub(crate) fn method_part(
     name: &str,
+    conversion_target: Option<&str>,
     modifiers: &[MethodModifier],
     origin: &str,
 ) -> Result<String, ApiError> {
     if modifiers.contains(&MethodModifier::Destructor) {
         return Ok("destructor".to_string());
+    }
+    if let Some(target) = conversion_target {
+        // Use readable type tokens for record names, not semantic type identity.
+        // ApiCollector reports collisions under TRLC's case/underscore rules.
+        let readable = target
+            .replace("::", "_")
+            .replace('.', "_")
+            .replace("&&", "_rref_")
+            .replace('&', "_ref_")
+            .replace('*', "_ptr_")
+            .replace('<', "_of_")
+            .replace('>', "_end_")
+            .replace(',', "_and_");
+        let readable = readable
+            .split(|c: char| c == '_' || c.is_whitespace())
+            .filter(|part| !part.is_empty())
+            .collect::<Vec<_>>()
+            .join("_");
+        return Ok(format!("operator_conversion_{readable}"));
     }
     if let Some(rest) = name.strip_prefix("operator") {
         // `operatorX` is a plain identifier; any other continuation (a symbol or
@@ -151,7 +171,7 @@ mod tests {
             ("operator_x", "operator_x"),
             ("ns::f", "ns_f"),
         ] {
-            assert_eq!(method_part(name, &[], "A::f").as_deref(), Ok(part));
+            assert_eq!(method_part(name, None, &[], "A::f").as_deref(), Ok(part));
         }
     }
 
@@ -159,17 +179,45 @@ mod tests {
     fn method_part_rejects_operators_without_a_record_name() {
         for (name, operator) in [
             ("operator bool", "bool"),
+            ("operator@", "@"),
             ("operator new", "new"),
             ("operator delete[]", "delete[]"),
             ("operator co_await", "co_await"),
         ] {
             assert_eq!(
-                method_part(name, &[], "A::f"),
+                method_part(name, None, &[], "A::f"),
                 Err(ApiError::UnsupportedOperator {
                     origin: "A::f".to_string(),
                     operator: operator.to_string(),
                 })
             );
         }
+    }
+
+    #[test]
+    fn conversion_metadata_has_readable_names() {
+        for (target, suffix) in [
+            ("bool", "bool"),
+            ("pointer", "pointer"),
+            ("T*", "T_ptr"),
+            ("T *", "T_ptr"),
+            ("T&", "T_ref"),
+            ("T&&", "T_rref"),
+            ("T**&", "T_ptr_ptr_ref"),
+            ("const T*", "const_T_ptr"),
+            ("T* const&&", "T_ptr_const_rref"),
+            ("::ns::T*", "ns_T_ptr"),
+            ("ns.T*", "ns_T_ptr"),
+            ("ns::Value<T>", "ns_Value_of_T_end"),
+            ("Pair<T, U>", "Pair_of_T_and_U_end"),
+        ] {
+            let part = method_part(&format!("operator {target}"), Some(target), &[], "A").unwrap();
+            assert!(is_trlc_identifier(&part));
+            assert_eq!(part, format!("operator_conversion_{suffix}"));
+        }
+        assert_eq!(
+            method_part("unrelated_name", Some("bool"), &[], "A").unwrap(),
+            "operator_conversion_bool"
+        );
     }
 }

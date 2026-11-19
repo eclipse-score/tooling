@@ -209,6 +209,30 @@ impl ErrorView for ClassError {
                 let _ = base_dir;
                 ProjectedError::new("UnexpectedClassMember").with_field("rule", rule.clone())
             }
+            ClassError::InvalidParameterMultiplicity {
+                value,
+                reason,
+                source_location,
+            } => ProjectedError::new("InvalidParameterMultiplicity")
+                .with_field("value", value.clone())
+                .with_field("reason", reason.clone())
+                .with_field(
+                    "file",
+                    relative_path(Path::new(source_location.file.as_ref()), base_dir),
+                )
+                .with_field("line", source_location.line.to_string()),
+            ClassError::InvalidReturnMultiplicity {
+                value,
+                reason,
+                source_location,
+            } => ProjectedError::new("InvalidReturnMultiplicity")
+                .with_field("value", value.clone())
+                .with_field("reason", reason.clone())
+                .with_field(
+                    "file",
+                    relative_path(Path::new(source_location.file.as_ref()), base_dir),
+                )
+                .with_field("line", source_location.line.to_string()),
         }
     }
 }

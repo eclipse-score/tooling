@@ -370,7 +370,9 @@ mod tests {
     fn method(name: &str) -> Method {
         Method {
             name: name.to_string(),
+            conversion_target: None,
             return_type: None,
+            return_multiplicity: None,
             source_location: SourceLocation::new("test.puml", 1),
             visibility: Visibility::Public,
             parameters: Vec::new(),

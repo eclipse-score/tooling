@@ -66,11 +66,18 @@ impl ApiCollector {
             .filter(|m| m.visibility == Visibility::Public)
         {
             let origin = format!("{scope}::{}", method.name);
-            let member = method_part(&method.name, &method.modifiers, &origin)?;
+            let member = method_part(
+                &method.name,
+                method.conversion_target.as_deref(),
+                &method.modifiers,
+                &origin,
+            )?;
             let record = record_name(Some(&entity.id), &member, &origin)?;
             let signature = render_signature(&SignatureParts {
                 qualified_name: &format!("{qualified_scope}::{}", method.name),
                 return_type: method.return_type.as_deref(),
+                return_multiplicity: method.return_multiplicity.as_deref(),
+                conversion_target: method.conversion_target.as_deref(),
                 parameters: &method.parameters,
                 template_parameters: method.template_parameters.as_deref(),
                 modifiers: &method.modifiers,
@@ -103,6 +110,8 @@ impl ApiCollector {
         let signature = render_signature(&SignatureParts {
             qualified_name: &qualified,
             return_type: function.return_type.as_deref(),
+            return_multiplicity: function.return_multiplicity.as_deref(),
+            conversion_target: None,
             parameters: &function.parameters,
             template_parameters: function.template_parameters.as_deref(),
             modifiers: &[],

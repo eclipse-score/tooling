@@ -80,11 +80,20 @@ table TypeAlias {
     source_location: SourceLocation (required);
 }
 
+enum ParameterDirection : byte {
+    Unspecified = 0,
+    In = 1,
+    Out = 2,
+    InOut = 3
+}
+
 table FunctionArgument {
     name: string (required);
     param_type: string;
     is_variadic: bool = false;
     is_pack_expansion: bool = false;
+    direction: ParameterDirection = Unspecified;
+    multiplicity: string;
 }
 
 table MemberVariable {
@@ -103,6 +112,8 @@ table Method {
     template_parameters: [TemplateParameter];
     modifiers: [MethodModifier];
     source_location: SourceLocation (required);
+    return_multiplicity: string;
+    conversion_target: string;
 }
 
 table EnumLiteral {
@@ -143,6 +154,7 @@ table FreeFunctionDecl {
     parameters: [FunctionArgument];
     template_parameters: [TemplateParameter];
     source_location: SourceLocation (required);
+    return_multiplicity: string;
 }
 
 table ClassDiagram {
