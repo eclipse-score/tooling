@@ -242,13 +242,13 @@ def _component_impl(ctx):
     # Propagate Tracing Files: collect .lobster files from sub-components
     # and unit test results from units (to be converted to gtest.lobster below)
     # -------------------------------------------------------------------------
-    collected_unit_test_files = []
+    collected_unit_test_results = []
     collected_test_specs = []
     collected_tests = []
     collected_architecture = []
     for component in ctx.attr.components:
         if UnitInfo in component:
-            collected_unit_test_files.append(component[UnitInfo].tests)
+            collected_unit_test_results.append(component[UnitInfo].test_results)
             collected_test_specs.append(component[UnitInfo].test_specs)
         if ComponentTestCaseCoverageInfo in component:
             collected_test_specs.append(component[ComponentTestCaseCoverageInfo].test_specs)
@@ -264,8 +264,20 @@ def _component_impl(ctx):
     # lobster versions do not offer the option and keep relying on the record
     # properties alone.
     derive_gwt = {"derive_gwt_from_test_name": True} if SUPPORTS_DERIVE_GWT_FROM_TEST_NAME else {}
+
+    # A test target may be attached to several units (e.g. one test binary
+    # covering multiple units). Its report is identical for every unit, so it
+    # is converted once; otherwise lobster sees duplicate test items.
+    unit_test_files = []
+    seen_test_labels = {}
+    for result in depset(transitive = collected_unit_test_results).to_list():
+        if result.test_label in seen_test_labels:
+            continue
+        seen_test_labels[result.test_label] = True
+        unit_test_files.append(result.xml)
+
     gtest_lobster_file, provider = subrule_lobster_gtest(
-        depset(transitive = collected_unit_test_files).to_list(),
+        unit_test_files,
         **derive_gwt
     )
 

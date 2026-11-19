@@ -84,6 +84,7 @@ UnitInfo = provider(
         "implementation_sequence_fbs": "Depset of FlatBuffers binaries generated from implementation sequence diagrams.",
         "implementation": "Depset of implementation targets (cc_library, rust_library, etc.).",
         "tests": "Depset of test targets (cc_test, rust_test, etc.).",
+        "test_results": "Depset of struct(test_label, xml): the gtest XML report of each attached test target with the label of that target. Lets a component report a test target shared by several units only once.",
         "test_specs": "Depset of struct(reference, spec_json): each test_specification of the unit, with the label as written in the unit's test_specs (how test cases reference it) and its normalized JSON File.",
         "dependent_labels": "Depset containing one struct for this unit with its label and a depset of transitive implementation dependency labels.",
         "validation_log": "Struct with file and name fields describing the UnitValidate (design-vs-implementation) log entry produced by this unit target.",
