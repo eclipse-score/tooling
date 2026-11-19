@@ -267,6 +267,41 @@ To run the validation for a single target:
 
     bazel test //my/package:my_feature_req_test
 
+Version pins
+~~~~~~~~~~~~
+
+The TRLC check runner compares each ``FeatReq`` and ``CompReq`` ``derived_from``
+version with the referenced record's current version. A mismatch is reported
+when the dependable element is built; development maturity reports it without
+failing the build. Versioned assessment ``measures`` of a ``safety_analysis``
+are not covered by this check; the LOBSTER traceability report flags them.
+
+ASIL coverage
+~~~~~~~~~~~~~
+
+A parent requirement (``AssumedSystemReq`` or ``FeatReq``) that has downstream
+requirements must have at least one direct child (``FeatReq`` or ``CompReq``
+whose ``derived_from`` names the parent) carrying the same ``safety`` value.
+Parents without children and ``AoU`` parents are not checked.
+
+TRLC checks only see forward references, so this reverse check cannot be part
+of the requirements model. It is a Python plugin (``trlc_checks/asil_coverage_check.py``)
+of ``trlc_check_runner``, the ``trlc`` CLI extended with plugin checks.
+``dependable_element`` runs it once over all
+requirement levels (its ``requirements`` targets and the requirements of its
+components) and fails the build on a violation; with ``maturity = "development"``
+the violation is only reported. Errors of ``trlc`` itself (parse errors, model
+``checks``) fail the build at every maturity. The result is written to
+``<module_name>_validation/trlc_checks.<package>.<name>.log``.
+
+To add a check of this kind, put a module with a function
+``check(symbols, mh) -> bool`` into ``bazel/rules/rules_score/src/trlc_checks/``,
+list it in the ``srcs`` of the ``trlc_checks`` target in
+``bazel/rules/rules_score/BUILD`` and in the ``_trlc_checks`` attribute of
+``dependable_element``; each listed module is passed to ``trlc_check_runner`` as
+``--check MODULE[:FUNC]``. The function reports findings through
+``mh.error(..., fatal=False)``.
+
 .. _requirements-images:
 
 Adding Images and Diagrams to Requirement Descriptions

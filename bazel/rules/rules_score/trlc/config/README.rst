@@ -67,14 +67,16 @@ enforced by LOBSTER at the dependable-element level.
 - ``FeatReq.derived_from`` accepts ``AssumedSystemReqId`` tuples (mandatory)
 - ``CompReq.derived_from`` accepts ``FeatReqId`` tuples (optional)
 
-ASIL Non-Degradation
---------------------
+ASIL Coverage
+-------------
 
-With ``QM < B < D``, ``FeatReq`` and ``CompReq`` checks (``trlc --verify``) reject a
-requirement whose ``safety`` is lower than that of any upstream requirement it
-references in ``derived_from``. Fault-tree ``RootCause`` upstreams carry no ASIL and
-impose no constraint.
+A parent requirement (``AssumedSystemReq`` or ``FeatReq``) with downstream requirements
+needs at least one direct child (``FeatReq`` or ``CompReq`` whose ``derived_from`` names the
+parent) with the same ``safety``. Further children may carry a different ASIL.
 
-Tests for the checks live in ``test/``. TRLC reports ``union_single_type`` and
-``union_partial_field_access`` lint warnings for the tuple item types that carry them;
-these are expected.
+The rule needs the reverse relation (a record does not see its referrers), so it cannot be a
+``checks`` block. It is checked by the ``asil_coverage_check`` plugin (``src/trlc_checks``) of
+``//bazel/rules/rules_score:trlc_check_runner`` in ``dependable_element``.
+
+TRLC reports ``union_single_type`` and ``union_partial_field_access`` lint warnings for the
+tuple item types that carry them; these are expected.

@@ -29,6 +29,7 @@ load(
 )
 load("@rules_python//sphinxdocs:sphinx_docs_library.bzl", "sphinx_docs_library")
 load("@tooling_provenance//:provenance.bzl", "TOOLING_VERSION")
+load("@trlc//:trlc.bzl", "TrlcProviderInfo")
 load(
     "//bazel/rules/rules_score:providers.bzl",
     "ArchitecturalDesignInfo",
@@ -1040,6 +1041,51 @@ def _run_validation(ctx, arch_json, static_fbs_files):
         log_level = get_log_level(ctx),
     )
 
+def _run_trlc_checks(ctx):
+    """Run the plugin checks that need the requirements of all levels in one TRLC run.
+
+    Args:
+        ctx: Rule context
+
+    Returns:
+        Struct with file and name fields describing the log entry, or None when
+        no TRLC sources are available.
+    """
+    trlc_files = []
+    for req_target in ctx.attr.requirements:
+        if TrlcProviderInfo in req_target:
+            trlc_info = req_target[TrlcProviderInfo]
+            trlc_files.extend([trlc_info.spec, trlc_info.reqs, trlc_info.deps])
+    for comp_target in ctx.attr.components:
+        if ComponentInfo in comp_target:
+            trlc_files.append(comp_target[ComponentInfo].requirements_trlc)
+    all_trlc_files = depset(transitive = trlc_files)
+    if not all_trlc_files.to_list():
+        return None
+
+    package_name = ctx.label.package.replace("/", "_")
+    log = ctx.actions.declare_file(ctx.label.name + "/trlc_checks.log")
+    args = ctx.actions.args()
+    args.add("--no-lint")
+    args.add("--brief")
+    args.add("--log", log)
+    args.add_all(ctx.attr._trlc_checks, before_each = "--check")
+    if ctx.attr.maturity == "development":
+        args.add("--warn-only")
+    args.add_all(all_trlc_files)
+    ctx.actions.run(
+        inputs = all_trlc_files,
+        outputs = [log],
+        executable = ctx.executable._trlc_check_runner,
+        arguments = [args],
+        progress_message = "Checking TRLC requirements: {}".format(ctx.label.name),
+        mnemonic = "TrlcChecks",
+    )
+    return struct(
+        file = log,
+        name = "trlc_checks.{}{}.log".format(package_name + "." if package_name else "", ctx.label.name),
+    )
+
 def _symlink_validation_log(ctx, validation_log):
     """Expose a validation log under the dependable-element validation folder."""
     output_log = ctx.actions.declare_file(
@@ -1349,6 +1395,9 @@ def _dependable_element_index_impl(ctx):
 
     # Run validation; build fails automatically on non-zero exit
     validation_logs.append(_run_validation(ctx, arch_json, static_fbs_files))
+    trlc_checks_log = _run_trlc_checks(ctx)
+    if trlc_checks_log:
+        validation_logs.append(trlc_checks_log)
 
     validation_output_files = []
     for log in validation_logs:
@@ -2026,6 +2075,19 @@ def _dependable_element_index_attrs():
             cfg = "exec",
             doc = "test_case_coverage test runner — checks test_case_coverage.lock.yaml for each component; maturity controls error vs. warning.",
         ),
+        "_trlc_check_runner": attr.label(
+            default = Label("//bazel/rules/rules_score:trlc_check_runner"),
+            executable = True,
+            cfg = "exec",
+            doc = "trlc CLI with plugin checks over the requirements of all levels; maturity controls error vs. warning.",
+        ),
+        "_trlc_checks": attr.string_list(
+            default = [
+                "trlc_checks.asil_coverage_check",
+                "trlc_checks.version_pin_check",
+            ],
+            doc = "Plugin modules (check(symbols, mh)) the trlc_check_runner runs, each passed as --check.",
+        ),
     }
     attrs.update(VALIDATION_ATTRS)
     attrs.update(VERBOSITY_ATTR)
@@ -2228,7 +2290,7 @@ def dependable_element(
             to further-forward to this element's own dependees. Only needed for
             chain-forwarding received AoUs that this element cannot handle.
         maturity: 'release' (default) fails the build/test on certified-scope,
-            architecture-consistency, or traceability violations. 'development'
+            architecture-consistency, ASIL-coverage, or traceability violations. 'development'
             downgrades all of these to warnings so the build/test still succeeds.
         generate_html_report: If True, additionally generate a standalone
             LOBSTER HTML traceability report. Off by default: it is not

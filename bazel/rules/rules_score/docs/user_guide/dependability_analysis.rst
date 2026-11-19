@@ -517,9 +517,10 @@ Rules for assessments:
   covered root causes and at most the ASIL of each listed measure; otherwise
   the build fails.
 - A measure is an ``AoU`` or ``CompReq`` of the targets in ``safety_measures``
-  and carries the version it was reviewed at (``Package.Name@1``). After a
-  version change of the measure the reference no longer resolves, which forces
-  a new review of the assessment.
+  and carries the version it was reviewed at (``Package.Name@1``). The
+  traceability report of the enclosing ``dependable_element`` flags a measure
+  whose current version differs from the pinned one, prompting a new review of
+  the assessment.
 - The traceability report of the enclosing ``dependable_element`` flags a root
   cause without assessment, and an own ``AoU`` that no assessment lists; with
   ``maturity = "release"`` this fails ``bazel test`` of the

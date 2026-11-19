@@ -2992,6 +2992,15 @@ py_test(
 )
 
 py_test(
+    name = "test_asil_coverage_check",
+    size = "small",
+    srcs = ["test_asil_coverage_check.py"],
+    args = ["$(locations @score_tooling//bazel/rules/rules_score/trlc/config:score_requirements_model)"],
+    data = ["@score_tooling//bazel/rules/rules_score/trlc/config:score_requirements_model"],
+    deps = ["@score_tooling//bazel/rules/rules_score:trlc_check_runner"],
+)
+
+py_test(
     name = "test_merge_lobster_items",
     size = "small",
     srcs = ["test_merge_lobster_items.py"],
@@ -3081,6 +3090,7 @@ test_suite(
         ":seooc_tests",
         ":sphinx_module_tests",
         ":test_aou_forwarding_to_lobster",
+        ":test_asil_coverage_check",
         ":test_bazel_sphinx_needs",
         ":test_merge_lobster_items",
         ":test_rst_to_trlc",
