@@ -51,9 +51,9 @@ rectangle "report.html\n+ RST report" <<rep>> as html
 rectangle "PASS / FAIL\n(bazel test gate)" <<rep>> as gate
 
 reqs_in  --> reqs_lob  : lobster-trlc
-api_in   --> api_lob   : puml_cli (public API TRLC)\nlobster-trlc
+api_in   --> api_lob   : puml_cli (public API TRLC)\nlobster-trlc\nrelocate_lobster_items
 fmcm_in  --> fmcm_lob  : lobster-trlc
-fta_in   --> rc_lob    : puml_cli (FTA mode)
+fta_in   --> rc_lob    : puml_cli (FTA mode)\nlobster-trlc\nrelocate_lobster_items
 test_in  --> test_lob  : gtest_report
 
 reqs_lob --> conf

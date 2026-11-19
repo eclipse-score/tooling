@@ -209,10 +209,12 @@ feed that pipeline:
 * **Requirements** (``.trlc``) → ``lobster-trlc`` → ``requirements.lobster``.
 * **Public API diagrams** (``public_api.puml``) → PlantUML parser →
   ``public_api.trlc`` (``ApiMethod`` records) → ``lobster-trlc`` →
-  ``<architectural_design>.lobster`` (enables failure-mode-to-interface tracing).
+  ``relocate_lobster_items`` → ``<architectural_design>/api_methods.lobster``
+  (enables failure-mode-to-interface tracing).
 * **FMEA** (``failure_modes`` / ``assessments.trlc``) → ``lobster-trlc``;
   **FTA** (``fta.puml``) → ``puml_cli`` (FTA mode) → ``fta_events.trlc`` →
-  ``lobster-trlc`` → ``<fault_trees>.lobster``.
+  ``lobster-trlc`` → ``relocate_lobster_items`` →
+  ``<fault_trees>/fta_root_causes.lobster``.
 * **Unit tests** (gtest) → ``gtest_report`` → ``<unit>.lobster``.
 
 Lobster report assembly (``dependable_element``)
@@ -236,7 +238,10 @@ test and to other rules.
    config into ``report.json``, the single artefact everything below reads.
 #. **HTML** — optional standalone convenience artefact.
 #. **Multi-page RST** — ``lobster-rst-report --out-dir`` renders one page per
-   level plus an ``index.rst`` into a directory artefact.
+   level plus an ``index.rst`` into a directory artefact. Each item links to its
+   file below ``--source-root``: the Bazel define ``LOBSTER_SOURCE_ROOT`` (for
+   example ``https://github.com/<org>/<repo>/blob/<commit>/``), else a relative
+   root that only resolves next to the sources.
 #. **Splice** — the parent ``index.rst`` gets a ``Traceability`` toctree entry
    pointing at that directory, but only if it was actually produced.
 #. **Publish** — ``report.json`` (plus HTML/RST) are exposed via
@@ -360,7 +365,7 @@ assessments (``assessments``) and the measures they list (``safety_measures``).
 ``failure_modes`` runs ``lobster-trlc`` over its records into
 ``<name>.lobster``; it provides ``FailureModesInfo`` and ``TrlcProviderInfo``.
 
-The ``fault_trees`` rule drives two actions:
+The ``fault_trees`` rule drives three actions:
 
 #. **puml_cli (FTA mode)** parses each ``fta_*.puml`` directly (no rewriting)
    and writes ``fta_events.trlc`` (the generated ``RootCause`` stubs).  The
@@ -368,8 +373,13 @@ The ``fault_trees`` rule drives two actions:
    fta_metamodel.puml``; the metamodel is on PlantUML's global include path
    (shipped in the docs toolchain runfiles), so it resolves at render time.
 #. **lobster-trlc** turns the generated ``RootCause`` records into
-   ``<fault_trees>.lobster`` (``AnalysisInfo.lobster_files["fta_root_causes.lobster"]``). The ``failure_modes`` files travel as inputs, so the
+   ``<fault_trees>.lobster``. The ``failure_modes`` files travel as inputs, so the
    ``import``s of ``fta_events.trlc`` resolve.
+#. **relocate_lobster_items** locates each root cause at its diagram and line
+   instead of ``fta_events.trlc``, which no report can link to. It reads them
+   from the ``// <diagram>:<line>`` comment ``puml_cli`` writes above each
+   record (``AnalysisInfo.lobster_files["fta_root_causes.lobster"]``).
+   ``architectural_design`` does the same for its ``ApiMethod`` items.
 
 The ``safety_analysis`` rule drives two actions:
 

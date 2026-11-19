@@ -482,7 +482,7 @@ and ``dependability_analysis``, and ``TrlcProviderInfo`` for the generated ``pub
    * - ``public_api``
      - label list
      - no
-     - Public-API class diagram files (``.puml``; other diagram kinds fail the build); generate ``public_api.trlc`` with one ``ScoreReq.ApiMethod`` record per public method (all overloads) and per free function, no class items; attributes, enums, typedefs and non-public members yield no record. Reports show the generated ``public_api.trlc`` as item location, not the ``.puml`` source. ``lobster-trlc`` turns the records into the Public API traceability level, exposed via ``ArchitecturalDesignInfo.public_api_lobster_files``. Several class diagrams resolve as one group (default ``[]``)
+     - Public-API class diagram files (``.puml``; other diagram kinds fail the build); generate ``public_api.trlc`` with one ``ScoreReq.ApiMethod`` record per public method (all overloads) and per free function, no class items; attributes, enums, typedefs and non-public members yield no record. Reports show the ``.puml`` diagram and line of a method as its location. ``lobster-trlc`` turns the records into the Public API traceability level, exposed via ``ArchitecturalDesignInfo.public_api_lobster_files``. Several class diagrams resolve as one group (default ``[]``)
    * - ``internal_api``
      - label list
      - no

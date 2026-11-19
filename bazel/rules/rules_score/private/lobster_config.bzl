@@ -66,6 +66,52 @@ def merge_lobster_files(ctx, files, output_name):
     )
     return [merged], [merged]
 
+RELOCATE_LOBSTER_ITEMS_ATTR = {
+    "_relocate_lobster_items_tool": attr.label(
+        default = Label("//bazel/rules/rules_score:relocate_lobster_items"),
+        executable = True,
+        cfg = "exec",
+        doc = "Tool pointing the lobster items of a generated TRLC file at the diagram they come from.",
+    ),
+}
+
+def relocate_lobster_file(ctx, lobster_file, generated_trlc, sources, output_name):
+    """Locate the items of a generated TRLC file at the diagrams they come from.
+
+    lobster-trlc locates an item at its record in the generated file, which no
+    repository holds. The relocated file locates it at the diagram and line of
+    the ``// <diagram>:<line>`` comment ``puml_cli`` writes above the record. The
+    rule must declare ``RELOCATE_LOBSTER_ITEMS_ATTR`` and ``VERBOSITY_ATTR``.
+
+    Args:
+        ctx: Rule context.
+        lobster_file: The .lobster File lobster-trlc wrote for *generated_trlc*.
+        generated_trlc: The generated TRLC File.
+        sources: Dict from a diagram's name in the origin comments to its File
+            (only the path is used).
+        output_name: Path of the relocated file, relative to the package.
+
+    Returns:
+        The relocated .lobster File.
+    """
+    relocated = ctx.actions.declare_file(output_name)
+    args = ctx.actions.args()
+    args.add("--input-lobster", lobster_file)
+    args.add("--generated-trlc", generated_trlc)
+    for name, diagram in sources.items():
+        args.add("--source", "{}={}".format(name, diagram.path))
+    args.add("--output", relocated)
+    args.add("--log-level", get_log_level(ctx))
+    ctx.actions.run(
+        inputs = [lobster_file, generated_trlc],
+        outputs = [relocated],
+        executable = ctx.executable._relocate_lobster_items_tool,
+        arguments = [args],
+        progress_message = "Relocating lobster items to their diagrams for %s" % relocated.short_path,
+        mnemonic = "RelocateLobsterItems",
+    )
+    return relocated
+
 def format_lobster_sources(files):
     """Format a list of File objects as lobster source lines.
 
