@@ -48,6 +48,13 @@
         {
           "name": "wheel2",
           "data_type": "std::vector<Wheel>",
+          "template_instantiation": {
+            "name": "std::vector",
+            "arguments": [
+              "Wheel"
+            ],
+            "outer_decorators": []
+          },
           "is_static": false,
           "visibility": "public",
           "source_location": {
@@ -68,6 +75,13 @@
         {
           "name": "wheel4",
           "data_type": "std::vector<const Wheel *>",
+          "template_instantiation": {
+            "name": "std::vector",
+            "arguments": [
+              "const Wheel *"
+            ],
+            "outer_decorators": []
+          },
           "is_static": false,
           "visibility": "public",
           "source_location": {
@@ -78,6 +92,13 @@
         {
           "name": "wheel5",
           "data_type": "std::vector<std::vector<Wheel>>",
+          "template_instantiation": {
+            "name": "std::vector",
+            "arguments": [
+              "std::vector<Wheel>"
+            ],
+            "outer_decorators": []
+          },
           "is_static": false,
           "visibility": "public",
           "source_location": {

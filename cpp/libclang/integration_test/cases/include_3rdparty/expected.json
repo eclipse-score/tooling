@@ -10,6 +10,13 @@
         {
           "name": "getNameOffset",
           "return_type": "flatbuffers::Offset<flatbuffers::String>",
+          "return_template_instantiation": {
+            "name": "flatbuffers::Offset",
+            "arguments": [
+              "flatbuffers::String"
+            ],
+            "outer_decorators": []
+          },
           "parameters": [],
           "modifiers": ["Const"],
           "template_parameters": null,
@@ -50,6 +57,13 @@
         {
           "name": "m_windows",
           "data_type": "std::vector<int>",
+          "template_instantiation": {
+            "name": "std::vector",
+            "arguments": [
+              "int"
+            ],
+            "outer_decorators": []
+          },
           "is_static": false,
           "visibility": "public",
           "source_location": {
@@ -70,6 +84,13 @@
         {
           "name": "m_name_offsets",
           "data_type": "std::vector<flatbuffers::Offset<flatbuffers::String>>",
+          "template_instantiation": {
+            "name": "std::vector",
+            "arguments": [
+              "flatbuffers::Offset<flatbuffers::String>"
+            ],
+            "outer_decorators": []
+          },
           "is_static": false,
           "visibility": "protected",
           "source_location": {
@@ -80,6 +101,13 @@
         {
           "name": "m_offsets",
           "data_type": "std::vector<flatbuffers::uoffset_t>",
+          "template_instantiation": {
+            "name": "std::vector",
+            "arguments": [
+              "flatbuffers::uoffset_t"
+            ],
+            "outer_decorators": []
+          },
           "is_static": false,
           "visibility": "private",
           "source_location": {

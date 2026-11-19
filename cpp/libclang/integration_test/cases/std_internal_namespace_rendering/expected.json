@@ -48,6 +48,14 @@
         },
         {
           "data_type": "std::unordered_map<std::string, std::string_view>",
+          "template_instantiation": {
+            "name": "std::unordered_map",
+            "arguments": [
+              "std::string",
+              "std::string_view"
+            ],
+            "outer_decorators": []
+          },
           "is_static": false,
           "name": "cache_",
           "source_location": {
