@@ -1,0 +1,46 @@
+# *******************************************************************************
+# Copyright (c) 2026 Contributors to the Eclipse Foundation
+#
+# See the NOTICE file(s) distributed with this work for additional
+# information regarding copyright ownership.
+#
+# This program and the accompanying materials are made available under the
+# terms of the Apache License Version 2.0 which is available at
+# https://www.apache.org/licenses/LICENSE-2.0
+#
+# SPDX-License-Identifier: Apache-2.0
+# *******************************************************************************
+# lobster_sphinx_needs conversion of the S-CORE requirement need types; each
+# requirement kind selects its need type via --need-type.
+conversion-rules:
+  - need-type: stkh_req
+    kind: AssumedSystemReq
+    namespace: req
+    version-field: version
+    description-fields: content
+    status-field: status
+    exclude-status: [invalid]
+  - need-type: feat_req
+    kind: FeatReq
+    namespace: req
+    version-field: version
+    description-fields: content
+    status-field: status
+    exclude-status: [invalid]
+  - need-type: comp_req
+    kind: CompReq
+    namespace: req
+    version-field: version
+    description-fields: content
+    status-field: status
+    exclude-status: [invalid]
+    tags:
+      - derived_from
+      - covers
+  - need-type: aou_req
+    kind: AoU
+    namespace: req
+    version-field: version
+    description-fields: content
+    status-field: status
+    exclude-status: [invalid]
