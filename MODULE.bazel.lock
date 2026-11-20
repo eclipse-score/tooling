@@ -1768,8 +1768,8 @@
           "REPO_MAPPING:rules_distroless+,bazel_skylib bazel_skylib+",
           "REPO_MAPPING:rules_distroless+,bazel_tools bazel_tools",
           "REPO_MAPPING:rules_distroless+,yq_linux_amd64 yq.bzl++yq+yq_linux_amd64",
-          "FILE:@@//third_party/docs_runtime/manifest.yaml f8bd762e0dcaf3150504eca8dfd60819fc3be428d3a8b58d1d9cc52d68e16a45",
-          "FILE:@@//third_party/tooling_sysroot/manifest.yaml ef1e4af34dbf67a9e332c69ccad0b12b2e295849c33e98658c6ccd69e363c4cd"
+          "FILE:@@//third_party/docs_runtime/manifest.yaml 5baea8ba900921427f58afa7ac5306c05cf5ab5c1549517e8ef21420e8f05f08",
+          "FILE:@@//third_party/tooling_sysroot/manifest.yaml 0049d2fe494ca2f2d8fb07bd78fda8b13631b6b2edea6a21224fdf8b1fe6f3be"
         ],
         "generatedRepoSpecs": {
           "docs_runtime_base-files_13ubuntu10.4_amd64": {

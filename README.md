@@ -30,6 +30,7 @@ See the individual README files for detailed usage instructions and configuratio
 
 | Tool | Description | Documentation |
 |------|-------------|---------------|
+| **api_surface** | C++ public API surface stability check (clang AST + lock file) | [README](api_surface/README.md) |
 | **cli_helper** | Command-line interface utilities | [README](cli_helper/README.md) |
 | **cr_checker** | Code review and compliance checking | [README](cr_checker/README.md) |
 | **dash** | Eclipse Dash license scanning | [README](dash/README.md) |
@@ -110,6 +111,7 @@ The available import targets are:
 - dash_license_checker
 - cli_helper
 - setup_starpls
+- api_surface_test
 - score_coverage_scope
 - score_coverage_reporter
 
