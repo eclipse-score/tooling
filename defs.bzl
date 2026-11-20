@@ -13,6 +13,9 @@
 
 """Unified entrypoint for score_tooling Bazel macros & rules."""
 
+# --- api_surface ---
+load("//api_surface:api_surface.bzl", _api_surface_test = "api_surface_test")
+
 # --- cli_helper ---
 load("//cli_helper:cli_helper.bzl", _cli_helper = "cli_helper")
 
@@ -56,3 +59,4 @@ score_coverage_scope = _score_coverage_scope
 score_coverage_reporter = _score_coverage_reporter
 trlc_requirements_ai_test = _trlc_requirements_ai_test
 architecture_ai_test = _architecture_ai_test
+api_surface_test = _api_surface_test
