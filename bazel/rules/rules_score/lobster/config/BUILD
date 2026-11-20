@@ -62,6 +62,13 @@ filegroup(
     visibility = ["//visibility:public"],
 )
 
+# lobster_sphinx_needs configuration for requirements given as needs.json
+filegroup(
+    name = "sphinx_needs_config",
+    srcs = ["lobster_sphinx_needs.yaml"],
+    visibility = ["//visibility:public"],
+)
+
 # ---------------------------------------------------------------------------
 # Lobster report config templates: static structure with {PLACEHOLDER} markers
 # for source file lists. Used by rules_score to generate per-target configs
