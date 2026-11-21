@@ -97,6 +97,8 @@ component(
         ":comp_req_spn",
         ":feat_req_spn",
     ],
+    # No units or tests, so the component's LOBSTER CI check fails by design.
+    tags = ["manual"],
 )
 
 dependable_element(
