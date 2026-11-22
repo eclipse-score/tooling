@@ -33,6 +33,7 @@ for safety related automotive software.
 | `failure_modes` | `FailureModesInfo`, `TrlcProviderInfo` |
 | `fault_trees` | `FaultTreesInfo`, `TrlcProviderInfo` |
 | `safety_analysis` | `AnalysisInfo`, `SafetyAnalysisProviderInfo` |
+| `safety_analysis_spn` | `AnalysisInfo`, `SafetyAnalysisProviderInfo` |
 | `glossary` | `SphinxSourcesInfo` |
 | `dependability_analysis` | `DependabilityAnalysisInfo` |
 | `dependable_element` | HTML documentation zip (Sphinx) |
@@ -277,6 +278,36 @@ hold `RootCauseAssessment` records; a root cause whose failure mode is not in
 Build-only; traceability validation is done by the wrapping
 `dependability_analysis` test. The `dependable_element` derives its own AoUs
 from the `assumptions_of_use` targets passed as `safety_measures`.
+
+---
+
+## `safety_analysis_spn` (FMEA from Sphinx-Needs)
+
+```starlark
+safety_analysis_spn(
+    name = "my_safety_analysis",
+    arch_design = ":my_arch_design",
+    arch_id = "comp_arc_sta__my_component",
+    fault_trees = glob(["fta_*.puml"]),
+    needs = ["//:needs_json_file"],
+    package = "MyComponentFmea",
+    safety_measures = [":comp_reqs", ":aous"],
+)
+```
+
+Counterpart of `failure_modes` + `fault_trees` + `safety_analysis` without TRLC.
+The failure modes are the `comp_saf_fmea` needs violating `arch_id`; a
+`$FailureMode` macro of a fault tree names one as `<package>.<need ID>`. A
+violated `real_arc_int_op` need traces the failure mode to the public API method
+of `arch_design` whose signature declares `<interface title>::<operation title>(`.
+A need rated `sufficient: yes` assesses the root causes of its failure mode, with
+its `mitigated_by` links among `safety_measures` as measures. The target writes
+the same LOBSTER files as `safety_analysis`, so `dependability_analysis` and
+`dependable_element` check them unchanged: a fault tree naming an unknown
+failure mode and an operation without API method are unknown tracing targets.
+An unknown `fault_id` (not a fault model of the `Guideword` enum) fails the
+build. `assumptions_of_use_spn(id_prefix = "aou_req__my_component__")` keeps
+the own AoUs to those of the component.
 
 ---
 

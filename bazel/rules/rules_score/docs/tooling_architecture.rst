@@ -141,6 +141,14 @@ are rendered under :doc:`tool_reference/index`.
        lists, or a "No assessment" flag), a section drawing every fault-tree
        diagram once, and a list of all measures.  Links between records
        are the typed TRLC references; coverage of them is checked by lobster.
+   * - **safety_analysis_spn**
+     - ``src/safety_analysis_spn.py`` (local)
+     - ``safety_analysis_spn``
+     - Converts the ``comp_saf_fmea`` needs of a ``needs.json`` and the
+       ``fta_events.trlc`` stub ``puml_cli`` generates from the fault trees into
+       the failure-mode, root-cause and assessment LOBSTER files of
+       ``safety_analysis``, without TRLC; checks ``fault_id`` against the fault
+       models of the ``Guideword`` enum.
    * - **Lobster**
      - ``@lobster//`` : ``lobster-trlc``, ``lobster-report``,
        ``lobster-ci-report``, ``lobster-html-report``, ``gtest_report``,

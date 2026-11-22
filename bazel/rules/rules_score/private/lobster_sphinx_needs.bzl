@@ -41,7 +41,7 @@ def needs_json_labels(needs):
             result.append(label_str + ".__internal__.needs_local")
     return result
 
-def _lobster_sphinx_needs_impl(ctx, needs_files, need_type, satisfied_by, rst_basename, title, _lobster_sphinx_needs, _config):
+def _lobster_sphinx_needs_impl(ctx, needs_files, need_type, satisfied_by, rst_basename, title, id_prefix = "", *, _lobster_sphinx_needs, _config):
     lobster_file = ctx.actions.declare_file(ctx.label.name + "_needs.lobster")
     rst_file = ctx.actions.declare_file(rst_basename)
 
@@ -50,6 +50,8 @@ def _lobster_sphinx_needs_impl(ctx, needs_files, need_type, satisfied_by, rst_ba
     args.add("--need-type", need_type)
     if satisfied_by:
         args.add("--satisfied-by", satisfied_by)
+    if id_prefix:
+        args.add("--id-prefix", id_prefix)
     args.add("--out", lobster_file)
     args.add("--rst-out", rst_file)
     args.add("--title", title)
