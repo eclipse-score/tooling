@@ -1,0 +1,112 @@
+{
+  "current_version": "0.0.0",
+  "project": "rules_score_test",
+  "versions": {
+    "0.0.0": {
+      "needs": {
+        "comp_arc_sta__bits__bits": {
+          "id": "comp_arc_sta__bits__bits",
+          "type": "comp_arc_sta",
+          "title": "Bits",
+          "version": 1,
+          "status": "valid",
+          "docname": "architecture/index",
+          "lineno": 10
+        },
+        "real_arc_int__bits__api": {
+          "id": "real_arc_int__bits__api",
+          "type": "real_arc_int",
+          "title": "BitsApi",
+          "version": 1,
+          "status": "valid",
+          "docname": "architecture/index",
+          "lineno": 20
+        },
+        "real_arc_int_op__bits__set_bit": {
+          "id": "real_arc_int_op__bits__set_bit",
+          "type": "real_arc_int_op",
+          "title": "SetBit",
+          "version": 1,
+          "status": "valid",
+          "safety": "ASIL_B",
+          "docname": "architecture/index",
+          "lineno": 30,
+          "included_by": ["real_arc_int__bits__api[version==1]"]
+        },
+        "real_arc_int_op__bits__clear_bit": {
+          "id": "real_arc_int_op__bits__clear_bit",
+          "type": "real_arc_int_op",
+          "title": "ClearBit",
+          "version": 1,
+          "status": "valid",
+          "safety": "ASIL_B",
+          "docname": "architecture/index",
+          "lineno": 40,
+          "included_by": ["real_arc_int__bits__api[version==1]"]
+        },
+        "comp_saf_fmea__bits__no_return": {
+          "id": "comp_saf_fmea__bits__no_return",
+          "type": "comp_saf_fmea",
+          "title": "Bits no return",
+          "content": "Covered by the AoU on integral types.",
+          "version": 1,
+          "status": "valid",
+          "docname": "safety_analysis/fmea",
+          "lineno": 10,
+          "violates": [
+            "comp_arc_sta__bits__bits[version==1]",
+            "real_arc_int_op__bits__set_bit[version==1]",
+            "real_arc_int_op__bits__clear_bit[version==1]"
+          ],
+          "fault_id": "MF_01_01,EX_01_04",
+          "failure_effect": "The bits are not set.",
+          "mitigated_by": ["aou_req__bits__integral[version==1]", "aou_req__platform__flow[version==1]"],
+          "sufficient": "yes"
+        },
+        "comp_saf_fmea__bits__wrong_bit": {
+          "id": "comp_saf_fmea__bits__wrong_bit",
+          "type": "comp_saf_fmea",
+          "title": "Bits wrong bit",
+          "content": "Not yet mitigated.",
+          "version": 1,
+          "status": "valid",
+          "docname": "safety_analysis/fmea",
+          "lineno": 30,
+          "violates": ["comp_arc_sta__bits__bits[version==1]", "real_arc_int_op__bits__set_bit[version==1]"],
+          "fault_id": "MF_01_05",
+          "failure_effect": "Another bit is set.",
+          "mitigated_by": ["comp_req__bits__set[version==1]"],
+          "sufficient": "no"
+        },
+        "comp_saf_fmea__bits__retired": {
+          "id": "comp_saf_fmea__bits__retired",
+          "type": "comp_saf_fmea",
+          "title": "Retired",
+          "content": "Replaced.",
+          "version": 1,
+          "status": "invalid",
+          "docname": "safety_analysis/fmea",
+          "lineno": 50,
+          "violates": ["comp_arc_sta__bits__bits[version==1]"],
+          "fault_id": "NOT_A_FAULT_MODEL",
+          "failure_effect": "None.",
+          "sufficient": "no"
+        },
+        "comp_saf_fmea__other__crash": {
+          "id": "comp_saf_fmea__other__crash",
+          "type": "comp_saf_fmea",
+          "title": "Other component crashes",
+          "content": "Belongs to another component.",
+          "version": 1,
+          "status": "valid",
+          "docname": "safety_analysis/other",
+          "lineno": 5,
+          "violates": ["comp_arc_sta__other__other[version==1]"],
+          "fault_id": "EX_01_04",
+          "failure_effect": "The other component stops.",
+          "sufficient": "yes"
+        }
+      }
+    }
+  }
+}

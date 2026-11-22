@@ -393,6 +393,10 @@ targets unchanged.
      - string
      - yes (``feature_requirements_spn`` / ``component_requirements_spn`` only)
      - Only needs whose ``satisfied_by`` link names this feature/component are converted
+   * - ``id_prefix``
+     - string
+     - no (``assumptions_of_use_spn`` only)
+     - Only needs whose ID starts with this prefix are converted
    * - ``visibility``
      - —
      - no
@@ -884,6 +888,70 @@ records of the root causes and the measures they list.
      - Bazel visibility
 
 **Generated targets:** ``<name>`` (documentation; no standalone test — traceability validated via the parent ``dependability_analysis``)
+
+.. _rule-safety-analysis-spn:
+
+safety_analysis_spn
+~~~~~~~~~~~~~~~~~~~
+
+Counterpart of ``failure_modes``, ``fault_trees`` and ``safety_analysis`` for an
+FMEA written as Sphinx-Needs ``comp_saf_fmea`` needs. ``safety_analysis_spn``
+writes the same LOBSTER files (``failuremodes.lobster``,
+``fta_root_causes.lobster``, ``assessments.lobster``) without TRLC, so
+``dependability_analysis`` and ``dependable_element`` accept it unchanged.
+
+.. code-block:: python
+
+   safety_analysis_spn(
+       name = "my_safety_analysis",
+       arch_design = ":my_arch_design",
+       arch_id = "comp_arc_sta__my_component",
+       fault_trees = glob(["fta_*.puml"]),
+       needs = ["//:needs_json_file"],
+       package = "MyComponentFmea",
+       safety_measures = [":comp_reqs", ":aous"],
+   )
+
+.. list-table::
+   :header-rows: 1
+   :widths: 18 12 10 60
+
+   * - Attribute
+     - Type
+     - Required
+     - Description
+   * - ``needs``
+     - label list
+     - yes
+     - ``needs.json`` files or ``docs_bundle`` targets with the FMEA needs and the ``real_arc_int`` / ``real_arc_int_op`` needs they violate
+   * - ``arch_id``
+     - string
+     - yes
+     - Only the ``comp_saf_fmea`` needs whose ``violates`` link names this need are converted
+   * - ``package``
+     - string
+     - yes
+     - Failure modes are ``req <package>.<need ID>``; the ``$FailureMode`` macros of the fault trees use this name
+   * - ``fault_trees``
+     - label list
+     - no
+     - FTA ``.puml`` diagrams (``fta_metamodel.puml`` is ignored); root causes are ``req <package>_fta.<alias>``
+   * - ``arch_design``
+     - label
+     - no
+     - ``architectural_design`` with the public API. A violated ``real_arc_int_op`` traces to the method whose signature declares ``<interface title>::<operation title>(``
+   * - ``safety_measures``
+     - label list
+     - no
+     - ``assumptions_of_use(_spn)`` / ``component_requirements(_spn)`` targets. ``mitigated_by`` links to their items become measures of the assessment; the AoU targets are the own AoUs of the ``dependable_element``
+
+A need rated ``sufficient: yes`` is the assessment of the root causes of its
+failure mode; with ``sufficient: no`` they stay unassessed. Checks: an unknown
+``fault_id`` (not documented as fault model on the ``Guideword`` enum) fails the
+build; a fault tree naming an unknown failure mode and a violated operation
+without public API method are reported by LOBSTER as unknown tracing targets.
+
+**Generated targets:** ``<name>`` (LOBSTER files, ``safety_analysis.rst`` with the fault-tree diagrams)
 
 .. _rule-dependability-analysis:
 

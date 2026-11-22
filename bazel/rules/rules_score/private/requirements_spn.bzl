@@ -51,6 +51,7 @@ def _requirements_spn_impl(ctx):
         ctx.attr.satisfied_by,
         "{}.rst".format(ctx.attr.name),
         kind.title,
+        id_prefix = ctx.attr.id_prefix,
     )
     lobster_depset = depset([lobster_file])
 
@@ -94,6 +95,9 @@ _score_requirements_spn_rule = rule(
         ),
         "satisfied_by": attr.string(
             doc = "Only convert needs whose satisfied_by link names this feature or component ID.",
+        ),
+        "id_prefix": attr.string(
+            doc = "Only convert needs whose ID starts with this prefix.",
         ),
     },
     subrules = [subrule_lobster_sphinx_needs],
@@ -161,7 +165,7 @@ def assumed_system_requirements_spn(name, needs, **kwargs):
         **kwargs
     )
 
-def assumptions_of_use_spn(name, needs, **kwargs):
+def assumptions_of_use_spn(name, needs, id_prefix = "", **kwargs):
     """Assumptions of use from Sphinx-Needs (``aou_req`` needs).
 
     Counterpart of ``assumptions_of_use``; provides AssumptionsOfUseInfo and
@@ -170,11 +174,14 @@ def assumptions_of_use_spn(name, needs, **kwargs):
     Args:
         name: The name of the target.
         needs: score_docs_as_code ``docs_bundle`` targets or ``needs.json`` files.
+        id_prefix: Only convert the AoUs whose ID starts with this prefix,
+            e.g. ``aou_req__<component>__``.
         **kwargs: Common Bazel attributes (e.g. visibility, testonly).
     """
     _score_requirements_spn_rule(
         name = name,
         needs = needs_json_labels(needs),
         req_kind = "aou",
+        id_prefix = id_prefix,
         **kwargs
     )

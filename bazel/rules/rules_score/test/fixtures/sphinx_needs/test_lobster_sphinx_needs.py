@@ -153,6 +153,15 @@ class ConvertTest(unittest.TestCase):
             ["comp_req__other__get"],
         )
 
+    def test_id_prefix_selects_needs_by_id(self):
+        needs = dict(NEEDS)
+        needs["comp_req__other__get"] = dict(NEEDS["comp_req__bits__set"], id="comp_req__other__get")
+        path = _write(self.tmp.name, "needs.json", _needs_json(needs))
+        self.assertEqual(
+            [item.name for _, item in convert([path], self.rule, id_prefix="comp_req__other__")],
+            ["comp_req__other__get"],
+        )
+
 
 class MainTest(unittest.TestCase):
     def test_writes_lobster_file_and_rst_page(self):

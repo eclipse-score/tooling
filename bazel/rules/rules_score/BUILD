@@ -127,6 +127,19 @@ py_binary(
     ],
 )
 
+# Counterpart of failure_modes + fault_trees + safety_analysis for a Sphinx-Needs FMEA
+py_binary(
+    name = "safety_analysis_spn",
+    srcs = ["src/safety_analysis_spn.py"],
+    imports = ["src"],
+    main = "src/safety_analysis_spn.py",
+    visibility = ["//visibility:public"],
+    deps = [
+        ":lobster_sphinx_needs",
+        "@lobster//lobster/common",
+    ],
+)
+
 # Merges lobster files, collapsing the same item arriving via several paths
 py_binary(
     name = "merge_lobster_items",

@@ -15,10 +15,12 @@
 load("@bazel_skylib//lib:unittest.bzl", "analysistest", "asserts")
 load(
     "@score_tooling//bazel/rules/rules_score:providers.bzl",
+    "AnalysisInfo",
     "AssumedSystemRequirementsInfo",
     "AssumptionsOfUseInfo",
     "ComponentRequirementsInfo",
     "FeatureRequirementsInfo",
+    "SafetyAnalysisProviderInfo",
     "SphinxSourcesInfo",
 )
 
@@ -61,6 +63,30 @@ def _spn_provider_test_impl(ctx):
     return analysistest.end(env)
 
 spn_provider_test = analysistest.make(_spn_provider_test_impl)
+
+def _safety_analysis_spn_provider_test_impl(ctx):
+    """The LOBSTER files of the TRLC safety_analysis, the AoU measures, no TRLC tool."""
+    env = analysistest.begin(ctx)
+    target = analysistest.target_under_test(env)
+
+    asserts.equals(
+        env,
+        ["assessments.lobster", "failuremodes.lobster", "fta_root_causes.lobster"],
+        sorted(target[AnalysisInfo].lobster_files.keys()),
+    )
+    asserts.equals(env, ["aous_spn"], [t.label.name for t in target[SafetyAnalysisProviderInfo].aou_targets])
+    asserts.equals(
+        env,
+        ["fta_no_return.puml", "fta_wrong_bit.puml"],
+        _basenames(target[SphinxSourcesInfo].aux_srcs.to_list()),
+    )
+
+    mnemonics = [a.mnemonic for a in analysistest.target_actions(env)]
+    asserts.true(env, "SafetyAnalysisSpn" in mnemonics, "expected a SafetyAnalysisSpn action")
+    asserts.equals(env, [], [m for m in mnemonics if "trlc" in m.lower()], "safety_analysis_spn must not run TRLC tools")
+    return analysistest.end(env)
+
+safety_analysis_spn_provider_test = analysistest.make(_safety_analysis_spn_provider_test_impl)
 
 def _requirement_lobster_files_impl(ctx):
     return [DefaultInfo(files = depset(transitive = [_lobster_files(t) for t in ctx.attr.requirements]))]

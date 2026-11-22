@@ -266,13 +266,15 @@ def _satisfies(need: dict[str, Any], satisfied_by: str) -> bool:
 
 
 def convert(
-    needs_files: list[str], rule: ConversionRule, satisfied_by: str | None = None
+    needs_files: list[str], rule: ConversionRule, satisfied_by: str | None = None, id_prefix: str | None = None
 ) -> list[tuple[dict[str, Any], Requirement]]:
     """Convert all needs of the rule's type, sorted by need ID."""
     converted: dict[str, tuple[dict[str, Any], Requirement]] = {}
     for path in needs_files:
         for need_id, need in load_needs(path).items():
             if need.get("type") != rule.need_type:
+                continue
+            if id_prefix and not need_id.startswith(id_prefix):
                 continue
             if satisfied_by and not _satisfies(need, satisfied_by):
                 continue
@@ -323,6 +325,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--config", required=True, help="YAML file with the conversion rules")
     parser.add_argument("--need-type", required=True, help="need type to convert, e.g. comp_req")
     parser.add_argument("--satisfied-by", help="only convert needs whose satisfied_by link names this need ID")
+    parser.add_argument("--id-prefix", help="only convert needs whose ID starts with this prefix")
     parser.add_argument("--out", required=True, help="output .lobster file")
     parser.add_argument("--rst-out", help="optional RST page listing the converted needs")
     parser.add_argument("--title", default="Requirements", help="heading of the RST page")
@@ -332,7 +335,7 @@ def main(argv: list[str] | None = None) -> int:
 
     try:
         rule = select_rule(load_config(args.config), args.need_type)
-        converted = convert(args.needs, rule, args.satisfied_by)
+        converted = convert(args.needs, rule, args.satisfied_by, args.id_prefix)
     except ConfigError as e:
         logger.error("%s", e)
         return 1

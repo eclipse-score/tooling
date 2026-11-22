@@ -79,6 +79,10 @@ load(
     _safety_analysis = "safety_analysis",
 )
 load(
+    "//bazel/rules/rules_score/private:safety_analysis_spn.bzl",
+    _safety_analysis_spn = "safety_analysis_spn",
+)
+load(
     "//bazel/rules/rules_score/private:sphinx_module.bzl",
     _sphinx_module = "sphinx_module",
 )
@@ -111,6 +115,7 @@ glossary = _glossary
 filter_execpath = _filter_execpath
 rst_to_trlc = _rst_to_trlc
 safety_analysis = _safety_analysis
+safety_analysis_spn = _safety_analysis_spn
 sphinx_module = _sphinx_module
 test_specification = _test_specification
 unit = _unit
