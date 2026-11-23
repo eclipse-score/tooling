@@ -54,7 +54,8 @@ interface context; the Component Sequence validator reports it.
 An internal API interface declared in several `internal_api` files (for
 example an overview and a detail file) is one interface holding the union of
 the declared methods. Its source location in errors is the first declaration
-that has methods.
+that has methods. Only method names are indexed here: overloads and
+redeclarations collapse into one name, and signature conflicts are not checked.
 *(Requirement: {requirement:downstream-ref}`Tools.InternalApiInterfaceMerge`)*
 
 Method names are extracted by taking the text before the first `(` and

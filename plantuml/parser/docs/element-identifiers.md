@@ -385,8 +385,12 @@ view:
 | Case | Result |
 |------|--------|
 | One declaration has a body, the other has none | Merged; the declaration with the body wins |
-| Two declarations both have a body | `class "<id>" is defined more than once` |
-| Same id, different element type or stereotype | `re-declared with a conflicting entity type` / `stereotype` |
+| Both declarations have a body | Merged; members are united, an identical redeclaration is kept once |
+| Same member with a different definition; methods are the same member when name, parameter types and `const` agree, so `data()` and `data() const` are two overloads; type spellings are compared normalized (`std::uint8_t *` = `uint8_t*`, `a.B` = `a::B`) | `re-declared with a conflicting definition of method "<name>"` (likewise attribute, type alias); the error names the earlier and the later conflicting member |
+| Both enums have literals but the lists differ | `re-declared with a conflicting list of enum literals`; declare the full list in one diagram |
+| Same id, whatever the spelling or alias (`a::B`, `a.B`, `B`, `B as E`); the id has the template arguments stripped, so specializations of one template share it | Merged |
+| Ids differing only in case | `class "<id>" is defined more than once`, noting the case-only difference |
+| Same id, different element type, stereotype or template parameters; a list that only adds parameter packs inferred from methods is the same | `re-declared with a conflicting entity type` / `stereotype` / `template parameters` |
 
 For reparenting, a body is any member, type alias, `extends` or `implements`
 (enum: any literal). For the merge, any member, type alias or enum literal;
@@ -472,8 +476,8 @@ construct of its own kind, so that it joins the right group:
 | `ImplicitParentCycle` | Files reparent each other's declarations | Remove one of the wrappers |
 | `CrossFileRelationSource` | A relation source is declared in another file | Write the relation in the file that declares its source |
 | `AmbiguousParticipantReference` | Two other files declare the reference key with different ids | Declare the participant in the file, or declare it once |
-| `class "<id>" is defined more than once` | Two files declare a class with a body | Keep the body in one file; write the other without |
-| `class "<id>" is re-declared with a conflicting …` | Two files declare one id with a different element type or stereotype | Make the declarations agree |
+| `class "<id>" is defined more than once` | Two files declare ids differing only in case | Use one spelling, or rename one class |
+| `class "<id>" is re-declared with a conflicting …` | Two files declare one id with a different element type, stereotype, template parameters, member definition or enum literal list | Make the declarations agree |
 
 ---
 

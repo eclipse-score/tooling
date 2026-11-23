@@ -18,6 +18,7 @@ mod class_diagram_models;
 mod component_diagram_models;
 mod sequence_diagram_models;
 mod shared;
+pub(crate) mod type_names;
 
 use shared::EntityKey;
 

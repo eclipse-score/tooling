@@ -49,11 +49,19 @@ method, enum literal, relationship, and template parameter items.
 
 If the same class ID is declared more than once across the unit design's input
 class diagrams (e.g. an overview and a detail `.puml` file), the declarations
-merge when at most one of them has a body (members, type aliases or enum
-literals); the relationships of all declarations are united. Two declarations
-with a body are reported as a failure naming both source locations, independent
-of entity type consistency. A different entity type or stereotype across the
-declarations is a failure as well.
+merge: members, type aliases and relationships of all declarations are united,
+and a member redeclared identically is kept once. Methods are the same member
+when name, parameter types and `const` agree, so `data()` and `data() const`
+are two overloads; type spellings are compared normalized, as in the
+design-to-implementation comparison. A member redeclared with a different
+definition, and a different entity type, stereotype, template parameter list
+(one that only adds inferred parameter packs is the same) or enum literal list
+(declare all literals in one diagram), are failures naming both conflicting
+source locations. The id alone identifies a class, so declarations under
+different spellings or aliases merge, as do specializations of one template,
+whose ids share the base name. Ids differing only in case are reported as a
+duplicate class. A member merged from another diagram is reported at its own
+source location.
 *(Requirement: {requirement:downstream-ref}`Tools.ClassDesignImplementationDeclarationMerge`)*
 
 ```text

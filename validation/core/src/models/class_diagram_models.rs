@@ -16,9 +16,12 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use class_diagram::{
-    ClassDiagram as ClassDiagramInput, EntityType, FreeFunctionDecl, SimpleEntity,
+    ClassDiagram as ClassDiagramInput, EntityType, FreeFunctionDecl, MemberVariable, Method,
+    Relationship, SimpleEntity, TemplateParameter,
 };
 use source_location::SourceLocation;
+
+use super::type_names::{method_key, normalized_method, render_type_name};
 
 use crate::{ErrorBuilder, ErrorCategory, ValidationResult};
 
@@ -46,7 +49,15 @@ fn is_bodyless(entity: &SimpleEntity) -> bool {
         && entity.enum_literals.is_empty()
 }
 
-/// The first field on which two same-id declarations disagree.
+/// A disagreement between two declarations of one class, with the locations
+/// of the earlier and the later conflicting declaration.
+struct MergeConflict {
+    field: String,
+    first: SourceLocation,
+    second: SourceLocation,
+}
+
+/// The first entity-level field on which two same-id declarations disagree.
 fn conflicting_declaration_field(
     prev: &SimpleEntity,
     entity: &SimpleEntity,
@@ -57,15 +68,137 @@ fn conflicting_declaration_field(
     if prev.stereotypes != entity.stereotypes {
         return Some("stereotype");
     }
+    if let (Some(a), Some(b)) = (&prev.template_parameters, &entity.template_parameters) {
+        if !is_compatible_template_parameters(a, b) {
+            return Some("template parameters");
+        }
+    }
     None
+}
+
+/// Equal lists, or one extended by parameter packs: the resolver appends packs
+/// inferred from method parameters to the declared list, so diagrams showing
+/// different methods of one template yield different tails.
+fn is_compatible_template_parameters(a: &[TemplateParameter], b: &[TemplateParameter]) -> bool {
+    let (short, long) = if a.len() <= b.len() { (a, b) } else { (b, a) };
+    long.starts_with(short)
+        && long[short.len()..]
+            .iter()
+            .all(|parameter| matches!(parameter, TemplateParameter::Type { is_pack: true, .. }))
+}
+
+/// Method identity: normalized signature (name, parameter types, const;
+/// conversion operators by target).
+fn is_same_overload(a: &Method, b: &Method) -> bool {
+    method_key(&normalized_method(a)) == method_key(&normalized_method(b))
+}
+
+fn comparable_variable(variable: &MemberVariable) -> MemberVariable {
+    let mut variable = variable.clone();
+    variable.source_location = SourceLocation::default();
+    variable.data_type = variable.data_type.as_deref().map(render_type_name);
+    variable
+}
+
+fn is_same_relationship(a: &Relationship, b: &Relationship) -> bool {
+    a.source == b.source
+        && a.target == b.target
+        && a.relation_type == b.relation_type
+        && a.source_multiplicity == b.source_multiplicity
+        && a.target_multiplicity == b.target_multiplicity
+}
+
+/// Merges the members and relationships of `other` (the later declaration)
+/// into `merged`. A member redeclared identically is kept once; a member
+/// sharing its identity (name, plus parameter types and const for methods) but
+/// differing in any other attribute is a conflict. Enum literal lists must
+/// agree when both are present.
+fn merge_members(merged: &mut SimpleEntity, other: SimpleEntity) -> Result<(), MergeConflict> {
+    match (&mut merged.template_parameters, other.template_parameters) {
+        (None, parameters) => merged.template_parameters = parameters,
+        (Some(existing), Some(parameters)) if parameters.len() > existing.len() => {
+            *existing = parameters;
+        }
+        _ => {}
+    }
+
+    for method in other.methods {
+        match merged.methods.iter().find(|m| is_same_overload(m, &method)) {
+            None => merged.methods.push(method),
+            Some(existing) if normalized_method(existing) == normalized_method(&method) => {}
+            Some(existing) => {
+                return Err(MergeConflict {
+                    field: format!("definition of method \"{}\"", method.name),
+                    first: existing.source_location.clone(),
+                    second: method.source_location,
+                });
+            }
+        }
+    }
+    for variable in other.variables {
+        match merged.variables.iter().find(|v| v.name == variable.name) {
+            None => merged.variables.push(variable),
+            Some(existing) if comparable_variable(existing) == comparable_variable(&variable) => {}
+            Some(existing) => {
+                return Err(MergeConflict {
+                    field: format!("definition of attribute \"{}\"", variable.name),
+                    first: existing.source_location.clone(),
+                    second: variable.source_location,
+                });
+            }
+        }
+    }
+    for alias in other.type_aliases {
+        match merged.type_aliases.iter().find(|t| t.alias == alias.alias) {
+            None => merged.type_aliases.push(alias),
+            Some(existing)
+                if render_type_name(&existing.original_type)
+                    == render_type_name(&alias.original_type) => {}
+            Some(existing) => {
+                return Err(MergeConflict {
+                    field: format!("definition of type alias \"{}\"", alias.alias),
+                    first: existing.source_location.clone(),
+                    second: alias.source_location,
+                });
+            }
+        }
+    }
+    if merged.enum_literals.is_empty() {
+        merged.enum_literals = other.enum_literals;
+    } else if let Some(first_literal) = other.enum_literals.first() {
+        let same_literals = merged.enum_literals.len() == other.enum_literals.len()
+            && merged
+                .enum_literals
+                .iter()
+                .zip(&other.enum_literals)
+                .all(|(x, y)| x.name == y.name && x.value == y.value);
+        if !same_literals {
+            return Err(MergeConflict {
+                field: "list of enum literals".to_string(),
+                first: merged.enum_literals[0].source_location.clone(),
+                second: first_literal.source_location.clone(),
+            });
+        }
+    }
+    for relationship in other.relationships {
+        if !merged
+            .relationships
+            .iter()
+            .any(|existing| is_same_relationship(existing, &relationship))
+        {
+            merged.relationships.push(relationship);
+        }
+    }
+    Ok(())
 }
 
 impl ClassEntityIndex {
     /// Builds an index from class design diagrams.
     ///
-    /// A bodyless declaration merges into the same id declared elsewhere and
-    /// the relationships of all declarations are united. Two declarations with
-    /// a body, or disagreeing on entity type or stereotype, are errors.
+    /// Declarations of one id merge: members, type aliases and relationships
+    /// are united. Entity type, stereotype, template parameter, enum literal
+    /// or member-definition disagreements, and ids differing in case, are
+    /// errors.
     pub fn build_diagram_index(
         diagrams: &[ClassDiagramInput],
         result: &mut ValidationResult,
@@ -109,13 +242,41 @@ impl ClassEntityIndex {
                     let (second_source_file, _) = indexed_entity.source_location.display();
 
                     let merges_declarations = matches!(input_kind, ClassInputKind::Design);
-                    let conflicting_field = if merges_declarations {
-                        conflicting_declaration_field(prev, &indexed_entity)
+                    // The index and the implementation matching ignore case, so ids differing only in case are duplicates.
+                    let same_id = prev.id == indexed_entity.id;
+                    let mut conflict = if merges_declarations && same_id {
+                        conflicting_declaration_field(prev, &indexed_entity).map(|field| {
+                            MergeConflict {
+                                field: field.to_string(),
+                                first: prev.source_location.clone(),
+                                second: indexed_entity.source_location.clone(),
+                            }
+                        })
                     } else {
                         None
                     };
 
-                    if let Some(field) = conflicting_field {
+                    let mut merged_entity = None;
+                    if conflict.is_none() && merges_declarations && same_id {
+                        let (mut merged, other) = if is_bodyless(prev) {
+                            (indexed_entity.clone(), prev.clone())
+                        } else {
+                            (prev.clone(), indexed_entity.clone())
+                        };
+                        match merge_members(&mut merged, other) {
+                            Ok(()) => merged_entity = Some(merged),
+                            Err(member_conflict) => conflict = Some(member_conflict),
+                        }
+                    }
+
+                    if let Some(MergeConflict {
+                        field,
+                        first,
+                        second,
+                    }) = conflict
+                    {
+                        let (first_source_file, _) = first.display();
+                        let (second_source_file, _) = second.display();
                         result.add_failure(
                             ErrorBuilder::new(ErrorCategory::Class)
                                 .title(format!(
@@ -123,42 +284,24 @@ impl ClassEntityIndex {
                                     prev.id,
                                 ))
                                 .field("class", format!("\"{}\"", prev.id))
-                                .field("conflicting field", field)
+                                .field("conflicting field", field.as_str())
                                 .field(
                                     "design source file",
                                     format!("\"{}\"", first_source_file),
                                 )
-                                .field(
-                                    "design source line",
-                                    prev.source_location.line.to_string(),
-                                )
+                                .field("design source line", first.line.to_string())
                                 .field(
                                     "conflicting source file",
                                     format!("\"{}\"", second_source_file),
                                 )
-                                .field(
-                                    "conflicting source line",
-                                    indexed_entity.source_location.line.to_string(),
-                                )
+                                .field("conflicting source line", second.line.to_string())
                                 .fix(format!(
                                     "make every declaration of class \"{}\" agree on {field}, or rename one of the conflicting classes",
                                     prev.id,
                                 ))
                                 .build(),
                         );
-                    } else if merges_declarations
-                        && (is_bodyless(&indexed_entity) || is_bodyless(prev))
-                    {
-                        let (mut merged, other) = if is_bodyless(prev) {
-                            (indexed_entity, prev.clone())
-                        } else {
-                            (prev.clone(), indexed_entity)
-                        };
-                        for relationship in other.relationships {
-                            if !merged.relationships.contains(&relationship) {
-                                merged.relationships.push(relationship);
-                            }
-                        }
+                    } else if let Some(merged) = merged_entity {
                         entities.insert(key, merged);
                     } else {
                         result.add_failure(
@@ -186,9 +329,14 @@ impl ClassEntityIndex {
                                     indexed_entity.source_location.line.to_string(),
                                 )
                                 .fix(format!(
-                                    "remove or rename one of the duplicate class \"{}\" declarations in the class {}",
+                                    "remove or rename one of the duplicate class \"{}\" declarations in the class {}{}",
                                     prev.id,
                                     source_kind,
+                                    if merges_declarations && !same_id {
+                                        format!("; ids \"{}\" and \"{}\" differ only in case", prev.id, indexed_entity.id)
+                                    } else {
+                                        String::new()
+                                    },
                                 ))
                                 .build(),
                         );
@@ -364,7 +512,9 @@ impl PublicApiIndex {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use class_diagram::{ClassDiagram, ClassTemplateKind, Method, SimpleEntity, Visibility};
+    use class_diagram::{
+        ClassDiagram, ClassTemplateKind, Method, MethodModifier, SimpleEntity, Visibility,
+    };
     use source_location::SourceLocation;
 
     fn method(name: &str) -> Method {
@@ -421,6 +571,145 @@ mod tests {
         assert_eq!(result.failures.len(), 1);
         assert!(result.failures[0].contains(
             "[Class] Class \"Unit.Sample\" is defined more than once in the class design."
+        ));
+    }
+
+    #[test]
+    fn class_entity_index_merges_declarations_with_bodies_across_diagrams() {
+        let diagrams = vec![ClassDiagram {
+            name: "classes".to_string(),
+            entities: vec![
+                with_method(entity("Unit.Sample", "design_a.puml", 12), "Run"),
+                with_method(entity("Unit.Sample", "design_b.puml", 34), "Run"),
+                with_method(entity("Unit.Sample", "design_b.puml", 35), "Stop"),
+            ],
+            free_functions: Vec::new(),
+        }];
+
+        let mut result = ValidationResult::default();
+        let index = ClassEntityIndex::build_diagram_index(&diagrams, &mut result);
+
+        assert!(
+            result.is_empty(),
+            "unexpected failures: {:?}",
+            result.failures
+        );
+        let merged = index.find_by_id("Unit.Sample").expect("merged entity");
+        let names: Vec<&str> = merged.methods.iter().map(|m| m.name.as_str()).collect();
+        assert_eq!(names, ["Run", "Stop"]);
+    }
+
+    #[test]
+    fn class_entity_index_merges_const_overloads() {
+        let mut const_overload = with_method(entity("Unit.Sample", "design_b.puml", 34), "data");
+        const_overload.methods[0].modifiers = vec![MethodModifier::Const];
+        let diagrams = vec![ClassDiagram {
+            name: "classes".to_string(),
+            entities: vec![
+                with_method(entity("Unit.Sample", "design_a.puml", 12), "data"),
+                const_overload,
+            ],
+            free_functions: Vec::new(),
+        }];
+
+        let mut result = ValidationResult::default();
+        let index = ClassEntityIndex::build_diagram_index(&diagrams, &mut result);
+
+        assert!(
+            result.is_empty(),
+            "unexpected failures: {:?}",
+            result.failures
+        );
+        assert_eq!(index.find_by_id("Unit.Sample").unwrap().methods.len(), 2);
+    }
+
+    #[test]
+    fn class_entity_index_merges_same_id_declared_under_different_names() {
+        let mut qualified = with_method(entity("a.B", "design_b.puml", 34), "Stop");
+        qualified.name = "E".to_string(); // alias, as in `class B as E`
+        let diagrams = vec![ClassDiagram {
+            name: "classes".to_string(),
+            entities: vec![
+                with_method(entity("a.B", "design_a.puml", 12), "Run"),
+                qualified,
+            ],
+            free_functions: Vec::new(),
+        }];
+
+        let mut result = ValidationResult::default();
+        let index = ClassEntityIndex::build_diagram_index(&diagrams, &mut result);
+
+        assert!(
+            result.is_empty(),
+            "unexpected failures: {:?}",
+            result.failures
+        );
+        assert_eq!(index.find_by_id("a.B").unwrap().methods.len(), 2);
+    }
+
+    #[test]
+    fn class_entity_index_reports_ids_differing_in_case_even_when_bodyless() {
+        let diagrams = vec![ClassDiagram {
+            name: "classes".to_string(),
+            entities: vec![
+                with_method(entity("Engine", "design_a.puml", 12), "start"),
+                entity("engine", "design_b.puml", 34),
+            ],
+            free_functions: Vec::new(),
+        }];
+
+        let mut result = ValidationResult::default();
+        let _index = ClassEntityIndex::build_diagram_index(&diagrams, &mut result);
+
+        assert_eq!(result.failures.len(), 1);
+        assert!(result.failures[0].contains("is defined more than once"));
+    }
+
+    #[test]
+    fn class_entity_index_reports_partial_enum_literal_lists() {
+        let literal = |name: &str, value: i128, line: u32| class_diagram::EnumLiteral {
+            name: name.to_string(),
+            value: Some(value),
+            source_location: SourceLocation::new("design.puml", line),
+        };
+        let mut full = entity("Unit.State", "design_a.puml", 1);
+        full.entity_type = EntityType::Enum;
+        full.enum_literals = vec![literal("Idle", 0, 2), literal("Running", 1, 3)];
+        let mut partial = entity("Unit.State", "design_b.puml", 1);
+        partial.entity_type = EntityType::Enum;
+        partial.enum_literals = vec![literal("Running", 0, 2)];
+        let diagrams = vec![ClassDiagram {
+            name: "classes".to_string(),
+            entities: vec![full, partial],
+            free_functions: Vec::new(),
+        }];
+
+        let mut result = ValidationResult::default();
+        let _index = ClassEntityIndex::build_diagram_index(&diagrams, &mut result);
+
+        assert_eq!(result.failures.len(), 1);
+        assert!(result.failures[0].contains("conflicting list of enum literals"));
+    }
+
+    #[test]
+    fn class_entity_index_reports_conflicting_member_definitions() {
+        let mut conflicting = with_method(entity("Unit.Sample", "design_b.puml", 34), "Run");
+        conflicting.methods[0].return_type = Some("int".to_string());
+        let diagrams = vec![ClassDiagram {
+            name: "classes".to_string(),
+            entities: vec![
+                with_method(entity("Unit.Sample", "design_a.puml", 12), "Run"),
+                conflicting,
+            ],
+            free_functions: Vec::new(),
+        }];
+
+        let mut result = ValidationResult::default();
+        let _index = ClassEntityIndex::build_diagram_index(&diagrams, &mut result);
+
+        assert_eq!(result.failures.len(), 1);
+        assert!(result.failures[0].contains(
+            "is re-declared with a conflicting definition of method \"Run\" in another class diagram file"
         ));
     }
 
@@ -526,6 +815,211 @@ mod tests {
         assert!(result.failures[0].contains(
             "is re-declared with a conflicting entity type in another class diagram file"
         ));
+    }
+
+    fn diagram_of(entities: Vec<SimpleEntity>) -> Vec<ClassDiagram> {
+        vec![ClassDiagram {
+            name: "classes".to_string(),
+            entities,
+            free_functions: Vec::new(),
+        }]
+    }
+
+    fn build(entities: Vec<SimpleEntity>) -> (ClassEntityIndex, ValidationResult) {
+        let mut result = ValidationResult::default();
+        let index = ClassEntityIndex::build_diagram_index(&diagram_of(entities), &mut result);
+        (index, result)
+    }
+
+    fn at(mut method: Method, file: &str, line: u32) -> Method {
+        method.source_location = SourceLocation::new(file, line);
+        method
+    }
+
+    fn type_parameter(name: &str, is_pack: bool) -> class_diagram::TemplateParameter {
+        class_diagram::TemplateParameter::Type {
+            name: name.to_string(),
+            is_pack,
+        }
+    }
+
+    #[test]
+    fn class_entity_index_merges_differently_spelled_types() {
+        let mut a = with_method(entity("Unit.Sample", "design_a.puml", 1), "data");
+        a.methods[0].return_type = Some("std::uint8_t*".to_string());
+        a.methods[0].parameters = vec![class_diagram::FunctionArgument {
+            param_type: Some("vehicle.Payload".to_string()),
+            ..Default::default()
+        }];
+        let mut b = with_method(entity("Unit.Sample", "design_b.puml", 1), "data");
+        b.methods[0].return_type = Some("uint8_t *".to_string());
+        b.methods[0].parameters = vec![class_diagram::FunctionArgument {
+            param_type: Some("vehicle::Payload".to_string()),
+            ..Default::default()
+        }];
+
+        let (index, result) = build(vec![a, b]);
+
+        assert!(
+            result.is_empty(),
+            "unexpected failures: {:?}",
+            result.failures
+        );
+        assert_eq!(index.find_by_id("Unit.Sample").unwrap().methods.len(), 1);
+    }
+
+    #[test]
+    fn class_entity_index_reports_conflict_between_later_declarations() {
+        let mut run_int = with_method(entity("Unit.Sample", "design_c.puml", 1), "Stop");
+        run_int.methods[0].return_type = Some("int".to_string());
+        run_int.methods[0] = at(run_int.methods[0].clone(), "design_c.puml", 7);
+        let (_, result) = build(vec![
+            with_method(entity("Unit.Sample", "design_a.puml", 1), "Run"),
+            {
+                let mut b = with_method(entity("Unit.Sample", "design_b.puml", 1), "Stop");
+                b.methods[0] = at(b.methods[0].clone(), "design_b.puml", 5);
+                b
+            },
+            run_int,
+        ]);
+
+        assert_eq!(result.failures.len(), 1);
+        let failure = &result.failures[0];
+        assert!(failure.contains("design_b.puml"), "{failure}");
+        assert!(failure.contains("design_c.puml"), "{failure}");
+        assert!(!failure.contains("design_a.puml"), "{failure}");
+        assert!(failure.contains("Design source line      : 5"), "{failure}");
+        assert!(failure.contains("Conflicting source line : 7"), "{failure}");
+    }
+
+    #[test]
+    fn class_entity_index_reports_conflicting_attributes_and_type_aliases() {
+        let variable = |data_type: &str, file: &str| class_diagram::MemberVariable {
+            name: "count".to_string(),
+            data_type: Some(data_type.to_string()),
+            source_location: SourceLocation::new(file, 2),
+            ..Default::default()
+        };
+        let mut a = entity("Unit.Sample", "design_a.puml", 1);
+        a.variables = vec![variable("int", "design_a.puml")];
+        let mut b = entity("Unit.Sample", "design_b.puml", 1);
+        b.variables = vec![variable("long", "design_b.puml")];
+        let (_, result) = build(vec![a, b]);
+        assert_eq!(result.failures.len(), 1);
+        assert!(result.failures[0].contains("conflicting definition of attribute \"count\""));
+
+        let alias = |original: &str, file: &str| class_diagram::TypeAlias {
+            alias: "Id".to_string(),
+            original_type: original.to_string(),
+            source_location: SourceLocation::new(file, 2),
+        };
+        let mut a = entity("Unit.Sample", "design_a.puml", 1);
+        a.type_aliases = vec![alias("int", "design_a.puml")];
+        let mut b = entity("Unit.Sample", "design_b.puml", 1);
+        b.type_aliases = vec![alias("long", "design_b.puml")];
+        let (_, result) = build(vec![a, b]);
+        assert_eq!(result.failures.len(), 1);
+        assert!(result.failures[0].contains("conflicting definition of type alias \"Id\""));
+    }
+
+    #[test]
+    fn class_entity_index_merges_identical_enum_literals() {
+        let literals = |file: &str| {
+            let mut declared = entity("Unit.State", file, 1);
+            declared.entity_type = EntityType::Enum;
+            declared.enum_literals = ["Idle", "Running"]
+                .iter()
+                .enumerate()
+                .map(|(value, name)| class_diagram::EnumLiteral {
+                    name: name.to_string(),
+                    value: Some(value as i128),
+                    source_location: SourceLocation::new(file, 2),
+                })
+                .collect();
+            declared
+        };
+
+        let (index, result) = build(vec![literals("design_a.puml"), literals("design_b.puml")]);
+
+        assert!(
+            result.is_empty(),
+            "unexpected failures: {:?}",
+            result.failures
+        );
+        assert_eq!(
+            index.find_by_id("Unit.State").unwrap().enum_literals.len(),
+            2
+        );
+    }
+
+    #[test]
+    fn class_entity_index_reports_conflicting_template_parameters() {
+        let mut a = entity("Unit.Box", "design_a.puml", 1);
+        a.template_parameters = Some(vec![type_parameter("T", false)]);
+        let mut b = entity("Unit.Box", "design_b.puml", 1);
+        b.template_parameters = Some(vec![type_parameter("U", false)]);
+
+        let (_, result) = build(vec![a, b]);
+
+        assert_eq!(result.failures.len(), 1);
+        assert!(result.failures[0].contains("conflicting template parameters"));
+    }
+
+    #[test]
+    fn class_entity_index_merges_template_parameters_extended_by_inferred_packs() {
+        let mut a = with_method(entity("Unit.Box", "design_a.puml", 1), "Run");
+        a.template_parameters = Some(vec![type_parameter("T", false)]);
+        let mut b = with_method(entity("Unit.Box", "design_b.puml", 1), "Emplace");
+        b.template_parameters = Some(vec![
+            type_parameter("T", false),
+            type_parameter("Args", true),
+        ]);
+
+        let (index, result) = build(vec![a, b]);
+
+        assert!(
+            result.is_empty(),
+            "unexpected failures: {:?}",
+            result.failures
+        );
+        let merged = index.find_by_id("Unit.Box").unwrap();
+        assert_eq!(merged.template_parameters.as_ref().unwrap().len(), 2);
+    }
+
+    #[test]
+    fn class_entity_index_keeps_one_copy_of_a_relationship_drawn_twice() {
+        let relationship = |file: &str, line: u32| class_diagram::Relationship {
+            source: "Unit.Sample".to_string(),
+            target: "Unit.Wheel".to_string(),
+            source_location: SourceLocation::new(file, line),
+            ..Default::default()
+        };
+        let mut a = with_method(entity("Unit.Sample", "design_a.puml", 1), "Run");
+        a.relationships = vec![relationship("design_a.puml", 4)];
+        let mut b = with_method(entity("Unit.Sample", "design_b.puml", 1), "Stop");
+        b.relationships = vec![relationship("design_b.puml", 9)];
+
+        let (index, result) = build(vec![a, b]);
+
+        assert!(
+            result.is_empty(),
+            "unexpected failures: {:?}",
+            result.failures
+        );
+        assert_eq!(
+            index.find_by_id("Unit.Sample").unwrap().relationships.len(),
+            1
+        );
+    }
+
+    #[test]
+    fn class_entity_index_names_case_only_id_difference() {
+        let (_, result) = build(vec![
+            with_method(entity("Engine", "design_a.puml", 1), "start"),
+            entity("engine", "design_b.puml", 1),
+        ]);
+
+        assert!(result.failures[0].contains("differ only in case"));
     }
 
     #[test]
