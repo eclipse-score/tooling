@@ -1423,11 +1423,7 @@ unit(
     name = "dynamic_dispatcher_unit",
     testonly = True,
     # RealImpl-style rationale: mock_lib1 has no matching C++ class, only
-    # illustrative for this fixture's linking scenario. tests is empty (not
-    # :test_unit_tests) because dynamic_worker_unit below is a sibling under
-    # the same component/dependable_element -- reusing the same gtest
-    # target for both would make lobster-report see duplicate gtest item
-    # definitions within one aggregated report.
+    # illustrative for this fixture's linking scenario.
     maturity = "development",
     tests = [],
     unit_design = [":dynamic_dispatcher_unit_design"],
@@ -1443,8 +1439,7 @@ unit(
     name = "dynamic_worker_unit",
     testonly = True,
     # RealImpl-style rationale: mock_lib1 has no matching C++ class, only
-    # illustrative for this fixture's linking scenario. tests is empty --
-    # see dynamic_dispatcher_unit above for why.
+    # illustrative for this fixture's linking scenario.
     maturity = "development",
     tests = [],
     unit_design = [":dynamic_worker_unit_design"],

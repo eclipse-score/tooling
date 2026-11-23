@@ -66,6 +66,27 @@ def merge_lobster_files(ctx, files, output_name):
     )
     return [merged], [merged]
 
+def unique_test_reports(test_results):
+    """Collect the gtest XML reports of test results, one per test target.
+
+    A test target may be attached to several units; its reports are identical,
+    and lobster rejects the duplicate test items they would yield.
+
+    Args:
+        test_results: List of depsets of ``struct(test_label, xml)``.
+
+    Returns:
+        List of XML Files, the first report of each test target.
+    """
+    reports = []
+    seen_labels = {}
+    for result in depset(transitive = test_results).to_list():
+        if result.test_label in seen_labels:
+            continue
+        seen_labels[result.test_label] = True
+        reports.append(result.xml)
+    return reports
+
 def format_lobster_sources(files):
     """Format a list of File objects as lobster source lines.
 

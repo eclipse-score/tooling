@@ -942,7 +942,7 @@ diagram.
    * - ``tests``
      - label list
      - yes
-     - Test targets that verify this unit (may be ``[]``)
+     - Test targets that verify this unit (may be ``[]``). A target may be shared by several units, also across components; it is traced only once
    * - ``test_specs``
      - label list
      - no

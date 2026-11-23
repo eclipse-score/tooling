@@ -23,7 +23,7 @@ load("@lobster//:lobster.bzl", "subrule_lobster_gtest", "subrule_lobster_html_re
 load("@lobster_capabilities//:capabilities.bzl", "SUPPORTS_DERIVE_GWT_FROM_TEST_NAME")
 load("@trlc//:trlc.bzl", "TrlcProviderInfo")
 load("//bazel/rules/rules_score:providers.bzl", "AssumedSystemRequirementsInfo", "CertifiedScope", "ComponentInfo", "ComponentRequirementsInfo", "ComponentTestCaseCoverageInfo", "FeatureRequirementsInfo", "SphinxSourcesInfo", "UnitInfo")
-load("//bazel/rules/rules_score/private:lobster_config.bzl", "format_lobster_sources")
+load("//bazel/rules/rules_score/private:lobster_config.bzl", "format_lobster_sources", "unique_test_reports")
 
 # ============================================================================
 # Private Rule Implementation: Component .update target
@@ -250,19 +250,23 @@ def _component_impl(ctx):
     # Propagate Tracing Files: collect .lobster files from sub-components
     # and unit test results from units (to be converted to gtest.lobster below)
     # -------------------------------------------------------------------------
-    collected_unit_test_files = []
+    collected_unit_test_results = []
+    collected_nested_test_results = []
     collected_test_specs = []
     collected_tests = []
     collected_architecture = []
     for component in ctx.attr.components:
         if UnitInfo in component:
-            collected_unit_test_files.append(component[UnitInfo].tests)
+            collected_unit_test_results.append(getattr(component[UnitInfo], "test_results", depset()))
             collected_test_specs.append(component[UnitInfo].test_specs)
         if ComponentTestCaseCoverageInfo in component:
             collected_test_specs.append(component[ComponentTestCaseCoverageInfo].test_specs)
         if ComponentInfo in component:
             if component[ComponentInfo].tests:
                 collected_tests.append(component[ComponentInfo].tests)
+            nested_test_results = getattr(component[ComponentInfo], "test_results", None)
+            if nested_test_results:
+                collected_nested_test_results.append(nested_test_results)
             if component[ComponentInfo].architecture:
                 collected_architecture.append(component[ComponentInfo].architecture)
 
@@ -272,8 +276,9 @@ def _component_impl(ctx):
     # lobster versions do not offer the option and keep relying on the record
     # properties alone.
     derive_gwt = {"derive_gwt_from_test_name": True} if SUPPORTS_DERIVE_GWT_FROM_TEST_NAME else {}
+
     gtest_lobster_file, provider = subrule_lobster_gtest(
-        depset(transitive = collected_unit_test_files).to_list(),
+        unique_test_reports(collected_unit_test_results),
         **derive_gwt
     )
 
@@ -354,7 +359,8 @@ def _component_impl(ctx):
         ),
         # CertifiedScope: propagate certification scopes upward
         CertifiedScope(transitive_scopes = depset(transitive = collected_certified_scopes)),
-        # ComponentInfo: lobster traceability files for requirements, architecture, and tests; propagated up to dependable_element
+        # ComponentInfo: lobster traceability files for requirements, architecture and tests; propagated up to dependable_element
+        # (tests: this component's own gtest.lobster, informational; dependable_element converts test_results itself)
         ComponentInfo(
             name = ctx.label.name,
             design_name = ctx.attr.design_name or ctx.label.name,
@@ -366,6 +372,7 @@ def _component_impl(ctx):
                 [gtest_lobster_file],
                 transitive = collected_tests,
             ),
+            test_results = depset(transitive = collected_unit_test_results + collected_nested_test_results),
             architecture = depset(
                 [arch_lobster_file] if arch_lobster_file else [],
                 transitive = collected_architecture,

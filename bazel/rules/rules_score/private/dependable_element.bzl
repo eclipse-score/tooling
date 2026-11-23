@@ -24,9 +24,11 @@ load("@bazel_skylib//lib:paths.bzl", "paths")
 load(
     "@lobster//:lobster.bzl",
     "LobsterProvider",
+    "subrule_lobster_gtest",
     "subrule_lobster_html_report",
     "subrule_lobster_report",
 )
+load("@lobster_capabilities//:capabilities.bzl", "SUPPORTS_DERIVE_GWT_FROM_TEST_NAME")
 load("@rules_python//sphinxdocs:sphinx_docs_library.bzl", "sphinx_docs_library")
 load("@tooling_provenance//:provenance.bzl", "TOOLING_VERSION")
 load("@trlc//:trlc.bzl", "TrlcProviderInfo")
@@ -65,6 +67,7 @@ load(
     "MERGE_LOBSTER_ITEMS_ATTR",
     "format_lobster_block",
     "merge_lobster_files",
+    "unique_test_reports",
 )
 load("//bazel/rules/rules_score/private:sphinx_module.bzl", "sphinx_module")
 load("//bazel/rules/rules_score/private:validation.bzl", "PROFILES", "VALIDATION_ATTRS", "run_validation")
@@ -1471,20 +1474,27 @@ def _dependable_element_index_impl(ctx):
     feat_req_lobster_depset = depset(transitive = feat_req_lobster_files)
 
     comp_req_lobster_files = []
-    comp_test_lobster_files = []
+    comp_test_results = []
     comp_arch_lobster_files = []
     for comp_target in ctx.attr.components:
         if ComponentInfo in comp_target:
             comp_info = comp_target[ComponentInfo]
             if comp_info.requirements_transitive:
                 comp_req_lobster_files.append(comp_info.requirements_transitive)
-            if comp_info.tests:
-                comp_test_lobster_files.append(comp_info.tests)
+            comp_test_results.append(getattr(comp_info, "test_results", depset()))
             if comp_info.architecture:
                 comp_arch_lobster_files.append(comp_info.architecture)
 
     comp_req_lobster_depset = depset(transitive = comp_req_lobster_files)
-    comp_test_lobster_depset = depset(transitive = comp_test_lobster_files)
+
+    # A test target may be attached to units of different components (siblings
+    # or parent and child), each reporting it. It is converted once here so
+    # lobster sees every test item a single time.
+    comp_test_list = []
+    if comp_test_results:
+        derive_gwt = {"derive_gwt_from_test_name": True} if SUPPORTS_DERIVE_GWT_FROM_TEST_NAME else {}
+        gtest_lobster_file, _ = subrule_lobster_gtest(unique_test_reports(comp_test_results), **derive_gwt)
+        comp_test_list = [gtest_lobster_file]
     comp_arch_lobster_depset = depset(transitive = comp_arch_lobster_files)
 
     # Test-case-coverage lock check: run test_runner once per component that has a
@@ -1594,7 +1604,6 @@ def _dependable_element_index_impl(ctx):
     feat_req_list = feat_req_lobster_depset.to_list()
 
     comp_req_list = comp_req_lobster_depset.to_list()
-    comp_test_list = comp_test_lobster_depset.to_list()
     comp_arch_list = comp_arch_lobster_depset.to_list()
     interface_req_list = public_api_lobster_list
     fm_list = sa_lobster_files.get("failuremodes.lobster", [])
@@ -2106,7 +2115,7 @@ _dependable_element_index = rule(
     by the public `<name>` target.
     """,
     attrs = _dependable_element_index_attrs(),
-    subrules = [subrule_lobster_report, subrule_lobster_html_report],
+    subrules = [subrule_lobster_gtest, subrule_lobster_report, subrule_lobster_html_report],
 )
 
 # ============================================================================
