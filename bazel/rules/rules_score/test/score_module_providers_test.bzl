@@ -487,5 +487,6 @@ def sphinx_module_providers_test_suite(name):
             # Persistent worker gating tests
             ":worker_gating_html_test",
             ":worker_gating_needs_test",
+            ":dependable_element_worker_gating_html_test",
         ],
     )

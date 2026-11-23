@@ -1127,6 +1127,10 @@ and scope checks at build/test time.
      - bool
      - no
      - If ``True``, only testonly targets may depend on this element (default ``True``)
+   * - ``allow_persistent_workers``
+     - bool
+     - no
+     - (Experimental) If ``True``, the ``<name>_doc`` HTML Sphinx build may run as a Bazel persistent worker. Removed source pages can survive as stale output across worker-reused builds (default ``False``)
    * - ``visibility``
      - —
      - no
