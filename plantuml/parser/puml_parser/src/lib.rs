@@ -21,7 +21,8 @@ pub use parser_core::{
     common_ast, common_parser, Arrow, BaseParseError, DiagramParser, ErrorLocation,
 };
 pub use preprocessor::{
-    IncludeExpandError, IncludeExpander, IncludeParseError, PreprocessError, Preprocessor,
-    ProcedureExpandError, ProcedureFile, ProcedureParseError, ProcedureParserService,
+    IncludeExpandError, IncludeExpander, IncludeParseError, IncludeSite, PreprocessError,
+    Preprocessed, Preprocessor, ProcedureExpandError, ProcedureFile, ProcedureParseError,
+    ProcedureParserService, SourceLine,
 };
 pub use sequence_parser::{PumlSequenceParser, SeqPumlDocument, SequenceError};

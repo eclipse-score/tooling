@@ -61,6 +61,7 @@ def test_match_shebang_ignores_rust_inner_attribute():
         "rst",
         "md",
         "puml",
+        "iuml",
     ]
 )
 def prepare_test_with_header(request, tmp_path):
@@ -94,6 +95,7 @@ def prepare_test_with_header(request, tmp_path):
         "rst",
         "md",
         "puml",
+        "iuml",
     ]
 )
 def prepare_test_no_header(request, tmp_path):
@@ -1490,7 +1492,9 @@ def test_style_variants_adds_block_form_to_slash_template():
     assert " *" in lines
 
 
-@pytest.mark.parametrize("extension", ["py", "sh", "bzl", "BUILD", "bazel", "yml", "yaml", "ini", "rst", "md", "puml"])
+@pytest.mark.parametrize(
+    "extension", ["py", "sh", "bzl", "BUILD", "bazel", "yml", "yaml", "ini", "rst", "md", "puml", "iuml"]
+)
 def test_style_variants_keeps_single_form_for_other_languages(extension):
     cr_checker = load_cr_checker_module()
     template = load_template(extension)
@@ -1535,6 +1539,7 @@ def test_process_files_accepts_header_in_alternative_comment_form(tmp_path, exte
         ("sh", _to_slash(_rendered("cpp"))),
         ("md", _to_slash(_rendered("cpp"))),
         ("puml", _to_slash(_rendered("cpp"))),
+        ("iuml", _to_slash(_rendered("cpp"))),
         ("h", _rendered("py")),
         ("trlc", _rendered("py")),
         ("rs", _rendered("py")),

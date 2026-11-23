@@ -26,9 +26,18 @@ def _staged_files_test_impl(ctx):
             any([p.endswith(suffix) for p in short_paths]),
             "missing staged '{}' in: {}".format(suffix, short_paths),
         )
+    for suffix in ctx.attr.absent_suffixes:
+        asserts.false(
+            env,
+            any([p.endswith(suffix) for p in short_paths]),
+            "unexpected staged '{}' in: {}".format(suffix, short_paths),
+        )
     return analysistest.end(env)
 
 staged_files_test = analysistest.make(
     _staged_files_test_impl,
-    attrs = {"suffixes": attr.string_list(mandatory = True)},
+    attrs = {
+        "absent_suffixes": attr.string_list(),
+        "suffixes": attr.string_list(mandatory = True),
+    },
 )

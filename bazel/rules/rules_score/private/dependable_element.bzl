@@ -177,6 +177,7 @@ def _filter_doc_files(files):
             "rst",
             "md",
             "puml",
+            "iuml",
             "plantuml",
             "png",
             "svg",

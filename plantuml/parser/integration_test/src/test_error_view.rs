@@ -114,7 +114,7 @@ impl ErrorView for IncludeParseError {
 impl ErrorView for IncludeExpandError {
     fn project(&self, base_dir: &Path) -> ProjectedError {
         match self {
-            IncludeExpandError::FileNotFound { file } => ProjectedError::new("FileNotFound")
+            IncludeExpandError::FileNotFound { file, .. } => ProjectedError::new("FileNotFound")
                 .with_field("file", relative_path(file, base_dir)),
 
             IncludeExpandError::ParseFailed { file, error } => ProjectedError::new("ParseFailed")

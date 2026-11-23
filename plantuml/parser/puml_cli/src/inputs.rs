@@ -54,6 +54,40 @@ pub fn collect_input_files(
     Ok(ordered)
 }
 
+/// Resolves the `--include-file` entries: existing `.puml` / `.iuml` files that
+/// are neither listed twice nor among the `diagrams`.
+pub fn collect_include_files(
+    files: &[String],
+    diagrams: &[Rc<PathBuf>],
+) -> Result<Vec<Rc<PathBuf>>, Box<dyn std::error::Error>> {
+    let mut include_files: Vec<Rc<PathBuf>> = Vec::with_capacity(files.len());
+
+    for file_path in files {
+        let abs_path = resolve_path(Path::new(file_path))?;
+        if !abs_path.is_file() {
+            return Err(format!("Path is not a file: {file_path}").into());
+        }
+        if !matches!(
+            abs_path.extension().and_then(|ext| ext.to_str()),
+            Some("puml" | "iuml")
+        ) {
+            return Err(format!("File is not a .puml or .iuml file: {file_path}").into());
+        }
+        let abs_path = Rc::new(abs_path);
+        if include_files.contains(&abs_path) {
+            return Err(format!("Duplicate --include-file entry: {file_path}").into());
+        }
+        if diagrams.contains(&abs_path) {
+            return Err(
+                format!("--include-file entry is also an input diagram: {file_path}").into(),
+            );
+        }
+        include_files.push(abs_path);
+    }
+
+    Ok(include_files)
+}
+
 fn resolve_path(path: &Path) -> Result<PathBuf, Box<dyn std::error::Error>> {
     if path.is_absolute() {
         return Ok(path.to_path_buf());
@@ -73,11 +107,12 @@ pub fn require_one_per_file_or_none(
     values: &[String],
     file_count: usize,
     flag_name: &str,
+    entity: &str,
 ) -> Result<(), Box<dyn std::error::Error>> {
     if !values.is_empty() && values.len() != file_count {
         return Err(format!(
-            "--{flag_name} must be given exactly once per input file (in the same \
-             order as --file) or not at all; got {file_count} input file(s), \
+            "--{flag_name} must be given exactly once per {entity} (in the same \
+             order) or not at all; got {file_count} {entity}(s), \
              {} --{flag_name}",
             values.len(),
         )
@@ -86,19 +121,19 @@ pub fn require_one_per_file_or_none(
     Ok(())
 }
 
-/// Validate a user-supplied `--source-name` value.
+/// Validate a user-supplied `--source-name` (or `--include-source-name`) value.
 ///
 /// Rejects empty strings and absolute paths: an absolute path would leak the
 /// local machine's directory layout into build outputs (breaking build
 /// reproducibility) and would defeat the whole purpose of the flag, which is
 /// to supply a *stable, workspace-relative* key for cross-diagram matching.
-pub fn validate_source_name(name: &str) -> Result<(), Box<dyn std::error::Error>> {
+pub fn validate_source_name(flag: &str, name: &str) -> Result<(), Box<dyn std::error::Error>> {
     if name.is_empty() {
-        return Err("--source-name must not be empty".into());
+        return Err(format!("--{flag} must not be empty").into());
     }
     if Path::new(name).is_absolute() {
         return Err(format!(
-            "--source-name must be a workspace-relative path, got an absolute path: {name}"
+            "--{flag} must be a workspace-relative path, got an absolute path: {name}"
         )
         .into());
     }

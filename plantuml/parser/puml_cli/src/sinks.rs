@@ -247,12 +247,20 @@ mod tests {
     use super::*;
     use crate::parsing::{parse_puml_file, DiagramType};
     use crate::resolving::resolve_single;
+    use crate::source_map::SourceMap;
     use puml_utils::LogLevel;
     use std::rc::Rc;
 
     fn resolved(content: &str, diagram_type: DiagramType) -> ResolvedDiagram {
         let path = Rc::new(PathBuf::from("d.puml"));
-        let parsed = parse_puml_file(&path, content, LogLevel::Warn, diagram_type).unwrap();
+        let parsed = parse_puml_file(
+            &path,
+            content,
+            &SourceMap::identity(),
+            LogLevel::Warn,
+            diagram_type,
+        )
+        .unwrap();
         resolve_single(parsed).unwrap()
     }
 

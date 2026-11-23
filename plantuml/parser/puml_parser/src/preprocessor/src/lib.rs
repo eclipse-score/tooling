@@ -13,8 +13,10 @@
 
 mod preprocessor;
 
-pub use include_preprocessor::{IncludeExpandError, IncludeExpander, IncludeParseError};
-pub use preprocessor::{PreprocessError, Preprocessor};
+pub use include_preprocessor::{
+    Expanded, IncludeExpandError, IncludeExpander, IncludeParseError, IncludeSite, SourceLine,
+};
+pub use preprocessor::{PreprocessError, Preprocessed, Preprocessor};
 pub use procedure_preprocessor::{
     ProcedureExpandError, ProcedureExpander, ProcedureFile, ProcedureParseError,
     ProcedureParserService,

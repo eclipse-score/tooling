@@ -25,6 +25,8 @@ use puml_parser::{
 };
 use puml_utils::LogLevel;
 
+use crate::source_map::SourceMap;
+
 /// Grammar / diagram type selected with `--diagram-type`.
 #[derive(Copy, Clone, ValueEnum, Debug)]
 pub enum DiagramType {
@@ -150,16 +152,57 @@ where
         })
 }
 
+/// Parses `content`, the include-expanded text of the diagram `path`. A
+/// failure names the file and line that `source_map` gives for the expanded
+/// line.
 // lobster-trace: Tools.ArchitectureModelingSyntax
 pub fn parse_puml_file(
     path: &Rc<PathBuf>,
     content: &str,
+    source_map: &SourceMap,
     log_level: LogLevel,
     diagram_type: DiagramType,
 ) -> Result<ParsedDiagram, Box<dyn std::error::Error>> {
     match diagram_type.kind() {
-        Some(kind) => parse_as(kind, path, content, log_level),
-        None => parse_in_order(path, content, log_level),
+        Some(kind) => parse_as(kind, path, content, source_map, log_level),
+        None => parse_in_order(path, content, source_map, log_level),
+    }
+}
+
+/// The file and line of the 1-based `line_no` of the expanded text, as far as
+/// `source_map` knows them.
+fn describe_place(source_map: &SourceMap, line_no: usize) -> String {
+    match source_map.locate(line_no) {
+        Some((file, line)) => format!("{file}:{line} (expanded line {line_no})"),
+        None => format!("line {line_no}"),
+    }
+}
+
+/// The text of the 1-based `line_no` of `content`.
+fn line_text(content: &str, line_no: usize) -> &str {
+    content
+        .lines()
+        .nth(line_no.saturating_sub(1))
+        .unwrap_or("<unknown>")
+        .trim()
+}
+
+/// The error of `failure`; where `source_map` knows the failing line, it
+/// names the line's file and line.
+fn located_error(
+    failure: ParseFailure,
+    content: &str,
+    source_map: &SourceMap,
+) -> Box<dyn std::error::Error> {
+    match failure.location {
+        Some((line_no, _)) if source_map.locate(line_no).is_some() => format!(
+            "Failed at {}: {}\n  Error: {}",
+            describe_place(source_map, line_no),
+            line_text(content, line_no),
+            failure.error
+        )
+        .into(),
+        _ => failure.error,
     }
 }
 
@@ -169,6 +212,7 @@ fn parse_as(
     kind: DiagramKind,
     path: &Rc<PathBuf>,
     content: &str,
+    source_map: &SourceMap,
     log_level: LogLevel,
 ) -> Result<ParsedDiagram, Box<dyn std::error::Error>> {
     match kind.parse(path, content, log_level) {
@@ -176,18 +220,21 @@ fn parse_as(
             debug!("Successfully parsed PlantUML document: {}", path.display());
             Ok(parsed)
         }
-        Err(failure) => Err(match detect_other_kind(kind, path, content, log_level) {
-            Some(found) => format!(
-                "{}: expected a {} diagram, found a {} diagram\n  {} parser error: {}",
-                path.display(),
-                kind.name(),
-                found.name(),
-                kind.name(),
-                failure.error
-            )
-            .into(),
-            None => failure.error,
-        }),
+        Err(failure) => {
+            let error = located_error(failure, content, source_map);
+            Err(match detect_other_kind(kind, path, content, log_level) {
+                Some(found) => format!(
+                    "{}: expected a {} diagram, found a {} diagram\n  {} parser error: {}",
+                    path.display(),
+                    kind.name(),
+                    found.name(),
+                    kind.name(),
+                    error
+                )
+                .into(),
+                None => error,
+            })
+        }
     }
 }
 
@@ -209,6 +256,7 @@ fn detect_other_kind(
 fn parse_in_order(
     path: &Rc<PathBuf>,
     content: &str,
+    source_map: &SourceMap,
     log_level: LogLevel,
 ) -> Result<ParsedDiagram, Box<dyn std::error::Error>> {
     let mut failures: Vec<(DiagramKind, ParseFailure)> = Vec::new();
@@ -240,21 +288,14 @@ fn parse_in_order(
 
     let detail = match best {
         Some((kind, failure)) => match failure.location {
-            Some((line_no, _col)) => {
-                let source_line = content
-                    .lines()
-                    .nth(line_no - 1)
-                    .unwrap_or("<unknown>")
-                    .trim();
-                format!(
-                    "\n  Parsers tried: {}\n  Parser with longest match: {}\n  Failed at line {}: {}\n  Error: {}",
-                    tried_names.join(", "),
-                    kind.name(),
-                    line_no,
-                    source_line,
-                    failure.error,
-                )
-            }
+            Some((line_no, _col)) => format!(
+                "\n  Parsers tried: {}\n  Parser with longest match: {}\n  Failed at {}: {}\n  Error: {}",
+                tried_names.join(", "),
+                kind.name(),
+                describe_place(source_map, line_no),
+                line_text(content, line_no),
+                failure.error,
+            ),
             None => format!(
                 "\n  Parsers tried: {}\n  Parser with longest match: {}\n  Error: {}",
                 tried_names.join(", "),

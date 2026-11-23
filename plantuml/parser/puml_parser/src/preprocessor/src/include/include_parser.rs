@@ -67,6 +67,7 @@ impl IncludeParserService {
                         stmts.push(IncludeFile::SubBlock(sub_block));
                     }
                     Rule::text_line => {
+                        let line_no = line.line_col().0 as u32;
                         let text = line.as_str().to_string();
                         let trimmed = text.trim_start();
                         if INCLUDE_KW.iter().any(|kw| trimmed.starts_with(kw)) {
@@ -76,7 +77,10 @@ impl IncludeParserService {
                             });
                         }
                         if !text.trim().is_empty() {
-                            stmts.push(IncludeFile::Text(text));
+                            stmts.push(IncludeFile::Text {
+                                text,
+                                line: line_no,
+                            });
                         }
                     }
                     _ => {}
@@ -88,6 +92,7 @@ impl IncludeParserService {
     }
 
     fn parse_include_line(&self, pair: Pair<Rule>) -> IncludeStmt {
+        let line = pair.line_col().0 as u32;
         let directive = pair
             .into_inner()
             .find(|p| p.as_rule() == Rule::include_directive)
@@ -95,10 +100,11 @@ impl IncludeParserService {
 
         let (kind, path) = self.parse_include_directive(directive);
 
-        IncludeStmt::Include { kind, path }
+        IncludeStmt::Include { kind, path, line }
     }
 
     fn parse_includesub_line(&self, pair: Pair<Rule>) -> IncludeStmt {
+        let line = pair.line_col().0 as u32;
         let directive = pair
             .into_inner()
             .find(|p| p.as_rule() == Rule::includesub_directive)
@@ -106,7 +112,7 @@ impl IncludeParserService {
 
         let (path, suffix) = self.parse_includesub_directive(directive);
 
-        IncludeStmt::IncludeSub { path, suffix }
+        IncludeStmt::IncludeSub { path, suffix, line }
     }
 
     fn parse_include_directive(&self, pair: Pair<Rule>) -> (IncludeKind, String) {
@@ -183,9 +189,13 @@ impl IncludeParserService {
                     content.push(IncludeFile::Include(include_sub));
                 }
                 Rule::text_line => {
+                    let line_no = line.line_col().0 as u32;
                     let text = line.as_str().to_string();
                     if !text.trim().is_empty() {
-                        content.push(IncludeFile::Text(text));
+                        content.push(IncludeFile::Text {
+                            text,
+                            line: line_no,
+                        });
                     }
                 }
                 _ => {}

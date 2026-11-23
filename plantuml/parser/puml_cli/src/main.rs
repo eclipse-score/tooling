@@ -16,27 +16,30 @@ mod inputs;
 mod parsing;
 mod resolving;
 mod sinks;
+mod source_map;
 
 use clap::{ArgGroup, Parser, ValueEnum};
 use env_logger::Builder;
 use log::debug;
-use std::collections::HashSet;
-use std::path::PathBuf;
+use std::collections::{HashMap, HashSet};
+use std::path::{Path, PathBuf};
 use std::rc::Rc;
 
-use puml_parser::Preprocessor;
+use puml_parser::{Preprocessed, Preprocessor};
 use puml_utils::LogLevel;
 
 use crate::fta::run_fta;
 use crate::inputs::{
-    collect_input_files, output_naming_path, output_source_path, require_one_per_file_or_none,
-    validate_output_stem, validate_source_name, validate_trlc_package,
+    collect_include_files, collect_input_files, output_naming_path, output_source_path,
+    require_one_per_file_or_none, validate_output_stem, validate_source_name,
+    validate_trlc_package,
 };
 use crate::parsing::{parse_puml_file, DiagramType, ParsedDiagram};
 use crate::resolving::resolve_parsed_diagrams;
 use crate::sinks::{
     create_output_dir, DiagramOutput, FbsSink, IdmapSink, OutputSink, PublicApiSink,
 };
+use crate::source_map::SourceMap;
 
 /// CLI wrapper for LogLevel that implements ValueEnum
 #[derive(Copy, Clone, ValueEnum, Debug)]
@@ -112,7 +115,10 @@ struct Args {
     /// FlatBuffers / component processing is performed in this mode.
     #[arg(
         long,
-        conflicts_with_all = ["fbs_output_dir", "api_output_file", "source_name", "output_stem"]
+        conflicts_with_all = [
+            "fbs_output_dir", "api_output_file", "source_name", "output_stem",
+            "include_file", "include_source_name",
+        ]
     )]
     fta_output_dir: Option<String>,
 
@@ -140,6 +146,20 @@ struct Args {
     /// a single path component.
     #[arg(long, conflicts_with = "folders")]
     output_stem: Vec<String>,
+
+    /// Files that `!include` directives of the diagrams may name besides the
+    /// diagrams themselves (can be repeated). They are never parsed as
+    /// diagrams of their own and yield no output. A directive's path is
+    /// relative to the directory of the file holding it. Not combinable with
+    /// `--fta-output-dir`.
+    #[arg(long)]
+    include_file: Vec<String>,
+
+    /// Workspace-relative source path embedded in source locations, one per
+    /// `--include-file` (same order); omit entirely or give exactly one per
+    /// `--include-file`. Must be relative.
+    #[arg(long)]
+    include_source_name: Vec<String>,
 }
 
 fn main() {
@@ -173,7 +193,10 @@ fn execute(args: &Args, log_level: LogLevel) -> Result<(), Box<dyn std::error::E
     }
 
     for name in &args.source_name {
-        validate_source_name(name)?;
+        validate_source_name("source-name", name)?;
+    }
+    for name in &args.include_source_name {
+        validate_source_name("include-source-name", name)?;
     }
     for stem in &args.output_stem {
         validate_output_stem(stem)?;
@@ -260,36 +283,83 @@ fn load_diagrams(
     if file_list.is_empty() {
         return Err("No valid PUML files found.".into());
     }
-    require_one_per_file_or_none(&args.source_name, file_list.len(), "source-name")?;
-    require_one_per_file_or_none(&args.output_stem, file_list.len(), "output-stem")?;
+    require_one_per_file_or_none(
+        &args.source_name,
+        file_list.len(),
+        "source-name",
+        "input file",
+    )?;
+    require_one_per_file_or_none(
+        &args.output_stem,
+        file_list.len(),
+        "output-stem",
+        "input file",
+    )?;
     debug!("Collected {} puml files.", file_list.len());
 
-    // Per file: `IncludeExpander` keeps line numbers only for one file.
+    let include_files = collect_include_files(&args.include_file, &file_list)?;
+    require_one_per_file_or_none(
+        &args.include_source_name,
+        include_files.len(),
+        "include-source-name",
+        "include file",
+    )?;
+    let include_set: HashSet<Rc<PathBuf>> = include_files.iter().map(Rc::clone).collect();
+
+    // Names of the files in messages and source locations.
+    let mut names: HashMap<&Path, String> = HashMap::new();
+    for (i, path) in file_list.iter().enumerate() {
+        let source_name = args.source_name.get(i).map(String::as_str);
+        let (_, source_path) = output_source_path(source_name, path);
+        names.insert(path.as_path(), source_path.to_string_lossy().into_owned());
+    }
+    for (path, name) in include_files.iter().zip(&args.include_source_name) {
+        names.insert(path.as_path(), name.clone());
+    }
+    let name_of = |file: &Path| {
+        names
+            .get(file)
+            .cloned()
+            .unwrap_or_else(|| file.to_string_lossy().into_owned())
+    };
+
+    // Per file: `!include_once` is scoped to one diagram.
     debug!("Preprocessing: include expansion");
     let mut preprocessor = Preprocessor::new();
-    let mut preprocessed: Vec<(Rc<PathBuf>, String)> = Vec::with_capacity(file_list.len());
+    let mut preprocessed: Vec<(Rc<PathBuf>, Preprocessed)> = Vec::with_capacity(file_list.len());
     for path in &file_list {
-        let singleton: HashSet<Rc<PathBuf>> = std::iter::once(Rc::clone(path)).collect();
-        let mut file_map = preprocessor.preprocess(&singleton, log_level)?;
-        let content = file_map
-            .remove(path)
-            .expect("preprocess returns an entry for its single input");
+        let content = preprocessor
+            .preprocess_with_includes(path, &include_set, log_level)
+            .map_err(|error| std::io::Error::other(error.describe(&name_of)))?;
         preprocessed.push((Rc::clone(path), content));
     }
 
     debug!("Parsing started");
     let mut inputs = Vec::with_capacity(file_list.len());
     let mut parsed_diagrams = Vec::with_capacity(file_list.len());
-    for (i, (path, content)) in preprocessed.iter().enumerate() {
+    for (i, (path, content)) in preprocessed.into_iter().enumerate() {
         // Parsers only stamp `source_path` into `SourceLocation`s, so a path
         // built from `source_file` suffices.
         let output_stem = args.output_stem.get(i).map(String::as_str);
         let source_name = args.source_name.get(i).map(String::as_str);
-        let naming_path = output_naming_path(output_stem, path).into_owned();
-        let (source_file, source_path) = output_source_path(source_name, path);
+        let naming_path = output_naming_path(output_stem, &path).into_owned();
+        let (source_file, source_path) = output_source_path(source_name, &path);
 
-        let parsed = parse_puml_file(&source_path, content, log_level, args.diagram_type)
-            .map_err(|e| std::io::Error::other(e.to_string()))?;
+        let parser_file = source_path.to_string_lossy().into_owned();
+        let source_map = match content.origins {
+            Some(origins) => SourceMap::new(&path, origins, name_of),
+            None => SourceMap::identity(),
+        };
+
+        let mut parsed = parse_puml_file(
+            &source_path,
+            &content.text,
+            &source_map,
+            log_level,
+            args.diagram_type,
+        )
+        .map_err(|e| std::io::Error::other(e.to_string()))?;
+        source_map.apply(&mut parsed, &parser_file)?;
         for sink in sinks.iter_mut() {
             sink.parsed(&naming_path, &parsed)?;
         }
@@ -326,8 +396,14 @@ B --> A : reply
 @enduml";
 
         let path = Rc::new(PathBuf::from("test.puml"));
-        let parsed = parse_puml_file(&path, content, LogLevel::Info, DiagramType::Sequence)
-            .expect("sequence parse must succeed");
+        let parsed = parse_puml_file(
+            &path,
+            content,
+            &SourceMap::identity(),
+            LogLevel::Info,
+            DiagramType::Sequence,
+        )
+        .expect("sequence parse must succeed");
 
         let resolved = resolve_single(parsed);
         assert!(
@@ -345,8 +421,14 @@ mod group_pipeline_tests {
 
     fn parse(name: &str, content: &str, diagram_type: DiagramType) -> ParsedDiagram {
         let path = Rc::new(PathBuf::from(name));
-        parse_puml_file(&path, content, LogLevel::Info, diagram_type)
-            .unwrap_or_else(|error| panic!("{name} must parse: {error}"))
+        parse_puml_file(
+            &path,
+            content,
+            &SourceMap::identity(),
+            LogLevel::Info,
+            diagram_type,
+        )
+        .unwrap_or_else(|error| panic!("{name} must parse: {error}"))
     }
 
     /// One call covering several kinds resolves each kind as its own group
@@ -579,10 +661,16 @@ mod cli_input_tests {
             ),
         ] {
             let path = Rc::new(PathBuf::from("d.puml"));
-            let error = parse_puml_file(&path, content, LogLevel::Warn, DiagramType::Component)
-                .err()
-                .unwrap_or_else(|| panic!("{kind} diagram must not parse as Component"))
-                .to_string();
+            let error = parse_puml_file(
+                &path,
+                content,
+                &SourceMap::identity(),
+                LogLevel::Warn,
+                DiagramType::Component,
+            )
+            .err()
+            .unwrap_or_else(|| panic!("{kind} diagram must not parse as Component"))
+            .to_string();
 
             assert!(
                 error.starts_with(&format!(
@@ -591,6 +679,320 @@ mod cli_input_tests {
                 "{error}"
             );
         }
+    }
+
+    const MAIN_DIAGRAM: &str = "@startuml\n' note\n\nparticipant A\nparticipant B\n\
+        !include sub/frag.puml\nA -> B : last\n@enduml\n";
+    const FRAGMENT: &str = "' fragment\nA -> B : first\nB --> A : second\n";
+
+    /// Every `{file, line}` pair of the parsed diagram.
+    fn source_locations(parsed: &ParsedDiagram) -> Vec<(String, u64)> {
+        fn collect(value: &serde_json::Value, found: &mut Vec<(String, u64)>) {
+            match value {
+                serde_json::Value::Object(object) => {
+                    if let (Some(file), Some(line)) = (
+                        object.get("file").and_then(|v| v.as_str()),
+                        object.get("line").and_then(|v| v.as_u64()),
+                    ) {
+                        found.push((file.to_string(), line));
+                    }
+                    object.values().for_each(|v| collect(v, found));
+                }
+                serde_json::Value::Array(items) => items.iter().for_each(|v| collect(v, found)),
+                _ => {}
+            }
+        }
+        let mut found = Vec::new();
+        collect(&serde_json::to_value(parsed).unwrap(), &mut found);
+        found
+    }
+
+    fn load(argv: &[&str]) -> Result<Vec<ParsedDiagram>, String> {
+        let args = Args::parse_from(std::iter::once("puml_cli").chain(argv.iter().copied()));
+        load_diagrams(&args, LogLevel::Warn, &mut [])
+            .map(|(_, parsed)| parsed)
+            .map_err(|error| error.to_string())
+    }
+
+    #[test]
+    fn included_fragment_is_expanded_and_keeps_its_own_source_locations() {
+        let dir = unique_dir("include");
+        write(&dir.join("main.puml"), MAIN_DIAGRAM);
+        fs::create_dir_all(dir.join("sub")).unwrap();
+        write(&dir.join("sub/frag.puml"), FRAGMENT);
+
+        let parsed = load(&[
+            "--file",
+            dir.join("main.puml").to_str().unwrap(),
+            "--source-name",
+            "pkg/main.puml",
+            "--include-file",
+            dir.join("sub/frag.puml").to_str().unwrap(),
+            "--include-source-name",
+            "pkg/sub/frag.puml",
+            "--diagram-type",
+            "sequence",
+        ]);
+
+        fs::remove_dir_all(&dir).ok();
+        let locations = source_locations(&parsed.unwrap()[0]);
+        for expected in [
+            ("pkg/sub/frag.puml", 2),
+            ("pkg/sub/frag.puml", 3),
+            ("pkg/main.puml", 7),
+        ] {
+            assert!(
+                locations.contains(&(expected.0.to_string(), expected.1)),
+                "{expected:?} not in {locations:?}"
+            );
+        }
+        assert!(
+            !locations
+                .iter()
+                .any(|(file, line)| file == "pkg/main.puml" && *line > 8),
+            "{locations:?}"
+        );
+    }
+
+    #[test]
+    fn diagram_without_includes_keeps_its_source_locations() {
+        let dir = unique_dir("plain");
+        write(
+            &dir.join("main.puml"),
+            "@startuml\n\nparticipant A\nA -> A : call\n@enduml\n",
+        );
+        write(&dir.join("unused.puml"), FRAGMENT);
+
+        let parsed = load(&[
+            "--file",
+            dir.join("main.puml").to_str().unwrap(),
+            "--source-name",
+            "pkg/main.puml",
+            "--include-file",
+            dir.join("unused.puml").to_str().unwrap(),
+            "--diagram-type",
+            "sequence",
+        ]);
+
+        fs::remove_dir_all(&dir).ok();
+        let locations = source_locations(&parsed.unwrap()[0]);
+        assert!(
+            locations.contains(&("pkg/main.puml".to_string(), 4)),
+            "{locations:?}"
+        );
+    }
+
+    #[test]
+    fn include_of_an_undeclared_file_names_the_directive() {
+        let dir = unique_dir("undeclared");
+        write(&dir.join("main.puml"), MAIN_DIAGRAM);
+        fs::create_dir_all(dir.join("sub")).unwrap();
+        write(&dir.join("sub/frag.puml"), FRAGMENT);
+
+        let error = load(&["--file", dir.join("main.puml").to_str().unwrap()]).unwrap_err();
+
+        fs::remove_dir_all(&dir).ok();
+        assert!(error.starts_with("include preprocess failed: "), "{error}");
+        assert!(
+            error.contains("main.puml:6: !include \"sub/frag.puml\""),
+            "{error}"
+        );
+        assert!(error.contains("--include-file"), "{error}");
+    }
+
+    #[test]
+    fn include_of_an_undeclared_file_uses_the_source_name() {
+        let dir = unique_dir("undeclared_named");
+        write(&dir.join("main.puml"), MAIN_DIAGRAM);
+
+        let error = load(&[
+            "--file",
+            dir.join("main.puml").to_str().unwrap(),
+            "--source-name",
+            "pkg/main.puml",
+        ])
+        .unwrap_err();
+
+        fs::remove_dir_all(&dir).ok();
+        assert!(
+            error.contains(
+                "pkg/main.puml:6: !include \"sub/frag.puml\" resolves to pkg/sub/frag.puml,"
+            ),
+            "{error}"
+        );
+        assert!(!error.contains(dir.to_str().unwrap()), "{error}");
+    }
+
+    #[test]
+    fn syntax_error_in_a_fragment_names_the_fragment_line() {
+        let dir = unique_dir("syntax");
+        write(&dir.join("main.puml"), MAIN_DIAGRAM);
+        fs::create_dir_all(dir.join("sub")).unwrap();
+        write(
+            &dir.join("sub/frag.puml"),
+            "' fragment\nA -> B : first\n??? not uml\n",
+        );
+
+        let error = load(&[
+            "--file",
+            dir.join("main.puml").to_str().unwrap(),
+            "--include-file",
+            dir.join("sub/frag.puml").to_str().unwrap(),
+            "--include-source-name",
+            "pkg/sub/frag.puml",
+        ])
+        .unwrap_err();
+
+        fs::remove_dir_all(&dir).ok();
+        assert!(
+            error.contains("Failed at pkg/sub/frag.puml:3 (expanded line "),
+            "{error}"
+        );
+        assert!(error.contains("??? not uml"), "{error}");
+    }
+
+    #[test]
+    fn syntax_error_in_a_fragment_names_the_fragment_line_for_a_typed_diagram() {
+        let dir = unique_dir("typed_syntax");
+        write(
+            &dir.join("main.puml"),
+            "@startuml\n' note\n\n!include frag.puml\ncomponent B <<component>>\n@enduml\n",
+        );
+        write(
+            &dir.join("frag.puml"),
+            "' fragment\ncomponent A <<component>>\n??? not uml\n",
+        );
+
+        let error = load(&[
+            "--file",
+            dir.join("main.puml").to_str().unwrap(),
+            "--include-file",
+            dir.join("frag.puml").to_str().unwrap(),
+            "--include-source-name",
+            "pkg/frag.puml",
+            "--diagram-type",
+            "component",
+        ])
+        .unwrap_err();
+
+        fs::remove_dir_all(&dir).ok();
+        assert!(
+            error.contains("Failed at pkg/frag.puml:3 (expanded line "),
+            "{error}"
+        );
+        assert!(error.contains("??? not uml"), "{error}");
+    }
+
+    #[test]
+    fn include_file_must_not_be_an_input_diagram() {
+        let dir = unique_dir("both");
+        write(
+            &dir.join("main.puml"),
+            "@startuml\nparticipant A\n@enduml\n",
+        );
+        let main = dir.join("main.puml");
+
+        let error = load(&[
+            "--file",
+            main.to_str().unwrap(),
+            "--include-file",
+            main.to_str().unwrap(),
+        ])
+        .unwrap_err();
+
+        fs::remove_dir_all(&dir).ok();
+        assert!(
+            error.starts_with("--include-file entry is also an input diagram"),
+            "{error}"
+        );
+    }
+
+    #[test]
+    fn include_source_name_must_match_the_include_files() {
+        let dir = unique_dir("names");
+        write(
+            &dir.join("main.puml"),
+            "@startuml\nparticipant A\n@enduml\n",
+        );
+        write(&dir.join("frag.puml"), FRAGMENT);
+
+        let error = load(&[
+            "--file",
+            dir.join("main.puml").to_str().unwrap(),
+            "--include-file",
+            dir.join("frag.puml").to_str().unwrap(),
+            "--include-source-name",
+            "a.puml",
+            "--include-source-name",
+            "b.puml",
+        ])
+        .unwrap_err();
+
+        fs::remove_dir_all(&dir).ok();
+        assert!(
+            error.starts_with("--include-source-name must be given exactly once per include file"),
+            "{error}"
+        );
+    }
+
+    #[test]
+    fn locations_of_every_diagram_kind_with_locations_are_remapped() {
+        for (diagram_type, main, fragment) in [
+            (
+                "class",
+                "@startuml\n\n!include frag.puml\nclass B\n@enduml\n",
+                "' fragment\nclass A {\n  +Run() : void\n}\n",
+            ),
+            (
+                "component",
+                "@startuml\n\n!include frag.puml\ncomponent B <<component>>\n@enduml\n",
+                "' fragment\ncomponent A <<component>>\n",
+            ),
+        ] {
+            let dir = unique_dir(diagram_type);
+            write(&dir.join("main.puml"), main);
+            write(&dir.join("frag.puml"), fragment);
+
+            let parsed = load(&[
+                "--file",
+                dir.join("main.puml").to_str().unwrap(),
+                "--source-name",
+                "pkg/main.puml",
+                "--include-file",
+                dir.join("frag.puml").to_str().unwrap(),
+                "--include-source-name",
+                "pkg/frag.puml",
+                "--diagram-type",
+                diagram_type,
+            ]);
+
+            fs::remove_dir_all(&dir).ok();
+            let locations = source_locations(&parsed.unwrap()[0]);
+            assert!(
+                locations.contains(&("pkg/frag.puml".to_string(), 2)),
+                "{diagram_type}: {locations:?}"
+            );
+            assert!(
+                locations.iter().any(|(file, _)| file == "pkg/main.puml"),
+                "{diagram_type}: {locations:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn include_file_is_rejected_in_fta_mode() {
+        let error = Args::try_parse_from([
+            "puml_cli",
+            "--file",
+            "a.puml",
+            "--fta-output-dir",
+            "out",
+            "--include-file",
+            "frag.puml",
+        ])
+        .unwrap_err();
+
+        assert_eq!(error.kind(), clap::error::ErrorKind::ArgumentConflict);
     }
 }
 
@@ -936,8 +1338,14 @@ mod idmap_wiring_tests {
         let content = "@startuml\nstart\n:Do work;\nstop\n@enduml";
         let path = Rc::new(PathBuf::from("flow/activity.puml"));
 
-        let parsed = parse_puml_file(&path, content, LogLevel::Info, DiagramType::Activity)
-            .expect("activity parse must succeed");
+        let parsed = parse_puml_file(
+            &path,
+            content,
+            &SourceMap::identity(),
+            LogLevel::Info,
+            DiagramType::Activity,
+        )
+        .expect("activity parse must succeed");
         let resolved = resolve_single(parsed).expect("activity must resolve");
         assert!(
             matches!(resolved, ResolvedDiagram::Activity(_)),
@@ -992,8 +1400,14 @@ mod idmap_wiring_tests {
              @enduml";
         let path = Rc::new(PathBuf::from("comp/client_server.puml"));
 
-        let parsed = parse_puml_file(&path, content, LogLevel::Info, DiagramType::Component)
-            .expect("component parse must succeed");
+        let parsed = parse_puml_file(
+            &path,
+            content,
+            &SourceMap::identity(),
+            LogLevel::Info,
+            DiagramType::Component,
+        )
+        .expect("component parse must succeed");
         let resolved = resolve_single(parsed).expect("component must resolve");
         assert!(matches!(resolved, ResolvedDiagram::Component(_)));
 
@@ -1023,8 +1437,14 @@ mod idmap_wiring_tests {
         let content = "@startuml\nclass A {\n    +a\n}\n@enduml";
         let path = Rc::new(PathBuf::from("cls/a.puml"));
 
-        let parsed = parse_puml_file(&path, content, LogLevel::Info, DiagramType::Class)
-            .expect("class parse must succeed");
+        let parsed = parse_puml_file(
+            &path,
+            content,
+            &SourceMap::identity(),
+            LogLevel::Info,
+            DiagramType::Class,
+        )
+        .expect("class parse must succeed");
         let resolved = resolve_single(parsed).expect("class must resolve");
         assert!(matches!(resolved, ResolvedDiagram::Class(_)));
 
@@ -1059,8 +1479,14 @@ mod idmap_wiring_tests {
         let (_source_file, source_path) =
             output_source_path(Some("real/pkg/foo.puml"), &staging_path);
 
-        let parsed = parse_puml_file(&source_path, content, LogLevel::Info, DiagramType::Class)
-            .expect("class parse must succeed");
+        let parsed = parse_puml_file(
+            &source_path,
+            content,
+            &SourceMap::identity(),
+            LogLevel::Info,
+            DiagramType::Class,
+        )
+        .expect("class parse must succeed");
         let resolved = resolve_single(parsed).expect("class diagram must resolve");
         let fbs_bytes = serialize_resolved_diagram(&resolved);
         let fbs_text = String::from_utf8_lossy(&fbs_bytes);
@@ -1095,8 +1521,14 @@ mod idmap_wiring_tests {
         let content = "@startuml\nclass A {\n    +a\n}\n@enduml";
         let path = Rc::new(PathBuf::from("cls/original_name.puml"));
 
-        let parsed = parse_puml_file(&path, content, LogLevel::Info, DiagramType::Class)
-            .expect("class parse must succeed");
+        let parsed = parse_puml_file(
+            &path,
+            content,
+            &SourceMap::identity(),
+            LogLevel::Info,
+            DiagramType::Class,
+        )
+        .expect("class parse must succeed");
         let resolved = resolve_single(parsed).expect("class must resolve");
         let idmap_model =
             idmap_model_for(&resolved).expect("class diagrams must dispatch to an IdMapModel");
@@ -1127,14 +1559,19 @@ mod idmap_wiring_tests {
     /// `--output-stem` must be given once per input file, or not at all.
     #[test]
     fn output_stem_rejected_with_mismatched_count() {
-        let err = require_one_per_file_or_none(&["a".to_string()], 2, "output-stem")
+        let err = require_one_per_file_or_none(&["a".to_string()], 2, "output-stem", "input file")
             .expect_err("must reject a count that matches neither 0 nor the file count");
         assert!(err.to_string().contains("--output-stem"));
         assert!(err.to_string().contains("2 input file"));
 
-        require_one_per_file_or_none(&["a".to_string(), "b".to_string()], 2, "output-stem")
-            .expect("one entry per input file must be fine");
-        require_one_per_file_or_none(&[], 2, "output-stem")
+        require_one_per_file_or_none(
+            &["a".to_string(), "b".to_string()],
+            2,
+            "output-stem",
+            "input file",
+        )
+        .expect("one entry per input file must be fine");
+        require_one_per_file_or_none(&[], 2, "output-stem", "input file")
             .expect("omitting the flag entirely must never trigger the check");
     }
 
@@ -1155,8 +1592,14 @@ mod idmap_wiring_tests {
             "@startuml\nparticipant Alice\nparticipant Bob\nAlice -> Bob : hello\n@enduml";
         let path = Rc::new(PathBuf::from("seq/hello.puml"));
 
-        let parsed = parse_puml_file(&path, content, LogLevel::Info, DiagramType::Sequence)
-            .expect("sequence parse must succeed");
+        let parsed = parse_puml_file(
+            &path,
+            content,
+            &SourceMap::identity(),
+            LogLevel::Info,
+            DiagramType::Sequence,
+        )
+        .expect("sequence parse must succeed");
         let resolved = resolve_single(parsed).expect("sequence must resolve");
         assert!(matches!(resolved, ResolvedDiagram::Sequence(_)));
 
@@ -1209,6 +1652,7 @@ mod idmap_wiring_tests {
         let component_parsed = parse_puml_file(
             &component_path,
             component_content,
+            &SourceMap::identity(),
             LogLevel::Info,
             DiagramType::Component,
         )
@@ -1228,6 +1672,7 @@ mod idmap_wiring_tests {
         let class_parsed = parse_puml_file(
             &class_path,
             class_content,
+            &SourceMap::identity(),
             LogLevel::Info,
             DiagramType::Class,
         )

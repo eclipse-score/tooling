@@ -466,7 +466,11 @@ are bucketed by diagram kind, detected per file in the order component, activity
 
 Full rules and examples: `plantuml/parser/docs/element-identifiers.md` (section 4).
 
-`static`/`dynamic` accept `.puml`, `.png`, `.svg`, `.rst`, `.md`. To combine a
+`static`/`dynamic` accept `.puml`, `.iuml`, `.png`, `.svg`, `.rst`, `.md`. To share statements
+between diagrams, `!include` a fragment (a `.iuml` file without `@startuml`) and list it in any
+view (source files in the target's package or below, as are the diagrams of that view): the directive's path is relative to the
+including file's directory, and a `.iuml` file is never a diagram (no output, no wrapper page;
+any view's diagrams may include it; not in `unit_design`). To combine a
 diagram with prose, add both the RST/Markdown wrapper *and* the referenced `.puml` to the same
 list (as `public_api.puml` + `public_api.rst` above, which overrides `public_api.puml`'s
 generated wrapper page); the wrapper embeds the diagram with `.. uml:: file.puml`. `index.md`

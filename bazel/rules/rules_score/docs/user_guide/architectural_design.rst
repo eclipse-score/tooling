@@ -527,6 +527,37 @@ Bazel
         dynamic = ["sequence.puml"],
     )
 
+Reusing Diagram Parts
+~~~~~~~~~~~~~~~~~~~~~~
+
+A diagram can ``!include`` a fragment, a ``.iuml`` file of statements without ``@startuml``, to
+share them between diagrams. List the fragment in any view. The path of a directive is relative to
+the directory of the file holding it, not to the workspace root:
+
+.. code-block:: text
+
+    ' sequence.puml
+    @startuml sequence
+    participant A
+    participant B
+    !include subdiagrams/handshake.iuml
+    @enduml
+
+.. code-block:: starlark
+
+    architectural_design(
+        name    = "my_arch",
+        dynamic = [
+            "sequence.puml",
+            "subdiagrams/handshake.iuml",
+        ],
+    )
+
+A ``.iuml`` file is not a diagram: it is neither parsed on its own nor documented, and diagrams of
+every view may include it. It must be a source file in the package of the target or below it, as
+must every ``.puml`` of a view that holds fragments. An
+error inside it names its own file and line. ``unit_design`` does not support fragments.
+
 Public API
 ------------
 
