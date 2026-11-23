@@ -17,7 +17,7 @@ mod diagnostics;
 mod error_models;
 
 pub use diagnostics::Diagnostics;
-pub use error_models::{ErrorBuilder, ErrorCategory};
+pub use error_models::{ErrorBuilder, ErrorCategory, ErrorSection};
 
 #[derive(Debug, Default)]
 pub struct ValidationResult {

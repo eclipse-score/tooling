@@ -135,6 +135,13 @@ under every containing design path. Conflicting component paths are excluded
 from downstream matching diagnostics to avoid cascading errors. An entry without
 its own `design_name` is rejected when reading the JSON.
 
+## Class Design Validation Semantics
+
+For `unit`, the design constrains the implementation; this is not C++ call resolution.
+
+See the [class design implementation specification](docs/specifications/class_design_implementation.md)
+for detailed rules and current limitations.
+
 ## Run
 
 Build the CLI:
