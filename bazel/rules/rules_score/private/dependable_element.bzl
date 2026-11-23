@@ -2247,6 +2247,7 @@ def dependable_element(
         testonly = True,
         docs_prefix = "docs/sphinx/",
         manual_analysis = [],
+        allow_persistent_workers = False,
         **kwargs):
     """Define a dependable element (Safety Element out of Context - SEooC) following S-CORE process guidelines.
 
@@ -2308,6 +2309,10 @@ def dependable_element(
             "bazel/rules/rules_score/docs/sphinx/"), or the generated RST will
             land outside the embedding build's source directory and be
             unreachable.
+        allow_persistent_workers: (experimental) If True, the `<name>_doc` HTML Sphinx
+            build may run as a Bazel persistent worker. Off by default: removed source
+            pages can survive as stale output across worker-reused builds. See
+            `sphinx_module.allow_persistent_workers`.
 
     Generated Targets:
         <name>_index: Generates index.rst and copies artifacts. Also the actual
@@ -2360,6 +2365,7 @@ def dependable_element(
         srcs = [":" + name + "_index"],
         index = ":" + name + "_index",
         deps = [d + _DOC_TARGET_SUFFIX for d in deps],
+        allow_persistent_workers = allow_persistent_workers,
         testonly = testonly,
         **kwargs
     )

@@ -316,7 +316,7 @@ sphinx_module(
 # (see worker_enabled in sphinx_module.bzl's _add_sphinx_args), while the
 # needs pass -- which never opts into worker mode regardless of this attr,
 # since its source dir is the real checkout, not a generated tree -- must
-# keep it. No target ever sets this True outside this test fixture; workers
+# keep it. No target sets this True outside test fixtures; workers
 # stay off by default across the whole repo.
 sphinx_module(
     name = "module_worker_enabled_lib",
@@ -2367,6 +2367,24 @@ worker_gating_html_test(
 worker_gating_needs_test(
     name = "worker_gating_needs_test",
     target_under_test = ":module_worker_enabled_lib_needs",
+)
+
+dependable_element(
+    name = "dependable_element_worker_enabled",
+    allow_persistent_workers = True,
+    architectural_design = [],
+    components = [],
+    dependability_analysis = [":dependability_analysis_target"],
+    integrity_level = "B",
+    maturity = "development",
+    requirements = [":feat_req"],
+    tags = ["manual"],
+    tests = [],
+)
+
+worker_gating_html_test(
+    name = "dependable_element_worker_gating_html_test",
+    target_under_test = ":dependable_element_worker_enabled_doc",
 )
 
 deps_html_merging_test(
