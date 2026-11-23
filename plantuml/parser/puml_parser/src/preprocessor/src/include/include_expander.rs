@@ -32,13 +32,14 @@
 use log::debug;
 use std::collections::{HashMap, HashSet};
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Component, Path, PathBuf};
 use std::rc::Rc;
 use thiserror::Error;
 
+use crate::expanded::Expanded;
 use crate::include_ast::{IncludeFile, IncludeKind, IncludeStmt, IncludeSuffix, SubBlock};
 use crate::include_parser::{IncludeParseError, IncludeParserService};
-use crate::utils::{normalize_path, strip_start_end};
+use crate::utils::normalize_path;
 
 // ----------------------
 // Type Aliases
@@ -146,11 +147,27 @@ impl IncludeContext {
     }
 }
 
+/// An `!include` directive: where it stands and what it names.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct IncludeSite {
+    /// File holding the directive.
+    pub from: Rc<PathBuf>,
+    /// 1-based line of the directive.
+    pub line: u32,
+    /// Path as written in the directive.
+    pub target: String,
+}
+
 /// Include Expand errors.
 #[derive(Debug, Error)]
 pub enum IncludeExpandError {
-    #[error("Diagram {file} not found.")]
-    FileNotFound { file: Rc<PathBuf> },
+    #[error("{}", describe_file_not_found(.file, .site.as_ref(), .hint.as_deref(), &|path| path.display().to_string()))]
+    FileNotFound {
+        file: Rc<PathBuf>,
+        /// The directive that named `file`; `None` for a diagram given directly.
+        site: Option<IncludeSite>,
+        hint: Option<String>,
+    },
 
     #[error("Failed to parse included file {file}: {error}")]
     ParseFailed {
@@ -188,24 +205,48 @@ impl IncludeExpander {
         }
     }
 
+    /// Expands `file` to text. A file without include directives is returned
+    /// verbatim when it is the only file in `file_list`.
     pub fn expand(
         &mut self,
         file: &Rc<PathBuf>,
         file_list: &FileList,
     ) -> Result<String, IncludeExpandError> {
+        let verbatim_if_plain = file_list.len() == 1;
+        Ok(self.expand_entry(file, file_list, verbatim_if_plain)?.text)
+    }
+
+    /// Expands `file` to text and records the source line of each of its
+    /// lines. A file without include directives is returned verbatim, so
+    /// `file_list` may hold include files besides `file`.
+    pub fn expand_mapped(
+        &mut self,
+        file: &Rc<PathBuf>,
+        file_list: &FileList,
+    ) -> Result<Expanded, IncludeExpandError> {
+        self.expand_entry(file, file_list, true)
+    }
+
+    fn expand_entry(
+        &mut self,
+        file: &Rc<PathBuf>,
+        file_list: &FileList,
+        verbatim_if_plain: bool,
+    ) -> Result<Expanded, IncludeExpandError> {
         let mut ctx = IncludeContext::default();
-        self.expand_file(file, &mut ctx, file_list)
+        self.expand_file(file, &mut ctx, file_list, verbatim_if_plain)
     }
 
     /// Expands a single diagram file, recursively processing includes.
     ///
     /// # Arguments
-    /// - `file`: path to the entry diagram
+    /// - `file`: path to the diagram
     /// - `ctx`: per-diagram `IncludeContext`
     /// - `file_list`: set of all available files
+    /// - `verbatim_if_plain`: return a file without include directives as is
     ///
     /// # Returns
-    /// - Fully expanded PlantUML text as `String`
+    /// - Fully expanded PlantUML text, with the source line of each line
     ///
     /// # Errors
     /// - `IncludeExpandError::FileNotFound`: file missing
@@ -218,12 +259,15 @@ impl IncludeExpander {
         file: &Rc<PathBuf>,
         ctx: &mut IncludeContext,
         file_list: &FileList,
-    ) -> Result<String, IncludeExpandError> {
+        verbatim_if_plain: bool,
+    ) -> Result<Expanded, IncludeExpandError> {
         debug!("expand_file is {}", file.display());
 
         if !file_list.contains(file) {
             return Err(IncludeExpandError::FileNotFound {
                 file: Rc::clone(file),
+                site: None,
+                hint: None,
             });
         }
 
@@ -232,18 +276,20 @@ impl IncludeExpander {
         let original_content =
             fs::read_to_string(file.as_ref()).map_err(|_| IncludeExpandError::FileNotFound {
                 file: Rc::clone(file),
+                site: None,
+                hint: None,
             })?;
 
-        if file_list.len() == 1 && !has_include_or_subblock_directive(&original_content) {
+        if verbatim_if_plain && !has_include_or_subblock_directive(&original_content) {
             ctx.pop_stack();
-            return Ok(original_content);
+            return Ok(Expanded::verbatim(file, &original_content));
         }
 
         let stmts_ast = self.load_ast(file)?;
-        let expanded_ast = self.expand_stmts(&stmts_ast, file, ctx, file_list)?;
-        let rendered = render_stmts(expanded_ast);
+        let mut expanded = Expanded::default();
+        self.expand_stmts(&stmts_ast, file, ctx, file_list, &mut expanded)?;
         ctx.pop_stack();
-        Ok(rendered)
+        Ok(expanded)
     }
 
     /// Loads AST from cache or parses file if not present.
@@ -277,10 +323,7 @@ impl IncludeExpander {
         Ok(rc_ast)
     }
 
-    /// Recursively expands a sequence of AST statements.
-    ///
-    /// # Returns
-    /// - Fully expanded AST statements
+    /// Recursively expands a sequence of AST statements into `out`.
     ///
     /// # Errors
     /// - Propagates errors from include expansion
@@ -290,30 +333,22 @@ impl IncludeExpander {
         current_file: &Rc<PathBuf>,
         ctx: &mut IncludeContext,
         file_list: &FileList,
-    ) -> Result<Vec<IncludeFile>, IncludeExpandError> {
-        let mut result = Vec::new();
-
+        out: &mut Expanded,
+    ) -> Result<(), IncludeExpandError> {
         for stmt in stmts {
             match stmt {
-                IncludeFile::Text(text) => {
-                    result.push(IncludeFile::Text(text.clone()));
-                }
+                IncludeFile::Text { text, line } => out.push_line(text, current_file, *line),
                 IncludeFile::Include(inc) => {
                     let expanded = self.expand_include(inc, current_file, ctx, file_list)?;
-                    result.push(IncludeFile::Text(expanded));
+                    out.append(expanded);
                 }
                 IncludeFile::SubBlock(sub) => {
-                    let expanded_content =
-                        self.expand_stmts(&sub.content, current_file, ctx, file_list)?;
-                    result.push(IncludeFile::SubBlock(SubBlock {
-                        name: sub.name.clone(),
-                        content: expanded_content,
-                    }));
+                    self.expand_stmts(&sub.content, current_file, ctx, file_list, out)?;
                 }
             }
         }
 
-        Ok(result)
+        Ok(())
     }
 
     /// Expands a single `IncludeStmt` inline.
@@ -329,27 +364,39 @@ impl IncludeExpander {
         current_file: &Rc<PathBuf>,
         ctx: &mut IncludeContext,
         file_list: &FileList,
-    ) -> Result<String, IncludeExpandError> {
+    ) -> Result<Expanded, IncludeExpandError> {
         let base_dir = current_file
             .parent()
             .ok_or_else(|| IncludeExpandError::FileNotFound {
                 file: Rc::clone(current_file),
+                site: None,
+                hint: None,
             })?;
 
         match inc {
-            IncludeStmt::Include { kind, path } => {
-                let path = Rc::new(normalize_path(&base_dir.join(path)));
+            IncludeStmt::Include { kind, path, line } => {
+                let site = IncludeSite {
+                    from: Rc::clone(current_file),
+                    line: *line,
+                    target: path.clone(),
+                };
+                let path = resolve_target(&site, base_dir, file_list)?;
 
                 if !ctx.check_and_mark_include(kind, current_file, &path)? {
-                    return Ok(String::new());
+                    return Ok(Expanded::default());
                 }
 
-                let full_text = self.expand_file(&path, ctx, file_list)?;
-                Ok(strip_start_end(&full_text))
+                let full = self.expand_file(&path, ctx, file_list, false)?;
+                Ok(full.without_start_end())
             }
 
-            IncludeStmt::IncludeSub { path, suffix } => {
-                let path = Rc::new(normalize_path(&base_dir.join(path)));
+            IncludeStmt::IncludeSub { path, suffix, line } => {
+                let site = IncludeSite {
+                    from: Rc::clone(current_file),
+                    line: *line,
+                    target: path.clone(),
+                };
+                let path = resolve_target(&site, base_dir, file_list)?;
 
                 let _ = self.load_ast(&path)?;
                 let subs = self
@@ -364,14 +411,110 @@ impl IncludeExpander {
                         file: Rc::clone(&path),
                     })?;
 
-                let mut result = String::new();
+                let mut result = Expanded::default();
                 for sub in subs {
-                    let full_sub_text = self.expand_stmts(&sub.content, &path, ctx, file_list)?;
-                    result.push_str(&render_stmts(full_sub_text));
+                    self.expand_stmts(&sub.content, &path, ctx, file_list, &mut result)?;
                 }
 
                 Ok(result)
             }
+        }
+    }
+}
+
+/// The file an include directive names: its path is relative to the
+/// directory of the including file, and the file must be in `file_list`.
+fn resolve_target(
+    site: &IncludeSite,
+    base_dir: &Path,
+    file_list: &FileList,
+) -> Result<Rc<PathBuf>, IncludeExpandError> {
+    let target = Rc::new(normalize_path(&base_dir.join(&site.target)));
+    if file_list.contains(&target) {
+        return Ok(target);
+    }
+
+    Err(IncludeExpandError::FileNotFound {
+        hint: Some(not_found_hint(&site.target, base_dir, file_list)),
+        file: target,
+        site: Some(site.clone()),
+    })
+}
+
+/// How to fix an include path that names no available file.
+fn not_found_hint(target: &str, base_dir: &Path, file_list: &FileList) -> String {
+    let written = Path::new(target);
+    if written.is_absolute() {
+        return "include paths are relative to the including file's directory".to_string();
+    }
+
+    match file_list.iter().filter(|f| f.ends_with(written)).min() {
+        Some(candidate) => format!(
+            "include paths are relative to the including file's directory; did you mean \"{}\"?",
+            relative_path(base_dir, candidate).display()
+        ),
+        None => "declare the file as an include file (`--include-file`; a `.iuml` file in a \
+                 view of architectural_design in rules_score)"
+            .to_string(),
+    }
+}
+
+/// `to` as a path relative to the directory `from`.
+fn relative_path(from: &Path, to: &Path) -> PathBuf {
+    let from: Vec<Component> = from.components().collect();
+    let to: Vec<Component> = to.components().collect();
+    let shared = from.iter().zip(&to).take_while(|(a, b)| a == b).count();
+
+    let mut relative = PathBuf::new();
+    for _ in shared..from.len() {
+        relative.push("..");
+    }
+    for component in &to[shared..] {
+        relative.push(component.as_os_str());
+    }
+    relative
+}
+
+/// The message of an include that names no available file; `name_of` names a
+/// file in it.
+fn describe_file_not_found(
+    file: &Path,
+    site: Option<&IncludeSite>,
+    hint: Option<&str>,
+    name_of: &dyn Fn(&Path) -> String,
+) -> String {
+    let Some(site) = site else {
+        return format!("Diagram {} not found.", name_of(file));
+    };
+
+    let from = name_of(&site.from);
+    let target = match Path::new(&from).parent() {
+        Some(dir) if !Path::new(&site.target).is_absolute() => {
+            normalize_path(&dir.join(&site.target))
+                .display()
+                .to_string()
+        }
+        _ => name_of(file),
+    };
+    let mut message = format!(
+        "{from}:{}: !include \"{}\" resolves to {target}, which is not an available file",
+        site.line, site.target,
+    );
+    if let Some(hint) = hint {
+        message.push_str("\n  hint: ");
+        message.push_str(hint);
+    }
+    message
+}
+
+impl IncludeExpandError {
+    /// The message, with `name_of` naming the files of a missing include.
+    pub fn describe(&self, name_of: &dyn Fn(&Path) -> String) -> String {
+        match self {
+            Self::FileNotFound { file, site, hint } => {
+                describe_file_not_found(file, site.as_ref(), hint.as_deref(), name_of)
+            }
+            other => other.to_string(),
         }
     }
 }
@@ -386,19 +529,218 @@ fn has_include_or_subblock_directive(content: &str) -> bool {
     })
 }
 
-/// Renders AST statements into PlantUML text.
-///
-/// # Arguments
-/// - `stmts`: AST nodes to render
-///
-/// # Returns
-/// - `String` containing PlantUML text
-pub fn render_stmts(stmts: Vec<IncludeFile>) -> String {
-    let mut out = String::new();
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::sync::atomic::{AtomicU32, Ordering};
 
-    for stmt in stmts {
-        stmt.render(&mut out);
+    struct Workspace {
+        root: PathBuf,
     }
 
-    out
+    impl Workspace {
+        fn new() -> Self {
+            static NEXT: AtomicU32 = AtomicU32::new(0);
+            let root = std::env::temp_dir().join(format!(
+                "puml_include_{}_{}",
+                std::process::id(),
+                NEXT.fetch_add(1, Ordering::Relaxed)
+            ));
+            fs::create_dir_all(&root).unwrap();
+            Self { root }
+        }
+
+        fn write(&self, name: &str, content: &str) -> Rc<PathBuf> {
+            let path = self.root.join(name);
+            fs::create_dir_all(path.parent().unwrap()).unwrap();
+            fs::write(&path, content).unwrap();
+            Rc::new(path)
+        }
+    }
+
+    impl Drop for Workspace {
+        fn drop(&mut self) {
+            fs::remove_dir_all(&self.root).ok();
+        }
+    }
+
+    fn files(paths: &[&Rc<PathBuf>]) -> FileList {
+        paths.iter().map(|p| Rc::clone(p)).collect()
+    }
+
+    fn lines_of(expanded: &Expanded) -> Vec<(String, u32)> {
+        expanded
+            .origins
+            .iter()
+            .map(|o| (o.file.file_name().unwrap().to_string_lossy().into(), o.line))
+            .collect()
+    }
+
+    #[test]
+    fn included_lines_keep_their_own_file_and_line() {
+        let ws = Workspace::new();
+        let fragment = ws.write(
+            "sub/frag.puml",
+            "' header\n\nB -> C : first\nC -> B : second\n",
+        );
+        let main = ws.write(
+            "main.puml",
+            "@startuml\n' note\n\n!include sub/frag.puml\nA -> B : last\n@enduml\n",
+        );
+
+        let expanded = IncludeExpander::new()
+            .expand_mapped(&main, &files(&[&main, &fragment]))
+            .unwrap();
+
+        assert_eq!(
+            expanded.text,
+            "@startuml\nB -> C : first\nC -> B : second\nA -> B : last\n@enduml\n"
+        );
+        assert_eq!(
+            lines_of(&expanded),
+            [
+                ("main.puml".into(), 1),
+                ("frag.puml".into(), 3),
+                ("frag.puml".into(), 4),
+                ("main.puml".into(), 5),
+                ("main.puml".into(), 6),
+            ]
+        );
+    }
+
+    #[test]
+    fn nested_include_is_relative_to_the_including_fragment() {
+        let ws = Workspace::new();
+        let inner = ws.write("sub/deep/inner.puml", "X -> Y\n");
+        let fragment = ws.write("sub/frag.puml", "!include deep/inner.puml\n");
+        let main = ws.write("main.puml", "@startuml\n!include sub/frag.puml\n@enduml\n");
+
+        let expanded = IncludeExpander::new()
+            .expand_mapped(&main, &files(&[&main, &fragment, &inner]))
+            .unwrap();
+
+        assert_eq!(expanded.text, "@startuml\nX -> Y\n@enduml\n");
+        assert_eq!(lines_of(&expanded)[1], ("inner.puml".into(), 1));
+    }
+
+    #[test]
+    fn file_without_directives_is_returned_verbatim() {
+        let ws = Workspace::new();
+        let fragment = ws.write("frag.puml", "X -> Y\n");
+        let main = ws.write("main.puml", "@startuml\n' note\n\nA -> B\n@enduml\n");
+
+        let expanded = IncludeExpander::new()
+            .expand_mapped(&main, &files(&[&main, &fragment]))
+            .unwrap();
+
+        assert_eq!(expanded.text, "@startuml\n' note\n\nA -> B\n@enduml\n");
+        assert_eq!(expanded.origins.len(), 5);
+    }
+
+    #[test]
+    fn workspace_relative_path_is_reported_with_the_relative_one() {
+        let ws = Workspace::new();
+        let fragment = ws.write("pkg/dyn/sub/frag.puml", "X -> Y\n");
+        let main = ws.write(
+            "pkg/dyn/main.puml",
+            "@startuml\n!include pkg/dyn/sub/frag.puml\n@enduml\n",
+        );
+
+        let error = IncludeExpander::new()
+            .expand_mapped(&main, &files(&[&main, &fragment]))
+            .unwrap_err();
+
+        let message = error.to_string();
+        assert!(
+            message.contains("main.puml:2: !include \"pkg/dyn/sub/frag.puml\""),
+            "{message}"
+        );
+        assert!(
+            message.contains("did you mean \"sub/frag.puml\"?"),
+            "{message}"
+        );
+    }
+
+    #[test]
+    fn undeclared_file_is_reported_with_the_way_to_declare_it() {
+        let ws = Workspace::new();
+        ws.write("frag.puml", "X -> Y\n");
+        let main = ws.write("main.puml", "@startuml\n!include frag.puml\n@enduml\n");
+
+        let error = IncludeExpander::new()
+            .expand_mapped(&main, &files(&[&main]))
+            .unwrap_err();
+
+        let message = error.to_string();
+        assert!(message.contains("main.puml:2"), "{message}");
+        assert!(message.contains("--include-file"), "{message}");
+    }
+
+    #[test]
+    fn missing_include_is_described_with_the_given_names() {
+        let ws = Workspace::new();
+        let main = ws.write("main.puml", "@startuml\n!include sub/frag.puml\n@enduml\n");
+
+        let error = IncludeExpander::new()
+            .expand_mapped(&main, &files(&[&main]))
+            .unwrap_err();
+
+        let main_path = main.as_path().to_path_buf();
+        let message = error.describe(&|path| {
+            if path == main_path {
+                "pkg/main.puml".to_string()
+            } else {
+                path.display().to_string()
+            }
+        });
+        assert!(
+            message.starts_with(
+                "pkg/main.puml:2: !include \"sub/frag.puml\" resolves to pkg/sub/frag.puml,"
+            ),
+            "{message}"
+        );
+    }
+
+    #[test]
+    fn absolute_path_that_is_not_available_is_rejected_with_a_hint() {
+        let ws = Workspace::new();
+        let main = ws.write("main.puml", "@startuml\n!include /abs/frag.puml\n@enduml\n");
+
+        let error = IncludeExpander::new()
+            .expand_mapped(&main, &files(&[&main]))
+            .unwrap_err();
+
+        assert!(error.to_string().contains("relative to the including file"));
+    }
+
+    #[test]
+    fn includesub_is_limited_to_available_files() {
+        let ws = Workspace::new();
+        ws.write("lib.puml", "!startsub Part\nX -> Y\n!endsub\n");
+        let main = ws.write(
+            "main.puml",
+            "@startuml\n!includesub lib.puml!Part\n@enduml\n",
+        );
+
+        let error = IncludeExpander::new()
+            .expand_mapped(&main, &files(&[&main]))
+            .unwrap_err();
+
+        assert!(matches!(
+            error,
+            IncludeExpandError::FileNotFound { site: Some(_), .. }
+        ));
+    }
+
+    #[test]
+    fn relative_path_walks_up_from_the_base_directory() {
+        assert_eq!(
+            relative_path(Path::new("/a/b/c"), Path::new("/a/b/x/y.puml")),
+            Path::new("../x/y.puml")
+        );
+        assert_eq!(
+            relative_path(Path::new("/a/b"), Path::new("/a/b/sub/y.puml")),
+            Path::new("sub/y.puml")
+        );
+    }
 }

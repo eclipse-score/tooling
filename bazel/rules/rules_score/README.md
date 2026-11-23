@@ -112,10 +112,18 @@ architectural_design(
     name = "my_design",
     package = "my_design_api",
     static = ["component.puml"],
-    dynamic = ["sequence.puml"],
+    dynamic = ["sequence.puml"] + glob(["subdiagrams/*.iuml"]),  # .iuml: optional fragments
     public_api = ["api.puml"],
 )
 ```
+
+A `.iuml` file in any view is a fragment that `!include` directives of any view may name
+(no `@startuml` needed). It must be a source file in the package of the target or below it, as
+must every `.puml` of a view that holds fragments.
+A directive's path is relative to the directory of the file holding it, e.g.
+`!include subdiagrams/x.iuml`. Fragments are neither parsed on their own nor documented;
+they stage beside the diagrams so Sphinx renders the include. Errors inside one name its
+own file and line. Not supported by `unit_design`.
 
 **`bazel build`** — runs `puml_parser` on every `.puml` file, producing:
 - a `.fbs.bin` FlatBuffers binary (diagram AST) — consumed by validation/core checks

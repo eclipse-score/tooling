@@ -89,12 +89,13 @@ def test_main_returns_two_on_unreadable_template(tmp_path):
 
 # One representative extension per distinct comment style declared in the
 # real templates.ini: "/* */" (cpp family), "#" (py family), "//" (rs),
-# "'" (puml), "<!-- -->" (md) and the indented ".." (rst).
+# "'" (puml, iuml), "<!-- -->" (md) and the indented ".." (rst).
 COMMENT_STYLE_SAMPLES = {
     "cpp": ("sample.cpp", "int main() { return 0; }\n", "/*"),
     "py": ("sample.py", "print('hello')\n", "#"),
     "rs": ("sample.rs", "fn main() {}\n", "//"),
     "puml": ("sample.puml", "@startuml\n@enduml\n", "'"),
+    "iuml": ("sample.iuml", "A -> B : call\n", "'"),
     "md": ("sample.md", "# Heading\n", "<!--"),
     "rst": ("sample.rst", "Heading\n=======\n", ".."),
 }

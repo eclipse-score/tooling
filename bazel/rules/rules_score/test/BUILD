@@ -91,6 +91,10 @@ load(
     "lobster_config_test_suite",
 )
 load(
+    ":puml_includes_test.bzl",
+    "includes_fails_test",
+)
+load(
     ":puml_layout_test.bzl",
     "puml_layout_test_suite",
 )
@@ -437,6 +441,155 @@ architectural_design(
 stem_collision_fails_test(
     name = "stem_collision_fails_test",
     target_under_test = ":arch_design_stem_collision_repro",
+)
+
+# A dynamic diagram `!include`s a `.iuml` fragment (no @startuml) of its view.
+# The fragment is staged beside the diagram, without a wrapper page of its own,
+# and PlantUML draws it into the diagram; see :includes_staged_test and
+# :includes_rendered_test.
+architectural_design(
+    name = "arch_design_includes_example",
+    dynamic = [
+        "fixtures/includes/dynamic/main_seq.puml",
+        "fixtures/includes/dynamic/sub/frag.iuml",
+    ],
+    # The fixture is not checked against a component diagram.
+    maturity = "development",
+)
+
+dependable_element(
+    name = "includes_example_lib",
+    testonly = True,
+    architectural_design = [":arch_design_includes_example"],
+    components = [":same_puml_component"],
+    dependability_analysis = [":dependability_analysis_target"],
+    integrity_level = "B",
+    maturity = "development",
+    requirements = [":feat_req"],
+    tests = [],
+    deps = [],
+)
+
+staged_files_test(
+    name = "includes_staged_test",
+    absent_suffixes = [
+        "/dynamic/fixtures/includes/dynamic/sub/frag.rst",
+    ],
+    suffixes = [
+        "/dynamic/fixtures/includes/dynamic/main_seq.puml",
+        "/dynamic/fixtures/includes/dynamic/main_seq.rst",
+        "/dynamic/fixtures/includes/dynamic/sub/frag.iuml",
+    ],
+    target_under_test = ":includes_example_lib_index",
+)
+
+sh_test(
+    name = "includes_rendered_test",
+    srcs = ["check_include_render.sh"],
+    args = [
+        "$(rootpath :includes_example_lib_doc)",
+        "local_call",
+        "included_call",
+        "included_return",
+        "local_return",
+    ],
+    data = [":includes_example_lib_doc"],
+)
+
+# The fragments live in a package below the target's and include each other:
+# `frags/a.iuml` includes `b.iuml`, both staged beside `main.puml`.
+dependable_element(
+    name = "includes_nested_lib",
+    testonly = True,
+    architectural_design = ["//fixtures/includes/nested:arch_design_includes_nested"],
+    components = [":same_puml_component"],
+    dependability_analysis = [":dependability_analysis_target"],
+    integrity_level = "B",
+    maturity = "development",
+    requirements = [":feat_req"],
+    tests = [],
+    deps = [],
+)
+
+staged_files_test(
+    name = "includes_nested_staged_test",
+    absent_suffixes = [
+        "/dynamic/frags/a.rst",
+        "/dynamic/frags/b.rst",
+    ],
+    suffixes = [
+        "/dynamic/main.puml",
+        "/dynamic/frags/a.iuml",
+        "/dynamic/frags/b.iuml",
+    ],
+    target_under_test = ":includes_nested_lib_index",
+)
+
+sh_test(
+    name = "includes_nested_rendered_test",
+    srcs = ["check_include_render.sh"],
+    args = [
+        "$(rootpath :includes_nested_lib_doc)",
+        "nested_main_call",
+        "a_call",
+        "b_return",
+    ],
+    data = [":includes_nested_lib_doc"],
+)
+
+# A fragment listed in two views reaches each parser action once; the parser
+# rejects a duplicate `--include-file`.
+architectural_design(
+    name = "arch_design_includes_shared_repro",
+    dynamic = [
+        "fixtures/includes/dynamic/main_seq.puml",
+        "fixtures/includes/dynamic/sub/frag.iuml",
+    ],
+    internal_api = ["fixtures/includes/dynamic/sub/frag.iuml"],
+    # The fixture is not checked against a component diagram.
+    maturity = "development",
+    tags = ["manual"],
+)
+
+build_test(
+    name = "includes_shared_build_test",
+    targets = [":arch_design_includes_shared_repro"],
+)
+
+# Regression fixtures: a fragment that lives in another package or is
+# generated must fail analysis; see :includes_*_fails_test.
+genrule(
+    name = "generated_include",
+    outs = ["generated_include.iuml"],
+    cmd = "echo \"' generated\" > $@",
+    tags = ["manual"],
+)
+
+architectural_design(
+    name = "arch_design_includes_generated_repro",
+    dynamic = [
+        "fixtures/includes/dynamic/main_seq.puml",
+        ":generated_include.iuml",
+    ],
+    tags = ["manual"],
+)
+
+includes_fails_test(
+    name = "includes_foreign_package_fails_test",
+    expected = "lives outside package",
+    target_under_test = "//fixtures/includes/consumer:arch_design_includes_foreign_package_repro",
+)
+
+includes_fails_test(
+    name = "includes_foreign_diagram_fails_test",
+    expected = "every diagram must live in the package",
+    target_under_test = "//fixtures/includes/consumer:arch_design_includes_foreign_diagram_repro",
+)
+
+includes_fails_test(
+    name = "includes_generated_fails_test",
+    expected = "is generated",
+    target_under_test = ":arch_design_includes_generated_repro",
 )
 
 # Regression fixture: a single label whose SphinxSourcesInfo lists the same

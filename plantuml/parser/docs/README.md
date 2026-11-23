@@ -29,10 +29,13 @@ The sequence diagram shows the phases of the plantuml processing:
 
 The preprocessor:
 
-- Resolves file paths (absolute and relative)
+- Resolves a path relative to the directory of the file holding the directive, as PlantUML does; an absolute path is accepted only for an available file
+- Accepts only the `--include-file` files of the run (see [`README.md`](../README.md)), never a diagram of the run; an include file needs no `@startuml` and is never parsed as a diagram
 - Recursively expands nested includes
 - Detects circular dependencies and reports an error
 - Caches already-resolved files to avoid redundant I/O
+- Records the file and line of every expanded line, so source locations and parse errors name the included file and its own line; a diagram that defines `!procedure`s keeps the line of the fully expanded text instead, with a warning
+- Reports an unresolved path with the directive's file and line, and with the relative path of an available file of the same path suffix
 
 #### 2. Parsing Phase
 

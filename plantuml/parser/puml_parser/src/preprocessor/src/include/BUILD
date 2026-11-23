@@ -15,6 +15,7 @@ load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
 filegroup(
     name = "include_preprocessor_files",
     srcs = [
+        "expanded.rs",
         "include_ast.rs",
         "include_expander.rs",
         "include_parser.rs",

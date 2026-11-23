@@ -21,6 +21,8 @@ architectural_design(
     dynamic = [
         "dynamic_cast.puml",
         "dynamic_design.puml",
+        "dynamic_polling.puml",
+        "subdiagrams/get_data.iuml",  # `.iuml`: fragment, `!include`d by scenarios
     ],
     internal_api = [
         "internal_api.puml",

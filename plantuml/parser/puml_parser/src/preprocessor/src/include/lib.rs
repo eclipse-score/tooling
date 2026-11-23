@@ -11,10 +11,12 @@
 // SPDX-License-Identifier: Apache-2.0
 // *******************************************************************************
 
+mod expanded;
 mod include_ast;
 mod include_expander;
 mod include_parser;
 mod utils;
 
-pub use include_expander::{IncludeExpandError, IncludeExpander};
+pub use expanded::{Expanded, SourceLine};
+pub use include_expander::{IncludeExpandError, IncludeExpander, IncludeSite};
 pub use include_parser::IncludeParseError;

@@ -10,7 +10,6 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 // *******************************************************************************
-use std::fmt::Write;
 use std::path::{Component, Path, PathBuf};
 
 /// Normalizes paths resolving `.` and `..`.
@@ -27,16 +26,10 @@ pub fn normalize_path(path: &Path) -> PathBuf {
     })
 }
 
-/// Strips `@startuml` and `@enduml` from text.
-pub fn strip_start_end(text: &str) -> String {
-    let mut out = String::with_capacity(text.len());
-    for line in text.lines() {
-        let t = line.trim_start();
-        if !t.starts_with("@startuml") && !t.starts_with("@enduml") {
-            writeln!(out, "{}", line).unwrap();
-        }
-    }
-    out
+/// Whether `line` opens (`@startuml`) or closes (`@enduml`) a diagram.
+pub fn is_start_end_line(line: &str) -> bool {
+    let t = line.trim_start();
+    t.starts_with("@startuml") || t.starts_with("@enduml")
 }
 
 #[cfg(test)]
@@ -73,30 +66,11 @@ mod tests {
     }
 
     #[test]
-    fn strip_start_end_test() {
-        let text = "@startuml\nline1\nline2\n@enduml\n";
-        let stripped = strip_start_end(text);
-        assert_eq!(stripped, "line1\nline2\n");
-    }
-
-    #[test]
-    fn strip_start_end_no_tags() {
-        let text = "line1\nline2\n";
-        let stripped = strip_start_end(text);
-        assert_eq!(stripped, "line1\nline2\n");
-    }
-
-    #[test]
-    fn strip_start_end_similar_tags() {
-        let text = "!@startuml\nline1\nline2\n!@enduml\n";
-        let stripped = strip_start_end(text);
-        assert_eq!(stripped, "!@startuml\nline1\nline2\n!@enduml\n");
-    }
-
-    #[test]
-    fn strip_start_end_empty_string() {
-        let text = "";
-        let stripped = strip_start_end(text);
-        assert_eq!(stripped, "");
+    fn start_end_lines_are_recognized() {
+        assert!(is_start_end_line("@startuml name\n"));
+        assert!(is_start_end_line("  @enduml"));
+        assert!(!is_start_end_line("!@startuml"));
+        assert!(!is_start_end_line("a -> b"));
+        assert!(!is_start_end_line(""));
     }
 }

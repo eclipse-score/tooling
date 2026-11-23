@@ -19,6 +19,7 @@ _SRCS = [
     "src/parsing.rs",
     "src/resolving.rs",
     "src/sinks.rs",
+    "src/source_map.rs",
 ]
 
 rust_binary(
@@ -62,6 +63,7 @@ rust_test(
         "//plantuml/parser/puml_utils",
         "//tools/metamodel/activity:activity_diagram",
         "//tools/metamodel/class:class_diagram",
+        "//tools/metamodel/common:source_location",
         "//tools/metamodel/component:component_diagram",
         "//tools/metamodel/sequence:sequence_diagram",
         "//tools/serialization/flatbuffers/activity:activity_serializer",

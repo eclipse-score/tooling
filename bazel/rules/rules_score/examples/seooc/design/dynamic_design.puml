@@ -16,8 +16,6 @@
 ' Scenario only: the participants are declared in dynamic_cast.puml. `activate`
 ' makes the file a sequence diagram (a message-only file is a component diagram).
 
-unit_1 -> unit_2 : GetData()
-activate unit_2
-return Data*
+!include subdiagrams/get_data.iuml
 
 @enduml

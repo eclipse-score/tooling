@@ -58,9 +58,19 @@ Options:
 | `--api-output-file <FILE>` | Output file for the public API TRLC (`ApiMethod` records of class diagrams); all inputs must be class diagrams; requires `--api-package` | none (no output) |
 | `--api-package <NAME>` | TRLC package of the public API file (a TRLC identifier); requires `--api-output-file` | none |
 | `--output-stem <STEM>` | Override the file stem used to name every output file for this run, instead of deriving it from the input file's own basename. Requires exactly one input file. | none (uses the input file's basename) |
+| `--include-file <FILE>...` | File that `!include` directives may name besides the diagrams (repeatable; `.puml` or `.iuml`). It is neither parsed as a diagram nor written as an output. Not combinable with `--fta-output-dir`. | none |
+| `--include-source-name <PATH>...` | Workspace-relative path embedded in the source locations of each `--include-file`; give none or one per `--include-file`, in the same order. | the file's absolute path |
 
 At least one of `--file` or `--folders` is required. Inputs must have the `.puml`
 extension; the same file given twice is an error.
+
+A path in an include directive (`!include`, `!include_once`, `!include_many`, `!includesub`)
+is relative to the directory of the file holding it, as in PlantUML, and must name an
+`--include-file`: a file that is not declared is never read, and a diagram of the run cannot
+be included. A directive that does not is an error naming its file and line, with a hint if a
+file of the same path suffix is available. Source locations in the outputs and parse errors
+name the file and line an included line was written at; in a diagram that defines
+`!procedure`s they carry the line of the fully expanded text instead, and a warning says so.
 
 All inputs of one run, whether from `--file` or `--folders`, are resolved together: per
 diagram kind, the files form one group in which a top-level declaration with a body is

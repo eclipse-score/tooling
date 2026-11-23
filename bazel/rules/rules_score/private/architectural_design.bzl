@@ -29,7 +29,7 @@ load("@lobster//:lobster.bzl", "subrule_lobster_trlc")
 load("@trlc//:trlc.bzl", "TrlcProviderInfo")
 load("//bazel/rules/rules_score:providers.bzl", "ArchitecturalDesignInfo", "SphinxSourcesInfo")
 load("//bazel/rules/rules_score/private:puml_parser.bzl", "disambiguated_stems", "run_puml_parser")
-load("//bazel/rules/rules_score/private:puml_utils.bzl", "emit_view_navigation", "plan_view_layout")
+load("//bazel/rules/rules_score/private:puml_utils.bzl", "emit_view_navigation", "plan_view_layout", "relative_source_path")
 load("//bazel/rules/rules_score/private:validation.bzl", "PROFILES", "VALIDATION_ATTRS", "run_validation")
 load("//bazel/rules/rules_score/private:verbosity.bzl", "VERBOSITY_ATTR", "get_log_level")
 load("//bazel/rules/rules_score/private:views.bzl", "ARCH_VIEWS")
@@ -105,6 +105,83 @@ def _run_validation(ctx, component_fbs_files, sequence_fbs_files, public_api_fbs
         log_level = get_log_level(ctx),
     )
 
+def _split_fragments(view_files_by_name):
+    """Splits `.iuml` include fragments off the files of all views.
+
+    Args:
+        view_files_by_name: Dict of view name to its List of File objects.
+
+    Returns:
+        Struct with `views` (Dict of view name to its files without
+        fragments) and `fragments` (List of the `.iuml` File objects of all
+        views, each once).
+    """
+    views = {}
+    fragments = {}
+    for view_name, files in view_files_by_name.items():
+        views[view_name] = [f for f in files if f.extension != "iuml"]
+        for f in files:
+            if f.extension == "iuml":
+                fragments[f.path] = f
+    return struct(views = views, fragments = fragments.values())
+
+def _fragment_error(ctx, f):
+    """Why `.iuml` fragment `f` cannot be included by this target, or None.
+
+    Args:
+        ctx: Rule context.
+        f: `.iuml` File object of a view.
+
+    Returns:
+        Human-readable message, or None when `f` is usable.
+    """
+    if not f.is_source:
+        return "'{}' is generated; .iuml fragments must be source files, as the `!include` path of a diagram cannot name a generated file".format(f.short_path)
+    if relative_source_path(f, ctx.label.package, ctx.label.workspace_name).startswith("../"):
+        return "'{}' lives outside this repository; .iuml fragments must live in the same repository as the target".format(f.short_path)
+    if _outside_package(ctx, f):
+        return "'{}' lives outside package '{}'; .iuml fragments must live in the package of the target, or below it, so their `!include` paths resolve when the docs are staged".format(f.short_path, ctx.label.package)
+    return None
+
+def _outside_package(ctx, f):
+    """Whether `f` is not in the package of the target or below it."""
+    package = ctx.label.package
+    owner_package = f.owner.package
+    return bool(package) and owner_package != package and not owner_package.startswith(package + "/")
+
+def _diagram_error(ctx, f):
+    """Why diagram `f` cannot `!include` fragments of this target, or None.
+
+    Staging keeps the package-relative path of a fragment and the full path of
+    a diagram outside the package, so their relative `!include` path would
+    no longer resolve.
+
+    Args:
+        ctx: Rule context.
+        f: `.puml` File object of a view that has fragments.
+
+    Returns:
+        Human-readable message, or None when `f` is usable.
+    """
+    if _outside_package(ctx, f) or relative_source_path(f, ctx.label.package, ctx.label.workspace_name).startswith("../"):
+        return "'{}' lives outside package '{}'; with `.iuml` fragments in the target, every diagram must live in the package of the target, or below it, so `!include` paths resolve when the docs are staged".format(f.short_path, ctx.label.package)
+    return None
+
+def _plan_include_staging(ctx, include_files):
+    """Plan where the `.iuml` fragments stage inside one view's tree.
+
+    A diagram's `!include` path is relative to its own directory, so each
+    fragment stages at its package-relative path, beside the diagrams.
+
+    Args:
+        ctx: Rule context.
+        include_files: List of `.iuml` File objects of all views.
+
+    Returns:
+        List of (File, relative_path) tuples.
+    """
+    return [(f, relative_source_path(f, ctx.label.package, ctx.label.workspace_name)) for f in include_files]
+
 def _architectural_design_impl(ctx):
     """Implementation for architectural_design rule.
 
@@ -126,12 +203,17 @@ def _architectural_design_impl(ctx):
         List of providers including DefaultInfo, ArchitecturalDesignInfo, TrlcProviderInfo, SphinxSourcesInfo
     """
 
+    # `.iuml` files of any view are include fragments, not diagrams: every
+    # view's parser action and docs tree gets all of them.
+    split = _split_fragments({view_name: getattr(ctx.files, view_name) for view_name, _ in ARCH_VIEWS})
+    include_files = split.fragments
+
     # All diagrams of this target share one flat fbs/idmap namespace
     # (keyed by ctx.label.name), so stems must be disambiguated across all
     # four views together, not per-view.
     stems = disambiguated_stems(
         ctx,
-        ctx.files.static + ctx.files.dynamic + ctx.files.public_api + ctx.files.internal_api,
+        split.views["static"] + split.views["dynamic"] + split.views["public_api"] + split.views["internal_api"],
     )
 
     api_package = ctx.attr.package
@@ -140,6 +222,11 @@ def _architectural_design_impl(ctx):
         fail("{}: `package` is required with `public_api` diagrams; failure mode files import it".format(ctx.label))
     if api_package and not has_api_diagrams:
         fail("{}: `package` is only used with `public_api` .puml diagrams".format(ctx.label))
+
+    for f in include_files:
+        error = _fragment_error(ctx, f)
+        if error:
+            fail("{}: {}".format(ctx.label, error))
 
     view_fbs = {}
     view_idmap = {}
@@ -151,7 +238,7 @@ def _architectural_design_impl(ctx):
     api_trlc = None
 
     for view_name, root_title in ARCH_VIEWS:
-        view_files = getattr(ctx.files, view_name)
+        view_files = split.views[view_name]
 
         # One `puml_cli` action per view: its diagrams resolve as one group, so
         # `static` may split a decomposition across an overview and detail files.
@@ -163,6 +250,7 @@ def _architectural_design_impl(ctx):
             diagram_type = _VIEW_DIAGRAM_TYPES.get(view_name),
             public_api_package = api_package if is_public_api else None,
             progress_label = "{} ({})".format(ctx.label, view_name),
+            include_files = include_files,
         )
         view_fbs[view_name] = parsed.fbs
         view_idmap[view_name] = parsed.idmap
@@ -176,13 +264,23 @@ def _architectural_design_impl(ctx):
         if plan.errors:
             fail("architectural_design {} view '{}': {}".format(ctx.label, view_name, "; ".join(plan.errors)))
 
+        # Fragments stage beside the diagrams, so their `!include` paths
+        # resolve when Sphinx renders them. They get no wrapper or navigation.
+        staged = plan.staged
+        if include_files and any([f.extension == "puml" for f in view_files]):
+            for f in view_files:
+                error = _diagram_error(ctx, f) if f.extension == "puml" else None
+                if error:
+                    fail("architectural_design {} view '{}': {}".format(ctx.label, view_name, error))
+            staged = plan.staged + _plan_include_staging(ctx, include_files)
+
         # Colocate every source file of this view (diagrams, hand-written
         # rst/md pages, assets) under its own "{name}/{view}/" tree, mirroring
         # on-disk directory structure -- see _colocate_view_files for why
         # this is required for `.. uml::`/toctree sibling references to
         # resolve once dependable_element.bzl stages these files.
         view_output_dir = "{}/{}".format(ctx.label.name, view_name)
-        colocated_by_relative_path = _colocate_view_files(ctx, plan.staged, view_output_dir)
+        colocated_by_relative_path = _colocate_view_files(ctx, staged, view_output_dir)
         colocated_files = colocated_by_relative_path.values()
         view_source_files.append(depset(colocated_files))
 
@@ -289,21 +387,26 @@ def _architectural_design_impl(ctx):
 # Rule Definition
 # ============================================================================
 
+# `.iuml` files are include fragments; see `_split_fragments`.
+_VIEW_FILE_TYPES = [".puml", ".iuml", ".svg", ".rst", ".md"]
+
+_FRAGMENT_DOC = " `.iuml` files are include fragments that `!include` directives of any view may name."
+
 def _architectural_design_attrs():
     attrs = {
         "static": attr.label_list(
-            allow_files = [".puml", ".svg", ".rst", ".md"],
+            allow_files = _VIEW_FILE_TYPES,
             mandatory = False,
             doc = "Static architecture diagrams -- component/package diagrams only " +
-                  "(see unit_design's static attribute for class diagrams).",
+                  "(see unit_design's static attribute for class diagrams)." + _FRAGMENT_DOC,
         ),
         "dynamic": attr.label_list(
-            allow_files = [".puml", ".svg", ".rst", ".md"],
+            allow_files = _VIEW_FILE_TYPES,
             mandatory = False,
-            doc = "Dynamic architecture diagrams (sequence diagrams, activity diagrams, etc.)",
+            doc = "Dynamic architecture diagrams (sequence diagrams, activity diagrams, etc.)." + _FRAGMENT_DOC,
         ),
         "public_api": attr.label_list(
-            allow_files = [".puml", ".svg", ".rst", ".md"],
+            allow_files = _VIEW_FILE_TYPES,
             mandatory = False,
             doc = "Public API class diagrams (.puml; the .svg/.rst/.md pages are staged as documentation). " +
                   "The diagrams yield the ScoreReq.ApiMethod records " +
@@ -311,14 +414,14 @@ def _architectural_design_attrs():
                   "per free function) that FailureMode.interface references; " +
                   "their lobster items are exposed via public_api_lobster_files, " +
                   "enabling failure-mode-to-interface traceability at the " +
-                  "dependable element level.",
+                  "dependable element level." + _FRAGMENT_DOC,
         ),
         "internal_api": attr.label_list(
-            allow_files = [".puml", ".svg", ".rst", ".md"],
+            allow_files = _VIEW_FILE_TYPES,
             mandatory = False,
             doc = "Internal API diagrams (class diagrams). " +
                   "Classified separately so their FlatBuffers outputs are exposed via " +
-                  "ArchitecturalDesignInfo.internal_api for downstream validation.",
+                  "ArchitecturalDesignInfo.internal_api for downstream validation." + _FRAGMENT_DOC,
         ),
         "maturity": attr.string(
             default = "release",
@@ -387,6 +490,14 @@ def architectural_design(
     docs/user_guide/architectural_design.rst for the full authoring-mode
     reference.
 
+    A `.iuml` file in any view is an include fragment, not a diagram:
+    `!include` directives of the diagrams of any view may name it. It is
+    neither parsed on its own nor documented, needs no `@startuml`, and must
+    be a source file in the package of the target or below it, as must every
+    `.puml` of a view that holds fragments. A directive's
+    path is relative to the directory of the file holding it, as in PlantUML.
+    Errors inside a fragment are reported at its own file and line.
+
     Args:
         name: The name of the architectural design target. Used as the base
             name for all generated targets.
@@ -442,7 +553,7 @@ def architectural_design(
             dynamic = [
                 "sequence_diagram.puml",
                 "activity_diagram.puml",
-            ],
+            ] + glob(["dynamic_design/subdiagrams/*.iuml"]),
             internal_api = ["internal_api.puml"],
         )
         ```

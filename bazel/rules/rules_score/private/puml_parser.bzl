@@ -62,7 +62,7 @@ def disambiguated_stems(ctx, files):
         stems[f.path] = stem
     return stems
 
-def run_puml_parser(ctx, files, stems, diagram_type = None, public_api_package = None, progress_label = None):
+def run_puml_parser(ctx, files, stems, diagram_type = None, public_api_package = None, progress_label = None, include_files = []):
     """Runs `puml_cli` once for a whole `.puml` file list, so the files resolve
     as one group.
 
@@ -85,6 +85,10 @@ def run_puml_parser(ctx, files, stems, diagram_type = None, public_api_package =
             Use with `diagram_type = "class"`.
         progress_label: Optional group description for the progress message;
             defaults to `str(ctx.label)`.
+        include_files: List of File objects the `!include` directives of
+            `files` may name. They are action inputs and are parsed neither as
+            diagrams nor into outputs. Their `short_path` is the source path
+            of the locations inside them.
     Returns:
         Struct with `fbs` and `idmap` (output File lists, one entry per
         `.puml` file in `files`, in order) and `public_api` (the declared
@@ -116,6 +120,14 @@ def run_puml_parser(ctx, files, stems, diagram_type = None, public_api_package =
             stem,
         ])
 
+    for f in include_files:
+        arguments.extend([
+            "--include-file",
+            f.path,
+            "--include-source-name",
+            f.short_path,
+        ])
+
     if diagram_type:
         arguments.extend(["--diagram-type", diagram_type])
 
@@ -133,7 +145,7 @@ def run_puml_parser(ctx, files, stems, diagram_type = None, public_api_package =
         arguments.extend(["--api-output-file", public_api.path, "--api-package", public_api_package])
 
     ctx.actions.run(
-        inputs = puml_files,
+        inputs = puml_files + include_files,
         outputs = fbs_outputs + idmap_outputs + api_outputs,
         executable = ctx.executable._puml_parser,
         arguments = arguments,
