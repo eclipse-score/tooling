@@ -101,6 +101,32 @@ py_binary(
     ],
 )
 
+# TRLC plugin checks: modules defining check(symbols, mh), run by trlc_check_runner when named with --check
+py_library(
+    name = "trlc_checks",
+    srcs = [
+        "src/trlc_checks/__init__.py",
+        "src/trlc_checks/asil_coverage_check.py",
+        "src/trlc_checks/version_pin_check.py",
+    ],
+    imports = ["src"],
+    visibility = ["//visibility:public"],
+    deps = ["@trlc//trlc"],
+)
+
+# trlc CLI extended with the plugin checks named with --check (see src/trlc_check_runner.py)
+py_binary(
+    name = "trlc_check_runner",
+    srcs = ["src/trlc_check_runner.py"],
+    imports = ["src"],
+    main = "src/trlc_check_runner.py",
+    visibility = ["//visibility:public"],
+    deps = [
+        ":trlc_checks",
+        "@trlc//trlc",
+    ],
+)
+
 # AoU forwarding filter: filters received AoU lobster entries for chain-forwarding
 py_binary(
     name = "aou_forwarding_to_lobster",

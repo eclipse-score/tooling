@@ -21,6 +21,7 @@ with associated requirements and tests.
 
 load("@lobster//:lobster.bzl", "subrule_lobster_gtest", "subrule_lobster_html_report", "subrule_lobster_report")
 load("@lobster_capabilities//:capabilities.bzl", "SUPPORTS_DERIVE_GWT_FROM_TEST_NAME")
+load("@trlc//:trlc.bzl", "TrlcProviderInfo")
 load("//bazel/rules/rules_score:providers.bzl", "AssumedSystemRequirementsInfo", "CertifiedScope", "ComponentInfo", "ComponentRequirementsInfo", "ComponentTestCaseCoverageInfo", "FeatureRequirementsInfo", "SphinxSourcesInfo", "UnitInfo")
 load("//bazel/rules/rules_score/private:lobster_config.bzl", "format_lobster_sources")
 
@@ -197,8 +198,14 @@ def _component_impl(ctx):
     # -------------------------------------------------------------------------
     req_lobster_files = []
     req_lobster_transitive_files = []
+    req_trlc_files = []
     feat_req_lobster_files = []
     for req_target in ctx.attr.requirements:
+        if TrlcProviderInfo in req_target:
+            trlc_info = req_target[TrlcProviderInfo]
+            req_trlc_files.append(trlc_info.spec)
+            req_trlc_files.append(trlc_info.reqs)
+            req_trlc_files.append(trlc_info.deps)
         if ComponentRequirementsInfo in req_target:
             req_lobster_files.append(req_target[ComponentRequirementsInfo].srcs)
             req_lobster_transitive_files.append(req_target[ComponentRequirementsInfo].srcs)
@@ -215,6 +222,7 @@ def _component_impl(ctx):
         if ComponentInfo in component:
             if component[ComponentInfo].requirements_transitive:
                 req_lobster_transitive_files.append(component[ComponentInfo].requirements_transitive)
+            req_trlc_files.append(component[ComponentInfo].requirements_trlc)
 
     req_lobster_depset = depset(transitive = req_lobster_files)
     req_lobster_transitive_depset = depset(transitive = req_lobster_transitive_files)
@@ -352,6 +360,7 @@ def _component_impl(ctx):
             design_name = ctx.attr.design_name or ctx.label.name,
             requirements = req_lobster_depset,
             requirements_transitive = req_lobster_transitive_depset,
+            requirements_trlc = depset(transitive = req_trlc_files),
             components = components_depset,
             tests = depset(
                 [gtest_lobster_file],
