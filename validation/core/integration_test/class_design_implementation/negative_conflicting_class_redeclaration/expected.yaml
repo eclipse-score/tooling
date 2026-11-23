@@ -16,7 +16,7 @@ error_contains: |
     Class                   : "Engine"
     Conflicting field       : definition of method "start"
     Design source file      : "validation/core/integration_test/class_design_implementation/negative_conflicting_class_redeclaration/class_diagram_part1.puml"
-    Design source line      : 18
+    Design source line      : 19
     Conflicting source file : "validation/core/integration_test/class_design_implementation/negative_conflicting_class_redeclaration/class_diagram_part2.puml"
-    Conflicting source line : 18
+    Conflicting source line : 19
     Fix                     : Make every declaration of class "Engine" agree on definition of method "start", or rename one of the conflicting classes.

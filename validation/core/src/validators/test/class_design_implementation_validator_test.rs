@@ -865,6 +865,25 @@ fn class_implementation_validation_passes_when_design_class_and_methods_exist() 
 }
 
 #[test]
+fn missing_member_from_another_design_file_reports_its_own_location() {
+    let mut overview = entity("Sample", vec!["run"]);
+    overview.source_location = SourceLocation::new("overview.puml", 3);
+    overview.methods[0].source_location = SourceLocation::new("overview.puml", 4);
+    let mut detail = entity("Sample", vec!["stop"]);
+    detail.source_location = SourceLocation::new("detail.puml", 10);
+    detail.methods[0].source_location = SourceLocation::new("detail.puml", 11);
+    let design = index(vec![overview, detail]);
+    let implementation = index(vec![entity("Sample", vec!["run"])]);
+
+    let result = validate_class_design_implementation(&design, &implementation);
+
+    assert_eq!(result.failures.len(), 1);
+    let failure = &result.failures[0];
+    assert!(failure.contains("detail.puml"), "{failure}");
+    assert!(failure.contains("Design source line : 11"), "{failure}");
+}
+
+#[test]
 fn class_implementation_validation_reports_missing_class() {
     let design = index(vec![entity("Sample", vec!["run"])]);
     let implementation = index(vec![]);

@@ -243,8 +243,8 @@ fn positive_class_declared_in_multiple_diagrams() {
 }
 
 #[test]
-fn negative_duplicate_partial_specialization_design_id() {
-    assert_case("negative_duplicate_partial_specialization_design_id");
+fn positive_partial_specializations_share_design_id() {
+    assert_case("positive_partial_specializations_share_design_id");
 }
 
 #[test]

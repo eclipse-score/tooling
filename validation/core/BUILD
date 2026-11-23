@@ -47,6 +47,7 @@ rust_library(
         "src/models/mod.rs",
         "src/models/sequence_diagram_models.rs",
         "src/models/shared.rs",
+        "src/models/type_names.rs",
         "src/profiles/architectural_design.rs",
         "src/profiles/dependable_element.rs",
         "src/profiles/mod.rs",

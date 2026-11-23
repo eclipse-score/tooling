@@ -331,11 +331,11 @@ section "Tool Requirements" {
             ToolQualification.ToolRequirement ClassDesignImplementationDeclarationMerge {
                 description = '''When the same class id is declared more than
                 once across the unit design class diagrams, the validator
-                shall merge the declarations (union of members, type aliases,
-                enum literals and relationships) and shall report an error
-                when a member is redeclared with a different definition, when
-                their entity type, stereotype or template parameters differ,
-                or when two declarations with a body use different names.'''
+                shall merge the declarations (union of members, type aliases and
+                relationships) and shall report an error when a member is
+                redeclared with a different definition, when their entity
+                type, stereotype, template parameters or enum literal lists
+                differ, or when their ids differ in case.'''
                 derived_from = [UseCases.Validate_Unit_Specification_Documents]
                 satisfied_by = Verifier
             }

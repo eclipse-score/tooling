@@ -18,6 +18,11 @@ use super::shared::{
     any_covering_matching, best_string_suggestion, candidate_graph, nonempty_candidate_rows,
     unique_covering_matching, MatchingOutcome,
 };
+use crate::models::type_names::{
+    contains_literal, method_key, normalize_callable_types,
+    normalize_non_type_template_parameter_type, normalize_parameter_type, normalize_qualified_name,
+    normalize_type_name, normalized_method, parameter_signature, render_type_name,
+};
 use crate::models::ClassEntityIndex;
 use crate::results::{ErrorBuilder, ErrorCategory, ErrorSection};
 use crate::ValidationResult;
@@ -286,6 +291,7 @@ impl ClassDesignImplementationValidator {
             self.result.add_failure(Self::format_mismatch(
                 design_entity,
                 implementation_entity,
+                &design_entity.source_location,
                 "entity_type",
                 FieldReferenceStyle::Quoted,
                 &format!("{:?}", design_entity.entity_type),
@@ -307,6 +313,7 @@ impl ClassDesignImplementationValidator {
             self.result.add_failure(Self::format_mismatch(
                 design_entity,
                 implementation_entity,
+                &design_entity.source_location,
                 "template_parameters",
                 FieldReferenceStyle::Quoted,
                 &render_template_parameters(&design_entity.template_parameters),
@@ -334,6 +341,7 @@ impl ClassDesignImplementationValidator {
                 Some(implementation_alias) => self.result.add_failure(Self::format_mismatch(
                     design_entity,
                     implementation_entity,
+                    design_location(design_entity, &design_alias.source_location),
                     &format!(
                         "type alias \"{}\" original type",
                         design_alias.alias.as_str()
@@ -345,6 +353,7 @@ impl ClassDesignImplementationValidator {
                 None => self.result.add_failure(Self::format_missing_member(
                     design_entity,
                     implementation_entity,
+                    design_location(design_entity, &design_alias.source_location),
                     "type_alias",
                     &design_alias.alias,
                     best_string_suggestion(
@@ -376,6 +385,7 @@ impl ClassDesignImplementationValidator {
                 None => self.result.add_failure(Self::format_missing_member(
                     design_entity,
                     implementation_entity,
+                    design_location(design_entity, &design_variable.source_location),
                     "variable",
                     &design_variable.name,
                     best_string_suggestion(
@@ -404,6 +414,7 @@ impl ClassDesignImplementationValidator {
             self.result.add_failure(Self::format_mismatch(
                 design_entity,
                 implementation_entity,
+                design_location(design_entity, &design_variable.source_location),
                 &format!("variable \"{variable_name}\" data type"),
                 FieldReferenceStyle::Verbatim,
                 &render_optional_type(&design_variable.data_type),
@@ -415,6 +426,7 @@ impl ClassDesignImplementationValidator {
             self.result.add_failure(Self::format_mismatch(
                 design_entity,
                 implementation_entity,
+                design_location(design_entity, &design_variable.source_location),
                 &format!("variable \"{variable_name}\" visibility"),
                 FieldReferenceStyle::Verbatim,
                 &format!("{:?}", design_variable.visibility),
@@ -426,6 +438,7 @@ impl ClassDesignImplementationValidator {
             self.result.add_failure(Self::format_mismatch(
                 design_entity,
                 implementation_entity,
+                design_location(design_entity, &design_variable.source_location),
                 &format!("variable \"{variable_name}\" is static"),
                 FieldReferenceStyle::Verbatim,
                 &format!("{:?}", design_variable.is_static),
@@ -470,6 +483,7 @@ impl ClassDesignImplementationValidator {
                     self.result.add_failure(Self::format_missing_member(
                         design_entity,
                         implementation_entity,
+                        design_location(design_entity, &design.source_location),
                         "method",
                         &method_key(design),
                         best_string_suggestion(
@@ -567,6 +581,7 @@ impl ClassDesignImplementationValidator {
             self.result.add_failure(Self::format_mismatch(
                 design_entity,
                 implementation_entity,
+                design_location(design_entity, &design_method.source_location),
                 &format!("method \"{}\" {}", design_method.name, difference.field),
                 FieldReferenceStyle::Verbatim,
                 &difference.design,
@@ -588,6 +603,7 @@ impl ClassDesignImplementationValidator {
                 Some(implementation_literal) => self.result.add_failure(Self::format_mismatch(
                     design_entity,
                     implementation_entity,
+                    design_location(design_entity, &design_literal.source_location),
                     &format!("{:?}", design_literal.name.as_str()),
                     FieldReferenceStyle::Verbatim,
                     &enum_literal_value(design_literal),
@@ -596,6 +612,7 @@ impl ClassDesignImplementationValidator {
                 None => self.result.add_failure(Self::format_missing_member(
                     design_entity,
                     implementation_entity,
+                    design_location(design_entity, &design_literal.source_location),
                     "enum_literal",
                     &design_literal.name,
                     best_string_suggestion(
@@ -632,6 +649,7 @@ impl ClassDesignImplementationValidator {
                     self.result.add_failure(Self::format_mismatch(
                         design_entity,
                         implementation_entity,
+                        design_location(design_entity, &design_relationship.source_location),
                         "relationship type",
                         FieldReferenceStyle::Quoted,
                         &display_name,
@@ -647,6 +665,7 @@ impl ClassDesignImplementationValidator {
                     self.result.add_failure(Self::format_missing_member(
                         design_entity,
                         implementation_entity,
+                        design_location(design_entity, &design_relationship.source_location),
                         "relationship",
                         &display_name,
                         best_string_suggestion(
@@ -758,6 +777,7 @@ impl ClassDesignImplementationValidator {
     fn format_missing_member(
         design_entity: &SimpleEntity,
         implementation_entity: &SimpleEntity,
+        design_location: &SourceLocation,
         member_type: &str,
         member_name: &str,
         suggested_member: Option<&str>,
@@ -771,9 +791,9 @@ impl ClassDesignImplementationValidator {
             .field("member", format!("{member_type} \"{member_name}\""))
             .field(
                 "design source file",
-                format!("\"{}\"", source_file(&design_entity.source_location)),
+                format!("\"{}\"", source_file(design_location)),
             )
-            .field("design source line", source_line(&design_entity.source_location))
+            .field("design source line", source_line(design_location))
             .fix(format!(
                 "add {member_type} \"{member_name}\" to entity \"{}\" in the C++ class implementation, or remove it from the unit design",
                 design_entity.id
@@ -812,6 +832,7 @@ impl ClassDesignImplementationValidator {
     fn format_mismatch(
         design_entity: &SimpleEntity,
         implementation_entity: &SimpleEntity,
+        design_location: &SourceLocation,
         field: &str,
         field_reference_style: FieldReferenceStyle,
         design_value: &str,
@@ -829,9 +850,9 @@ impl ClassDesignImplementationValidator {
             .field("design value", design_value)
             .field(
                 "design source file",
-                format!("\"{}\"", source_file(&design_entity.source_location)),
+                format!("\"{}\"", source_file(design_location)),
             )
-            .field("design source line", source_line(&design_entity.source_location));
+            .field("design source line", source_line(design_location));
 
         let error = if is_specialization(implementation_entity.template_kind) {
             error.field(
@@ -891,24 +912,6 @@ fn free_function_groups(index: &ClassEntityIndex) -> BTreeMap<String, Vec<&FreeF
     groups
 }
 
-fn normalized_method(method: &Method) -> Method {
-    let mut normalized = method.clone();
-    normalized.source_location = SourceLocation::new("", 0);
-    normalized.conversion_target = normalized
-        .conversion_target
-        .as_deref()
-        .map(render_type_name);
-    if let Some(target) = &normalized.conversion_target {
-        normalized.name = format!("operator {target}");
-    }
-    normalize_callable_types(
-        &mut normalized.return_type,
-        &mut normalized.parameters,
-        &mut normalized.template_parameters,
-    );
-    normalized
-}
-
 /// Normalize spelling only; preserve list lengths and constraints.
 fn normalized_free_function(function: &FreeFunctionDecl) -> FreeFunctionDecl {
     let mut normalized = function.clone();
@@ -923,34 +926,6 @@ fn normalized_free_function(function: &FreeFunctionDecl) -> FreeFunctionDecl {
         &mut normalized.template_parameters,
     );
     normalized
-}
-
-fn normalize_callable_types(
-    return_type: &mut Option<String>,
-    parameters: &mut [class_diagram::FunctionArgument],
-    template_parameters: &mut Option<Vec<TemplateParameter>>,
-) {
-    *return_type = return_type.as_deref().map(render_type_name);
-    for parameter in parameters {
-        parameter.param_type = parameter.param_type.as_deref().map(render_type_name);
-    }
-    if let Some(parameters) = template_parameters {
-        normalize_template_declarations(parameters);
-    }
-}
-
-fn normalize_template_declarations(parameters: &mut [TemplateParameter]) {
-    for parameter in parameters {
-        match parameter {
-            TemplateParameter::NonType { value_type, .. } => {
-                *value_type = normalize_non_type_template_parameter_type(value_type);
-            }
-            TemplateParameter::Template { parameters, .. } => {
-                normalize_template_declarations(parameters);
-            }
-            TemplateParameter::Type { .. } => {}
-        }
-    }
 }
 
 /// Keep detailed field diagnostics for unique candidates. For ambiguous candidates,
@@ -1206,6 +1181,16 @@ fn format_field_reference(field: &str, style: FieldReferenceStyle) -> String {
     match style {
         FieldReferenceStyle::Quoted => format!("\"{field}\""),
         FieldReferenceStyle::Verbatim => field.to_string(),
+    }
+}
+
+/// Location reported for a design member: the member's own when a merged
+/// declaration brought it from another diagram, else the entity's.
+fn design_location<'a>(entity: &'a SimpleEntity, member: &'a SourceLocation) -> &'a SourceLocation {
+    if member.file == entity.source_location.file {
+        &entity.source_location
+    } else {
+        member
     }
 }
 
@@ -1573,39 +1558,6 @@ fn free_function_key(function: &FreeFunctionDecl) -> String {
     )
 }
 
-fn method_key(method: &Method) -> String {
-    let parameter_types = parameter_signature(&method.parameters);
-    let const_qualifier = if method.modifiers.contains(&MethodModifier::Const) {
-        " const"
-    } else {
-        ""
-    };
-    format!("{}({}){}", method.name, parameter_types, const_qualifier)
-}
-
-fn parameter_signature(parameters: &[class_diagram::FunctionArgument]) -> String {
-    parameters
-        .iter()
-        .map(|parameter| {
-            let variadic = if parameter.is_variadic || parameter.is_pack_expansion {
-                "..."
-            } else {
-                ""
-            };
-            format!(
-                "{}{}",
-                parameter
-                    .param_type
-                    .as_deref()
-                    .map(render_type_name)
-                    .unwrap_or_default(),
-                variadic
-            )
-        })
-        .collect::<Vec<_>>()
-        .join(", ")
-}
-
 fn parameter_differences(
     design_parameters: &[class_diagram::FunctionArgument],
     implementation_parameters: &[class_diagram::FunctionArgument],
@@ -1804,14 +1756,6 @@ fn render_parameter_type(type_name: &Option<String>) -> String {
     render_optional_value(type_name.as_deref(), "<unknown>", render_type_name)
 }
 
-fn render_type_name(type_name: &str) -> String {
-    if contains_literal(type_name) {
-        type_name.to_string()
-    } else {
-        normalize_type_name(type_name)
-    }
-}
-
 fn format_parameter(parameter: &class_diagram::FunctionArgument) -> String {
     if parameter.name.is_empty() {
         render_parameter_type(&parameter.param_type)
@@ -1945,10 +1889,6 @@ fn comparison_types_match(design: &str, implementation: &str) -> bool {
     }
 }
 
-fn contains_literal(type_name: &str) -> bool {
-    type_name.contains('"') || type_name.contains('\'')
-}
-
 fn optional_parameter_types_match(
     design: &Option<String>,
     implementation: &Option<String>,
@@ -1964,85 +1904,6 @@ fn optional_parameter_types_match(
         }
         _ => false,
     }
-}
-
-fn normalize_parameter_type(type_name: &str) -> String {
-    strip_top_level_const(&normalize_type_name(type_name))
-}
-
-// Top-level const on a by-value parameter is not part of the C++ signature.
-fn strip_top_level_const(type_name: &str) -> String {
-    if let Some(pointer) = type_name.strip_suffix("*const") {
-        return format!("{pointer}*");
-    }
-    match type_name.strip_prefix("const") {
-        Some(rest) if rest.starts_with(char::is_whitespace) && !has_top_level_declarator(rest) => {
-            rest.trim_start().to_string()
-        }
-        _ => type_name.to_string(),
-    }
-}
-
-// A `*`, `&`, `[` or `(` outside template arguments makes a leading const low-level.
-fn has_top_level_declarator(type_name: &str) -> bool {
-    let mut depth = 0usize;
-    type_name.chars().any(|character| match character {
-        '<' => {
-            depth += 1;
-            false
-        }
-        '>' => {
-            depth = depth.saturating_sub(1);
-            false
-        }
-        '*' | '&' | '[' | '(' => depth == 0,
-        _ => false,
-    })
-}
-
-// `T* const` and `T *const` both become `T*const`.
-fn tighten_pointer_const(type_name: &str) -> String {
-    let mut tightened = String::with_capacity(type_name.len());
-    let mut rest = type_name;
-    while let Some(star) = rest.find('*') {
-        tightened.push_str(&rest[..=star]);
-        rest = &rest[star + 1..];
-        let trimmed = rest.trim_start();
-        let is_const_keyword = trimmed.strip_prefix("const").is_some_and(|tail| {
-            !tail.starts_with(|character: char| character.is_alphanumeric() || character == '_')
-        });
-        if is_const_keyword {
-            rest = trimmed;
-        }
-    }
-    tightened.push_str(rest);
-    tightened
-}
-
-fn normalize_non_type_template_parameter_type(type_name: &str) -> String {
-    // Preserve existing behavior for potentially literal-bearing expressions.
-    // Whitespace within literals is significant and must not be collapsed.
-    if contains_literal(type_name) {
-        return type_name.to_string();
-    }
-
-    normalize_type_name(&type_name.split_whitespace().collect::<Vec<_>>().join(" "))
-}
-
-fn normalize_type_name(type_name: &str) -> String {
-    normalize_qualified_name(&tighten_pointer_const(
-        &type_name
-            .trim()
-            .trim_start_matches("::")
-            .replace("std::", "")
-            .replace(" *", "*")
-            .replace(" &", "&"),
-    ))
-}
-
-fn normalize_qualified_name(reference: &str) -> String {
-    // TODO: Remove this workaround once class diagram and implementation parser UIDs use the same namespace separator.
-    reference.trim().replace('.', "::")
 }
 
 fn is_specialization(kind: ClassTemplateKind) -> bool {
