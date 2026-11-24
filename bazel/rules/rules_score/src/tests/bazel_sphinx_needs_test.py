@@ -14,6 +14,7 @@
 
 import json
 import os
+import shutil
 import tempfile
 import unittest
 from pathlib import Path
@@ -33,13 +34,12 @@ class TestLoadExternalNeeds(unittest.TestCase):
     """Tests for load_external_needs's base_dir handling."""
 
     def setUp(self) -> None:
-        self._tmp = tempfile.TemporaryDirectory()
-        self.root = Path(self._tmp.name)
+        self.root = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, self.root)
         self._old_cwd = Path.cwd()
 
     def tearDown(self) -> None:
         os.chdir(self._old_cwd)
-        self._tmp.cleanup()
 
     def test_explicit_base_dir_finds_file_regardless_of_cwd(self) -> None:
         """Regression test for the confdir-vs-cwd bug: a "config-inited"-style
@@ -70,7 +70,3 @@ class TestLoadExternalNeeds(unittest.TestCase):
         result = load_external_needs(self.root)
 
         self.assertEqual(result, [])
-
-
-if __name__ == "__main__":
-    unittest.main()

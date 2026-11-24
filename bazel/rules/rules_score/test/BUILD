@@ -15,7 +15,6 @@ load("@bazel_skylib//rules:build_test.bzl", "build_test")
 load("@bazel_skylib//rules:diff_test.bzl", "diff_test")
 load("@pip_tooling_test//:requirements.bzl", "requirement")
 load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_library", "cc_test")
-load("@rules_python//python:defs.bzl", "py_test")
 load("@rules_shell//shell:sh_test.bzl", "sh_test")
 load(
     "@score_tooling//bazel/rules/rules_score:rules_score.bzl",
@@ -3141,83 +3140,6 @@ trlc_requirements_test(
     reqs = [":root_cause_assessment_fixtures"],
 )
 
-py_test(
-    name = "test_safety_analysis_assembler",
-    size = "small",
-    srcs = ["test_safety_analysis_assembler.py"],
-    deps = ["@score_tooling//bazel/rules/rules_score:safety_analysis_assembler"],
-)
-
-py_test(
-    name = "test_aou_forwarding_to_lobster",
-    size = "small",
-    srcs = ["test_aou_forwarding_to_lobster.py"],
-    deps = [
-        "@lobster//lobster/common",
-        "@score_tooling//bazel/rules/rules_score:aou_forwarding_to_lobster",
-    ],
-)
-
-py_test(
-    name = "test_asil_coverage_check",
-    size = "small",
-    srcs = ["test_asil_coverage_check.py"],
-    args = ["$(locations @score_tooling//bazel/rules/rules_score/trlc/config:score_requirements_model)"],
-    data = ["@score_tooling//bazel/rules/rules_score/trlc/config:score_requirements_model"],
-    deps = ["@score_tooling//bazel/rules/rules_score:trlc_check_runner"],
-)
-
-py_test(
-    name = "test_merge_lobster_items",
-    size = "small",
-    srcs = ["test_merge_lobster_items.py"],
-    deps = [
-        "@lobster//lobster/common",
-        "@score_tooling//bazel/rules/rules_score:merge_lobster_items",
-    ],
-)
-
-py_test(
-    name = "test_sphinx_html_merge",
-    size = "small",
-    srcs = ["test_sphinx_html_merge.py"],
-    deps = ["@score_tooling//bazel/rules/rules_score:sphinx_html_merge_lib"],
-)
-
-py_test(
-    name = "test_bazel_sphinx_needs",
-    size = "small",
-    srcs = ["test_bazel_sphinx_needs.py"],
-    deps = ["@score_tooling//bazel/rules/rules_score:bazel_sphinx_needs"],
-)
-
-py_test(
-    name = "test_sphinx_module_ext",
-    size = "small",
-    srcs = ["test_sphinx_module_ext.py"],
-    deps = ["@score_tooling//bazel/rules/rules_score:sphinx_module_ext"],
-)
-
-py_test(
-    name = "test_rst_to_trlc",
-    size = "small",
-    srcs = ["rst_to_trlc_test.py"],
-    main = "rst_to_trlc_test.py",
-    deps = ["@score_tooling//bazel/rules/rules_score:rst_to_trlc_lib"],
-)
-
-py_test(
-    name = "test_trlc_rst_image_rendering",
-    size = "small",
-    srcs = ["trlc_rst_image_rendering_test.py"],
-    data = [
-        "fixtures/image_requirements/image_requirements.trlc",
-        "fixtures/image_requirements/schema.rsl",
-    ],
-    main = "trlc_rst_image_rendering_test.py",
-    deps = ["@trlc//tools/trlc_rst:trlc_rst_lib"],
-)
-
 # The default `fta_package` of a fault_trees target contains its Bazel package
 # path, so equally named targets of different packages do not collide.
 fta_default_package_test(
@@ -3256,15 +3178,6 @@ test_suite(
         ":same_name_units_validation_test",
         ":seooc_tests",
         ":sphinx_module_tests",
-        ":test_aou_forwarding_to_lobster",
-        ":test_asil_coverage_check",
-        ":test_bazel_sphinx_needs",
-        ":test_merge_lobster_items",
-        ":test_rst_to_trlc",
-        ":test_safety_analysis_assembler",
-        ":test_sphinx_html_merge",
-        ":test_sphinx_module_ext",
-        ":test_trlc_rst_image_rendering",
         ":transitive_modules_dedup_test",
         ":unit_component_tests",
         "//de_manual_analysis:manual_analysis_tests",

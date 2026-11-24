@@ -19,7 +19,6 @@ import unittest
 from lobster.common.io import lobster_write
 from lobster.common.items import Requirement, Tracing_Tag
 from lobster.common.location import File_Reference
-
 from merge_lobster_items import merge_items
 
 
@@ -39,10 +38,9 @@ class TestMergeItems(unittest.TestCase):
     """Tests for merge_items."""
 
     def _write(self, items: list[Requirement]) -> str:
-        f = tempfile.NamedTemporaryFile(mode="w", suffix=".lobster", delete=False)
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".lobster", delete=False) as f:
+            lobster_write(f, Requirement, "test", items)
         self.addCleanup(os.unlink, f.name)
-        lobster_write(f, Requirement, "test", items)
-        f.close()
         return f.name
 
     def test_distinct_items_are_all_kept(self) -> None:
@@ -100,7 +98,3 @@ class TestMergeItems(unittest.TestCase):
 
     def test_no_files_gives_no_items(self) -> None:
         self.assertEqual(merge_items([]), [])
-
-
-if __name__ == "__main__":
-    unittest.main()
