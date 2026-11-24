@@ -32,9 +32,16 @@ build --@rules_rust//rust/settings:extra_rustc_flag=-Clink-arg=-fuse-ld=bfd
 build:clippy --aspects=@rules_rust//rust:defs.bzl%rust_clippy_aspect
 build:clippy --output_groups=+clippy_checks
 
-# Python linters (ruff, pylint, ty)
-build:lint --aspects=//third_party/lint:linters.bzl%ruff,//third_party/lint:linters.bzl%pylint,//third_party/lint:linters.bzl%ty
-build:lint --output_groups=+rules_lint_human
+# Python linters (ruff, ty): bazel build --config=lint[-ruff|-ty] //...
+# Add --@aspect_rules_lint//lint:fail_on_violation to fail the build on findings.
+build:_lint --output_groups=rules_lint_human
+build:_lint --keep_going
+build:lint --config=_lint
+build:lint --aspects=//third_party/lint:linters.bzl%ruff,//third_party/lint:linters.bzl%ty
+build:lint-ruff --config=_lint
+build:lint-ruff --aspects=//third_party/lint:linters.bzl%ruff
+build:lint-ty --config=_lint
+build:lint-ty --aspects=//third_party/lint:linters.bzl%ty
 
 # Log level configuration for rules_score build output
 # normal build: only errors and warnings (default – no flag needed)

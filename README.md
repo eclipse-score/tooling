@@ -35,7 +35,7 @@ See the individual README files for detailed usage instructions and configuratio
 | **cr_checker** | Code review and compliance checking | [README](cr_checker/README.md) |
 | **dash** | Eclipse Dash license scanning | [README](dash/README.md) |
 | **format** | Code formatting validation | [README](third_party/format/README.md) |
-| **lint** | Python lint aspects (ruff, pylint) | [README](third_party/lint/README.md) |
+| **lint** | Python lint aspects (ruff, ty) | [README](third_party/lint/README.md) |
 | **python_basics** | Python development utilities and testing | [README](python_basics/README.md) |
 | **starpls** | Starlark language server support | [README](starpls/README.md) |
 | **tools** | Formatters & Linters | [README](tools/README.md) |

@@ -13,7 +13,7 @@
 
 """Reusable lint aspect factories for score_tooling consumers.
 
-Python linting (ruff, pylint, ty) is wired up as Bazel aspects on top of
+Python linting (ruff, ty; optionally pylint) is wired up as Bazel aspects on top of
 aspect_rules_lint, following the same model used elsewhere in score (see
 bmw-software-engineering-trlc's `third_party/lint/linters.bzl`):
 
@@ -21,22 +21,17 @@ Declare the aspects once, at the top level of your own repo's
 `linters.bzl` (so that `Label("//...")` config-file references resolve
 relative to your repo, not to score_tooling):
 
-    load("@score_tooling//third_party/lint:macros.bzl", "pylint_lint_aspect", "ruff_lint_aspect", "ty_lint_aspect")
+    load("@score_tooling//third_party/lint:macros.bzl", "ruff_lint_aspect", "ty_lint_aspect")
 
     ruff = ruff_lint_aspect(config = Label("//:pyproject.toml"))
-
-    pylint = pylint_lint_aspect(
-        binary = Label("//third_party/lint:pylint"),
-        config = Label("//:pyproject.toml"),
-    )
 
     ty = ty_lint_aspect(config = Label("//:pyproject.toml"))
 
 Then run/check them with plain `bazel build --aspects=...`, e.g. via a
 `.bazelrc` config:
 
-    build:lint --aspects=//third_party/lint:linters.bzl%ruff,//third_party/lint:linters.bzl%pylint,//third_party/lint:linters.bzl%ty
-    build:lint --output_groups=+rules_lint_human
+    build:lint --aspects=//third_party/lint:linters.bzl%ruff,//third_party/lint:linters.bzl%ty
+    build:lint --output_groups=rules_lint_human
 
     bazel build --config=lint //...
 

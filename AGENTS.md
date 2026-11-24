@@ -54,7 +54,7 @@ README, conventions and tests; nested `AGENTS.md` files refine this one.
   `starpls/integration_tests`, `cr_checker/tests`) are separate module roots, not covered by
   root `bazel test`. `cd` into them and run `bazel test //...`; CI does this (`.github/workflows/tests.yml`).
 - Rust crates are also checked with `bazel build //<pkg>/... --config=clippy`.
-- Python lint: `--config=lint` (ruff, pylint, ty); line length 120 (`pyproject.toml`).
+- Python lint: `--config=lint` (ruff, ty); line length 120 (`pyproject.toml`).
 - After changing `MODULE.bazel`, run `bazel mod deps` and commit `MODULE.bazel.lock`;
   CI requires `bazel mod deps --lockfile_mode=error` to pass.
 - Before committing: `bazel run //:format.fix` (buildifier, formatters) and

@@ -18,13 +18,8 @@ Run with:
     bazel build --config=lint //...
 """
 
-load("//third_party/lint:macros.bzl", "pylint_lint_aspect", "ruff_lint_aspect", "ty_lint_aspect")
+load("//third_party/lint:macros.bzl", "ruff_lint_aspect", "ty_lint_aspect")
 
 ruff = ruff_lint_aspect(config = Label("//:pyproject.toml"))
-
-pylint = pylint_lint_aspect(
-    binary = Label("//third_party/lint:pylint"),
-    config = Label("//:pyproject.toml"),
-)
 
 ty = ty_lint_aspect(config = Label("//:pyproject.toml"))

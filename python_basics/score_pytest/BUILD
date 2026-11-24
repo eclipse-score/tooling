@@ -35,4 +35,5 @@ py_library(
     srcs = ["attribute_plugin.py"],
     imports = ["."],
     visibility = ["//visibility:public"],
+    deps = ["@pip_tooling//pytest"],
 )

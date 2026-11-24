@@ -17,9 +17,7 @@ package(default_visibility = ["//visibility:public"])
 
 exports_files(["macros.bzl"])
 
-# pylint isn't provided by rules_multitool (it's a pure-python package, not a
-# static binary), so it's set up "in userland": declared as a pip dependency
-# in python_basics/requirements.in and exposed here as a runnable binary.
+# Optional pylint binary for consumers; not used by this repo's own lint run (ruff PL rules cover it).
 py_console_script_binary(
     name = "pylint",
     pkg = "@pip_tooling//pylint:pkg",
