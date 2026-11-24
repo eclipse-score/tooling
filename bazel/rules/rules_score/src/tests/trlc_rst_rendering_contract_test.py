@@ -36,7 +36,7 @@ def _runfile(env_var: str) -> str:
     return path
 
 
-class TestImageRenderingIntegration(unittest.TestCase):
+class TestImageRenderingContract(unittest.TestCase):
     """Verify that Markdown ``![alt](path)`` in a description is rendered to
     a ``.. image::`` RST directive with a ``:alt:`` option."""
 

@@ -22,9 +22,10 @@ target_under_test / analysis phase is needed to exercise them.
 
 load("@bazel_skylib//lib:unittest.bzl", "loadingtest")
 load(
-    "@score_tooling//bazel/rules/rules_score/private:lobster_config.bzl",
+    "//bazel/rules/rules_score/private:lobster_config.bzl",
     "format_lobster_block",
     "format_lobster_sources",
+    "unique_test_reports",
 )
 
 def _fake_file(path):
@@ -206,4 +207,32 @@ def lobster_config_test_suite(name):
             trace_to = ["Feature Requirements"],
             requires = [["Feature Requirements", "Received AoUs"]],
         ),
+    )
+
+    # --- unique_test_reports -----------------------------------------------------
+
+    loadingtest.equals(env, "reports_empty", [], unique_test_reports([]))
+
+    unit_a_report = _fake_file("unit_a/test.xml")
+    unit_b_report = _fake_file("unit_b/test.xml")
+    loadingtest.equals(
+        env,
+        "reports_one_per_test_target",
+        [unit_a_report, unit_b_report],
+        unique_test_reports([
+            depset([struct(test_label = "//a:test", xml = unit_a_report)]),
+            depset([struct(test_label = "//b:test", xml = unit_b_report)]),
+        ]),
+    )
+
+    # Distinct report files, so the depset cannot merge the two entries.
+    unit_a_other_report = _fake_file("unit_a_other/test.xml")
+    loadingtest.equals(
+        env,
+        "reports_shared_test_target_listed_once",
+        [unit_a_report],
+        unique_test_reports([
+            depset([struct(test_label = "//a:test", xml = unit_a_report)]),
+            depset([struct(test_label = "//a:test", xml = unit_a_other_report)]),
+        ]),
     )

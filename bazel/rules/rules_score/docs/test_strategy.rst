@@ -62,17 +62,31 @@ are run from their own directory and have their own CI jobs. L1 runs in the root
 CI step ``//bazel/rules/rules_score/... -//bazel/rules/rules_score/examples/...``;
 the L0 tools run there (``src/``) and in the ``//plantuml/...`` step (parsers).
 The legacy ``test/BUILD`` stays in place; its tests move into the level
-directories rule by rule. Each level
-directory holds one smoke test (``label_path_test`` at L1, ``rst_to_trlc`` at
-L2 and L3) as the template for new tests.
+directories rule by rule. ``rst_to_trlc`` is the template for new L2 and L3
+tests, the L1 tests below for new L1 tests.
+
+L1 conventions
+--------------
+
+* One ``<module>_test.bzl`` per tested ``private/<module>.bzl`` in
+  ``private/tests/``, exposing a ``<module>_test_suite(name)`` macro that is
+  instantiated in ``private/tests/BUILD``. The ``l1`` test suite aggregates all.
+* Tests use skylib ``loadingtest``: one test target per ``loadingtest.equals``
+  case, named ``<suite>_<case>``. Only functions that need no real ``ctx`` or
+  action belong here; fake files and contexts with ``struct(...)``.
+* ``@score_tooling`` is the main repository in the root module. For
+  external-repository cases use a dependency label such as ``@bazel_skylib//lib:...``
+  and assert that its ``workspace_name`` is not empty.
+* ``fail()`` paths and anything observing providers or actions are tested at L2.
 
 L0 Python conventions
 ---------------------
 
-* One ``<tool>_test.py`` per tool in ``src/tests/``, declared as a plain
-  ``py_test`` whose ``main`` is the shared ``src/tests/pytest_main.py``
-  (pytest from ``@pip_tooling``). Tests are plain ``unittest.TestCase``
-  classes run by pytest; there is no ``unittest.main()``.
+* One ``<tool>_test.py`` per tool in ``src/tests/``, declared with the
+  ``pytest_test`` macro (``src/tests/pytest_test.bzl``), which runs pytest on
+  the file, writes the JUnit XML and maps ``--test_filter`` to ``-k``. Tests are
+  plain ``unittest.TestCase`` classes run by pytest; there is no
+  ``unittest.main()``. The ``tests`` test suite aggregates all.
 * Data files are passed as ``$(rlocationpath ...)`` env vars and resolved with
   ``python.runfiles``, not relative paths.
 * ``src/tests/`` is a separate package so that the non-recursive ``src/*.py``
@@ -102,7 +116,7 @@ Level responsibilities
      - Rule wiring
    * - L1
      - Pure ``.bzl`` functions
-     - Label keys, scope calculation, config building
+     - Label keys, scope calculation, config building, view layout, provenance
      - Providers, actions
    * - L2
      - Providers, actions, ``FileWrite`` content, analysis errors

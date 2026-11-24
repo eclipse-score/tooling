@@ -10,49 +10,9 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
-"""Regression tests for the DE's architecture label keys.
+"""Analysis test of the generated architecture JSON of a dependable element."""
 
-Controlled contexts exercise the production collector across packages and
-repositories; an analysis test verifies the generated architecture JSON.
-"""
-
-load("@bazel_skylib//lib:unittest.bzl", "analysistest", "asserts", "unittest")
-load("@score_tooling//bazel/rules/rules_score/private:architecture_aspect.bzl", "CurrentArchitectureProviderInfo")
-load("@score_tooling//bazel/rules/rules_score/private:dependable_element.bzl", "dependable_element_test_helpers")
-
-def _context(label, components):
-    return struct(
-        label = label,
-        attr = struct(module_name = "engine", components = components),
-    )
-
-def _label_keys_test_impl(ctx):
-    env = unittest.begin(ctx)
-
-    # Cover root/non-root packages and an external repository. Derive strings
-    # from Label objects rather than assuming Bazel's repository prefix format.
-    for index_label in [
-        Label("//:engine_index"),
-        Label("//fixtures/architecture:engine_index"),
-        Label("@score_tooling//bazel/rules/rules_score:engine_index"),
-    ]:
-        expected_label = str(index_label.same_package_label("engine"))
-        other_label = str(Label("@@{}//other:engine".format(index_label.repo_name)))
-        existing_entry = {
-            "units": [{"label": str(index_label.same_package_label("worker")), "design_name": "worker"}],
-        }
-        existing = {other_label: existing_entry}
-        component = {CurrentArchitectureProviderInfo: CurrentArchitectureProviderInfo(components = existing)}
-        actual = dependable_element_test_helpers.collect_architecture_components(_context(index_label, [component]))
-
-        asserts.equals(env, {other_label: existing_entry, expected_label: {"design_name": "engine"}}, actual)
-        asserts.false(env, "engine" in actual)
-        asserts.false(env, str(index_label) in actual)
-        asserts.equals(env, {other_label: existing_entry}, existing)
-
-    return unittest.end(env)
-
-label_keys_test = unittest.make(_label_keys_test_impl)
+load("@bazel_skylib//lib:unittest.bzl", "analysistest", "asserts")
 
 def _architecture_json_test_impl(ctx):
     env = analysistest.begin(ctx)
@@ -90,12 +50,3 @@ architecture_json_test = analysistest.make(
     _architecture_json_test_impl,
     attrs = {"module_name": attr.string(mandatory = True)},
 )
-
-def architecture_collection_test_suite(name):
-    label_keys_test(name = name + "_label_keys_test")
-    native.test_suite(
-        name = name,
-        tests = [
-            ":" + name + "_label_keys_test",
-        ],
-    )

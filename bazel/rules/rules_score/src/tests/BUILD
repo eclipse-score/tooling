@@ -10,146 +10,75 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
-load("@pip_tooling//:requirements.bzl", "requirement")
-load("@rules_python//python:defs.bzl", "py_test")
+load(":pytest_test.bzl", "pytest_test")
 
 # L0 tool unit tests of //bazel/rules/rules_score:* (see docs/test_strategy.rst).
-# Each test is run by pytest through pytest_main.py.
 
-py_test(
+exports_files(["pytest_main.py"])
+
+pytest_test(
     name = "safety_analysis_assembler_test",
-    size = "small",
-    srcs = [
-        "pytest_main.py",
-        "safety_analysis_assembler_test.py",
-    ],
-    args = ["$(location safety_analysis_assembler_test.py)"],
-    main = "pytest_main.py",
-    deps = [
-        requirement("pytest"),
-        "//bazel/rules/rules_score:safety_analysis_assembler",
-    ],
+    src = "safety_analysis_assembler_test.py",
+    deps = ["//bazel/rules/rules_score:safety_analysis_assembler"],
 )
 
-py_test(
+pytest_test(
     name = "aou_forwarding_to_lobster_test",
-    size = "small",
-    srcs = [
-        "aou_forwarding_to_lobster_test.py",
-        "pytest_main.py",
-    ],
-    args = ["$(location aou_forwarding_to_lobster_test.py)"],
-    main = "pytest_main.py",
+    src = "aou_forwarding_to_lobster_test.py",
     deps = [
-        requirement("pytest"),
         "//bazel/rules/rules_score:aou_forwarding_to_lobster",
         "@lobster//lobster/common",
     ],
 )
 
-py_test(
+pytest_test(
     name = "asil_coverage_check_test",
-    size = "small",
-    srcs = [
-        "asil_coverage_check_test.py",
-        "pytest_main.py",
-    ],
-    args = ["$(location asil_coverage_check_test.py)"],
+    src = "asil_coverage_check_test.py",
     data = ["//bazel/rules/rules_score/trlc/config:score_requirements_model"],
     env = {"SCORE_REQUIREMENTS_MODEL": "$(rlocationpaths //bazel/rules/rules_score/trlc/config:score_requirements_model)"},
-    main = "pytest_main.py",
     deps = [
-        requirement("pytest"),
         "//bazel/rules/rules_score:trlc_check_runner",
         "@rules_python//python/runfiles",
     ],
 )
 
-py_test(
+pytest_test(
     name = "merge_lobster_items_test",
-    size = "small",
-    srcs = [
-        "merge_lobster_items_test.py",
-        "pytest_main.py",
-    ],
-    args = ["$(location merge_lobster_items_test.py)"],
-    main = "pytest_main.py",
+    src = "merge_lobster_items_test.py",
     deps = [
-        requirement("pytest"),
         "//bazel/rules/rules_score:merge_lobster_items",
         "@lobster//lobster/common",
     ],
 )
 
-py_test(
+pytest_test(
     name = "sphinx_html_merge_test",
-    size = "small",
-    srcs = [
-        "pytest_main.py",
-        "sphinx_html_merge_test.py",
-    ],
-    args = ["$(location sphinx_html_merge_test.py)"],
-    main = "pytest_main.py",
-    deps = [
-        requirement("pytest"),
-        "//bazel/rules/rules_score:sphinx_html_merge_lib",
-    ],
+    src = "sphinx_html_merge_test.py",
+    deps = ["//bazel/rules/rules_score:sphinx_html_merge_lib"],
 )
 
-py_test(
+pytest_test(
     name = "bazel_sphinx_needs_test",
-    size = "small",
-    srcs = [
-        "bazel_sphinx_needs_test.py",
-        "pytest_main.py",
-    ],
-    args = ["$(location bazel_sphinx_needs_test.py)"],
-    main = "pytest_main.py",
-    deps = [
-        requirement("pytest"),
-        "//bazel/rules/rules_score:bazel_sphinx_needs",
-    ],
+    src = "bazel_sphinx_needs_test.py",
+    deps = ["//bazel/rules/rules_score:bazel_sphinx_needs"],
 )
 
-py_test(
+pytest_test(
     name = "sphinx_module_ext_test",
-    size = "small",
-    srcs = [
-        "pytest_main.py",
-        "sphinx_module_ext_test.py",
-    ],
-    args = ["$(location sphinx_module_ext_test.py)"],
-    main = "pytest_main.py",
-    deps = [
-        requirement("pytest"),
-        "//bazel/rules/rules_score:sphinx_module_ext",
-    ],
+    src = "sphinx_module_ext_test.py",
+    deps = ["//bazel/rules/rules_score:sphinx_module_ext"],
 )
 
-py_test(
+pytest_test(
     name = "rst_to_trlc_test",
-    size = "small",
-    srcs = [
-        "pytest_main.py",
-        "rst_to_trlc_test.py",
-    ],
-    args = ["$(location rst_to_trlc_test.py)"],
-    main = "pytest_main.py",
-    deps = [
-        requirement("pytest"),
-        "//bazel/rules/rules_score:rst_to_trlc_lib",
-    ],
+    src = "rst_to_trlc_test.py",
+    deps = ["//bazel/rules/rules_score:rst_to_trlc_lib"],
 )
 
 # The requirement pages depend on the pinned trlc rendering Markdown images.
-py_test(
+pytest_test(
     name = "trlc_rst_rendering_contract_test",
-    size = "small",
-    srcs = [
-        "pytest_main.py",
-        "trlc_rst_rendering_contract_test.py",
-    ],
-    args = ["$(location trlc_rst_rendering_contract_test.py)"],
+    src = "trlc_rst_rendering_contract_test.py",
     data = [
         "fixtures/image_requirements/image_requirements.trlc",
         "fixtures/image_requirements/schema.rsl",
@@ -158,25 +87,17 @@ py_test(
         "IMAGE_REQUIREMENTS_RSL": "$(rlocationpath fixtures/image_requirements/schema.rsl)",
         "IMAGE_REQUIREMENTS_TRLC": "$(rlocationpath fixtures/image_requirements/image_requirements.trlc)",
     },
-    main = "pytest_main.py",
     deps = [
-        requirement("pytest"),
         "@rules_python//python/runfiles",
         "@trlc//tools/trlc_rst:trlc_rst_lib",
     ],
 )
 
-test_suite(
-    name = "tests",
-    tests = [
-        ":aou_forwarding_to_lobster_test",
-        ":asil_coverage_check_test",
-        ":bazel_sphinx_needs_test",
-        ":merge_lobster_items_test",
-        ":rst_to_trlc_test",
-        ":safety_analysis_assembler_test",
-        ":sphinx_html_merge_test",
-        ":sphinx_module_ext_test",
-        ":trlc_rst_rendering_contract_test",
-    ],
+# Stands in for `bazel test --test_filter=test_selected`.
+pytest_test(
+    name = "pytest_filter_test",
+    src = "fixtures/pytest_filter/filter_fixture.py",
+    env = {"TESTBRIDGE_TEST_ONLY": "test_selected"},
 )
+
+test_suite(name = "tests")

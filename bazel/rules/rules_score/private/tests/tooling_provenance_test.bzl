@@ -13,7 +13,7 @@
 """Loading-phase tests for resolved tooling provenance."""
 
 load("@bazel_skylib//lib:unittest.bzl", "loadingtest")
-load("@score_tooling//bazel/rules/rules_score/private:tooling_provenance.bzl", "resolved_tooling_version")
+load("//bazel/rules/rules_score/private:tooling_provenance.bzl", "resolved_tooling_version")
 
 def tooling_provenance_test_suite(name):
     """Check version selection independently of the consumer's identity."""

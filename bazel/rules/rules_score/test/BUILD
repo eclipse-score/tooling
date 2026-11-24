@@ -39,11 +39,6 @@ load("@score_tooling//bazel/rules/rules_score:sphinx_toolchain.bzl", "score_sphi
 load("@score_tooling//cpp/libclang:libclang_toolchain.bzl", "libclang_toolchain")
 load("@trlc//:trlc.bzl", "trlc_requirements", "trlc_requirements_test", "trlc_specification")
 load(
-    ":certified_scope_test.bzl",
-    "certified_scope_index_test_suite",
-    "certified_scope_matching_test_suite",
-)
-load(
     ":dependable_element_aou_test.bzl",
     "aou_derived_test",
     "aou_merged_test",
@@ -52,7 +47,6 @@ load(
 )
 load(
     ":dependable_element_architecture_test.bzl",
-    "architecture_collection_test_suite",
     "architecture_json_test",
 )
 load(
@@ -87,16 +81,8 @@ load(
 )
 load(":lobster_ci_report_test.bzl", "lobster_ci_report_test")
 load(
-    ":lobster_config_test.bzl",
-    "lobster_config_test_suite",
-)
-load(
     ":puml_includes_test.bzl",
     "includes_fails_test",
-)
-load(
-    ":puml_layout_test.bzl",
-    "puml_layout_test_suite",
 )
 load(
     ":puml_stem_collision_test.bzl",
@@ -175,7 +161,6 @@ load(
     "test_specification_test_suite",
     "unit_test_specs_test",
 )
-load(":tooling_provenance_test.bzl", "tooling_provenance_test_suite")
 load(
     ":unit_component_test.bzl",
     "component_direct_asr_test",
@@ -193,10 +178,6 @@ load(
 )
 
 package(default_visibility = ["//visibility:public"])
-
-tooling_provenance_test_suite(name = "tooling_provenance")
-
-architecture_collection_test_suite(name = "architecture_collection_test_suite")
 
 architecture_json_test(
     name = "architecture_public_label_test",
@@ -3096,23 +3077,6 @@ assumed_system_requirements(
 requirements_multi_spec_test_suite(name = "requirements_multi_spec_tests")
 
 # ============================================================================
-# lobster_config.bzl unit tests (format_lobster_sources / format_lobster_block)
-# ============================================================================
-lobster_config_test_suite(name = "lobster_config")
-
-# ============================================================================
-# certified_scope.bzl unit tests
-# ============================================================================
-certified_scope_matching_test_suite(name = "certified_scope_matching")
-
-certified_scope_index_test_suite(name = "certified_scope_index")
-
-# ============================================================================
-# puml_utils.bzl unit tests (plan_view_layout)
-# ============================================================================
-puml_layout_test_suite(name = "puml_layout")
-
-# ============================================================================
 # Image srcs Tests (defined in sub-package to avoid workspace-root edge case)
 # ============================================================================
 # feat_req_with_image and image_srcs_sphinx_sources_test live in
@@ -3163,7 +3127,6 @@ test_suite(
         ":assessment_config_own_aou_test",
         ":comp_req_measure_builds",
         ":fta_default_package_test",
-        ":lobster_config_tests",
         ":measure_deps_are_context_only_test",
         ":measure_spec_is_merged_test",
         ":requirements_multi_spec_tests",
