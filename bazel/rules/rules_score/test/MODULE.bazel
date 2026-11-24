@@ -34,6 +34,8 @@ bazel_dep(name = "aspect_rules_lint", version = "1.5.3")
 bazel_dep(name = "rules_shell", version = "0.5.0")
 bazel_dep(name = "bazel_skylib", version = "1.7.1")
 bazel_dep(name = "platforms", version = "1.0.0")
+bazel_dep(name = "rules_testing", version = "0.9.0")
+bazel_dep(name = "aspect_bazel_lib", version = "2.22.0")
 
 ###############################################################################
 # Python Toolchain

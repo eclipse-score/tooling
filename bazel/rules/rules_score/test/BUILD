@@ -12,6 +12,7 @@
 # *******************************************************************************
 
 load("@bazel_skylib//rules:build_test.bzl", "build_test")
+load("@bazel_skylib//rules:diff_test.bzl", "diff_test")
 load("@pip_tooling_test//:requirements.bzl", "requirement")
 load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_library", "cc_test")
 load("@rules_python//python:defs.bzl", "py_test")
@@ -3270,4 +3271,11 @@ test_suite(
         "//fixtures/image_srcs:requirements_image_tests",
         "//fixtures/spec_extras:requirements_spec_extras_tests",
     ],
+)
+
+# Outer Bazel of this module must match the root workspace.
+diff_test(
+    name = "bazelversion_in_sync_test",
+    file1 = ".bazelversion",
+    file2 = "@score_tooling//:.bazelversion",
 )

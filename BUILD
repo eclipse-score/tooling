@@ -16,6 +16,7 @@ load("//third_party/format:macros.bzl", "use_format_targets")
 package(default_visibility = ["//visibility:public"])
 
 exports_files([
+    ".bazelversion",
     "pyproject.toml",
 ])
 

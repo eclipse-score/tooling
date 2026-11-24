@@ -19,6 +19,8 @@ cr_checker/tests
 coverage/integration_tests
 # Should be run from its own directory (separate Module)
 bazel/rules/rules_score/test
+# Separate local Bazel module: L4 end-to-end tests (run from its own directory)
+bazel/rules/rules_score/integration_test
 # Separate local Bazel modules (use @seooc// and @some_other_library// instead)
 bazel/rules/rules_score/examples/seooc
 bazel/rules/rules_score/examples/some_other_library
