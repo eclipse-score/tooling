@@ -20,23 +20,22 @@ Tests are structured around the four S-CORE requirement types:
   - aou_req                        →  ScoreReq.AoU
 """
 
+import logging
 import tempfile
 import unittest
-from io import StringIO
 from pathlib import Path
 
 from rst_to_trlc import (
     _ALLOWED_RST_ATTRS,
+    DIRECTIVE_TO_TRLC,
+    SAFETY_MAP,
     _collect_body,
     _collect_refs,
     _escape,
     convert,
-    DIRECTIVE_TO_TRLC,
     parse_directives,
     render_trlc,
-    SAFETY_MAP,
 )
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -48,7 +47,7 @@ def _rst(*lines: str) -> str:
 
 
 # ---------------------------------------------------------------------------
-# DIRECTIVE_TO_TRLC – only S-CORE types are present
+# DIRECTIVE_TO_TRLC - only S-CORE types are present
 # ---------------------------------------------------------------------------
 
 
@@ -80,7 +79,7 @@ class TestDirectiveToTrlc(unittest.TestCase):
 
 
 # ---------------------------------------------------------------------------
-# ALLOWED_RST_ATTRS – whitelist is complete and minimal
+# ALLOWED_RST_ATTRS - whitelist is complete and minimal
 # ---------------------------------------------------------------------------
 
 
@@ -116,7 +115,7 @@ class TestAllowedRstAttrs(unittest.TestCase):
 
 
 # ---------------------------------------------------------------------------
-# SAFETY_MAP – only QM, B, D exist in ScoreReq.Asil
+# SAFETY_MAP - only QM, B, D exist in ScoreReq.Asil
 # ---------------------------------------------------------------------------
 
 
@@ -143,7 +142,7 @@ class TestSafetyMap(unittest.TestCase):
 
 
 # ---------------------------------------------------------------------------
-# parse_directives – S-CORE directive recognition
+# parse_directives - S-CORE directive recognition
 # ---------------------------------------------------------------------------
 
 
@@ -384,7 +383,7 @@ class TestParseDirectives(unittest.TestCase):
 
 
 # ---------------------------------------------------------------------------
-# render_trlc – TRLC output for each S-CORE type
+# render_trlc - TRLC output for each S-CORE type
 # ---------------------------------------------------------------------------
 
 
@@ -576,7 +575,7 @@ class TestRenderTrlc(unittest.TestCase):
 
 
 # ---------------------------------------------------------------------------
-# _collect_refs – only satisfies and derived_from are cross-references
+# _collect_refs - only satisfies and derived_from are cross-references
 # ---------------------------------------------------------------------------
 
 
@@ -681,7 +680,7 @@ class TestCollectRefs(unittest.TestCase):
 
 
 # ---------------------------------------------------------------------------
-# _collect_body – blank-line handling consistency
+# _collect_body - blank-line handling consistency
 # ---------------------------------------------------------------------------
 
 
@@ -732,7 +731,7 @@ class TestEscape(unittest.TestCase):
 
 
 # ---------------------------------------------------------------------------
-# convert – integration across all S-CORE types
+# convert - integration across all S-CORE types
 # ---------------------------------------------------------------------------
 
 
@@ -835,19 +834,13 @@ class TestConvert(unittest.TestCase):
         self.assertIn("package MyRequirements", out)
 
     def test_empty_rst_warns_and_returns_zero(self):
-        import sys
-
-        buf = StringIO()
-        old_stderr, sys.stderr = sys.stderr, buf
-        try:
-            with tempfile.TemporaryDirectory() as tmpdir:
-                src = Path(tmpdir) / "empty.rst"
-                src.write_text("No directives here.\n", encoding="utf-8")
+        with tempfile.TemporaryDirectory() as tmpdir:
+            src = Path(tmpdir) / "empty.rst"
+            src.write_text("No directives here.\n", encoding="utf-8")
+            with self.assertLogs(level="WARNING") as logs:
                 count = convert(src, Path(tmpdir) / "empty.trlc")
-        finally:
-            sys.stderr = old_stderr
         self.assertEqual(count, 0)
-        self.assertIn("WARNING", buf.getvalue())
+        self.assertIn("no supported requirement directives", logs.output[0])
 
     def test_stkh_req_is_skipped(self):
         rst = (
@@ -857,14 +850,8 @@ class TestConvert(unittest.TestCase):
             "\n"
             "   The platform shall do something.\n"
         )
-        import logging
-
         with self.assertLogs("root", level=logging.WARNING) as cm:
             out = self._convert(rst)
         # stkh_req has no TRLC mapping → treated as no directives found
         self.assertTrue(any("WARNING" in msg for msg in cm.output))
         self.assertNotIn("stkh_req", out)
-
-
-if __name__ == "__main__":
-    unittest.main()

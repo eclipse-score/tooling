@@ -10,31 +10,30 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
-"""Integration test: Markdown image syntax in a requirement description is
-rendered to a ``.. image::`` RST directive by trlc_rst.
+"""Contract test: Markdown image syntax in a requirement description is
+rendered to a ``.. image::`` RST directive by the pinned ``trlc_rst``.
 
-Uses the TRLCRST Python API directly against the local trlc checkout so that
-changes to ``trlc_rst.py`` are picked up immediately without a git push.
+The rules_score requirement pages rely on this rendering, so a trlc bump that
+changes it fails here.
 """
 
 import os
+import shutil
 import tempfile
 import unittest
 
+from python.runfiles import runfiles
 from trlc_rst import TRLCRST
 
 
-def _runfile(*parts: str) -> str:
-    """Locate a file in the Bazel runfiles tree."""
-    srcdir = os.environ["TEST_SRCDIR"]
-    workspace = os.environ.get("TEST_WORKSPACE", "_main")
-    for candidate in [
-        os.path.join(srcdir, workspace, *parts),
-        os.path.join(srcdir, *parts),
-    ]:
-        if os.path.exists(candidate):
-            return candidate
-    raise FileNotFoundError(f"Runfile not found: {os.path.join(*parts)}\n  Searched under TEST_SRCDIR={srcdir}")
+def _runfile(env_var: str) -> str:
+    """Resolve the runfile whose rlocation path Bazel passes in ``env_var``."""
+    rf = runfiles.Create()
+    assert rf is not None
+    path = rf.Rlocation(os.environ[env_var])
+    if path is None or not os.path.exists(path):
+        raise FileNotFoundError(f"Runfile for {env_var} not found: {path}")
+    return path
 
 
 class TestImageRenderingIntegration(unittest.TestCase):
@@ -43,17 +42,10 @@ class TestImageRenderingIntegration(unittest.TestCase):
 
     def setUp(self):
         self._tmpdir = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, self._tmpdir)
         self._out = os.path.join(self._tmpdir, "output.rst")
-        self._fixture_trlc = _runfile(
-            "fixtures",
-            "image_requirements",
-            "image_requirements.trlc",
-        )
-        self._fixture_rsl = _runfile(
-            "fixtures",
-            "image_requirements",
-            "schema.rsl",
-        )
+        self._fixture_trlc = _runfile("IMAGE_REQUIREMENTS_TRLC")
+        self._fixture_rsl = _runfile("IMAGE_REQUIREMENTS_RSL")
 
     def _render(self) -> str:
         renderer = TRLCRST(
@@ -85,7 +77,3 @@ class TestImageRenderingIntegration(unittest.TestCase):
         content = self._render()
         self.assertIn("The system shall operate without images.", content)
         self.assertEqual(content.count(".. image::"), 2)
-
-
-if __name__ == "__main__":
-    unittest.main()

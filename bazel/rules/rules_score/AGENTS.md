@@ -20,7 +20,7 @@ Architecture map: [docs/tooling_architecture.rst](docs/tooling_architecture.rst)
 
 - `private/*.bzl`: rule implementations. `providers.bzl`: provider contracts between rules.
   `rules_score.bzl`: the only public entry point; every public rule or provider is re-exported there.
-- `src/`: Python helpers run by actions (tests live in `test/test_*.py`).
+- `src/`: Python helpers run by actions (tests live in `src/tests/<tool>_test.py`).
   `templates/`: Sphinx/RST templates. `lobster/config/`: LOBSTER configs. `trlc/config/`: metamodel
   (`.rsl`) and tool qualification records (`tools.trlc`).
 - `README.md` (per-rule reference), `docs/` (user guide, architecture, tool qualification).

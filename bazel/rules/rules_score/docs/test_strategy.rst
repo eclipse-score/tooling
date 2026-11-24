@@ -31,7 +31,7 @@ Levels
      - Framework
      - Run
    * - L0 tool unit
-     - ``bazel/rules/rules_score/src/``, ``plantuml/parser/``
+     - ``bazel/rules/rules_score/src/tests/``, ``bazel/rules/rules_score/src/test_case_coverage/``, ``plantuml/parser/``
      - root
      - ``py_test`` (pytest), ``rust_test``
      - ``bazel test //bazel/rules/rules_score/src/... //plantuml/parser/...``
@@ -61,10 +61,29 @@ root workspace, consuming ``score_tooling`` via ``local_path_override``), so the
 are run from their own directory and have their own CI jobs. L1 runs in the root
 CI step ``//bazel/rules/rules_score/... -//bazel/rules/rules_score/examples/...``;
 the L0 tools run there (``src/``) and in the ``//plantuml/...`` step (parsers).
-The legacy ``test/BUILD`` and the tool tests next to it (``test/test_*.py``) stay
-in place; they move into the level directories rule by rule. Each level
+The legacy ``test/BUILD`` stays in place; its tests move into the level
+directories rule by rule. Each level
 directory holds one smoke test (``label_path_test`` at L1, ``rst_to_trlc`` at
 L2 and L3) as the template for new tests.
+
+L0 Python conventions
+---------------------
+
+* One ``<tool>_test.py`` per tool in ``src/tests/``, declared as a plain
+  ``py_test`` whose ``main`` is the shared ``src/tests/pytest_main.py``
+  (pytest from ``@pip_tooling``). Tests are plain ``unittest.TestCase``
+  classes run by pytest; there is no ``unittest.main()``.
+* Data files are passed as ``$(rlocationpath ...)`` env vars and resolved with
+  ``python.runfiles``, not relative paths.
+* ``src/tests/`` is a separate package so that the non-recursive ``src/*.py``
+  globs (``:py_srcs``, traceability) stay unchanged.
+* Lint gate: ruff and ty must be clean for ``src/tests/...``::
+
+    bazel build --config=lint --@aspect_rules_lint//lint:fail_on_violation \
+        //bazel/rules/rules_score/src/tests/...
+
+  The "Python lint" workflow runs this as a blocking step; the tools in ``src/``
+  are not yet covered by the gate.
 
 Level responsibilities
 ----------------------

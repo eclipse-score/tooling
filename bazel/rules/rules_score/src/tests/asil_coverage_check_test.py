@@ -11,18 +11,33 @@
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
 
+"""Tests for the asil_coverage_check and version_pin_check TRLC plugins."""
+
 import io
 import os
+import shutil
 import sys
 import tempfile
 import unittest
 from unittest import mock
 
 import trlc_check_runner
+from python.runfiles import runfiles
 
-# Bazel passes the requirements model files as arguments.
-_RSL = next(arg for arg in sys.argv[1:] if arg.endswith(".rsl"))
-sys.argv = sys.argv[:1]
+
+def _model_rsl() -> str:
+    """Resolve the ScoreReq model passed in ``SCORE_REQUIREMENTS_MODEL`` (rlocation paths)."""
+    rf = runfiles.Create()
+    assert rf is not None
+    for path in os.environ["SCORE_REQUIREMENTS_MODEL"].split():
+        if path.endswith(".rsl"):
+            resolved = rf.Rlocation(path)
+            assert resolved is not None
+            return resolved
+    raise FileNotFoundError("no .rsl in SCORE_REQUIREMENTS_MODEL")
+
+
+_RSL = _model_rsl()
 
 # The plugins dependable_element passes to the runner.
 _CHECKS = ("trlc_checks.asil_coverage_check", "trlc_checks.version_pin_check")
@@ -30,15 +45,15 @@ _CHECKS = ("trlc_checks.asil_coverage_check", "trlc_checks.version_pin_check")
 
 def _record(kind, name, safety, derived_from=()):
     lines = [
-        "ScoreReq.%s %s {" % (kind, name),
+        f"ScoreReq.{kind} {name} {{",
         '    description = "Fixture."',
-        "    safety = ScoreReq.Asil.%s" % safety,
+        f"    safety = ScoreReq.Asil.{safety}",
         "    version = 1",
     ]
     if kind == "AssumedSystemReq":
         lines.append('    rationale = "Fixture."')
     if derived_from:
-        lines.append("    derived_from = [%s]" % ", ".join(d + "@1" for d in derived_from))
+        lines.append(f"    derived_from = [{', '.join(d + '@1' for d in derived_from)}]")
     lines.append("}")
     return "\n".join(lines)
 
@@ -63,18 +78,18 @@ class TestAsilCoverageCheck(unittest.TestCase):
     """Tests for the asil_coverage_check plugin run through trlc_check_runner."""
 
     def setUp(self):
-        self._tmp = tempfile.TemporaryDirectory()
-        self.addCleanup(self._tmp.cleanup)
+        self._tmp = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, self._tmp)
 
     def _write(self, *records):
-        path = os.path.join(self._tmp.name, "reqs.trlc")
+        path = os.path.join(self._tmp, "reqs.trlc")
         with open(path, "w", encoding="utf-8") as fh:
             fh.write("package Fixture\n\nimport ScoreReq\n\n")
             fh.write("\n\n".join(records) + "\n")
         return path
 
     def _main(self, *records, extra=(), checks=_CHECKS):
-        log = os.path.join(self._tmp.name, "out.log")
+        log = os.path.join(self._tmp, "out.log")
         argv = ["--no-lint", "--brief", "--log", log, *extra]
         for check in checks:
             argv += ["--check", check]
@@ -168,7 +183,7 @@ class TestAsilCoverageCheck(unittest.TestCase):
         self.assertIn("Fixture.Asr has ASIL B", report)
 
     def test_log_is_echoed_to_stderr_on_failure(self):
-        log = os.path.join(self._tmp.name, "out.log")
+        log = os.path.join(self._tmp, "out.log")
         path = self._write(_asr("Asr", "B"), _feat("Feat", "D", "Asr"))
         stderr = io.StringIO()
         argv = ["--log", log, "--check", _CHECKS[0], _RSL, path]
@@ -199,7 +214,7 @@ class TestAsilCoverageCheck(unittest.TestCase):
         plugin.assert_not_called()
 
     def test_plugin_runs_after_model_check_failure_and_warn_only_keeps_exit_code(self):
-        spec = os.path.join(self._tmp.name, "failing.rsl")
+        spec = os.path.join(self._tmp, "failing.rsl")
         with open(spec, "w", encoding="utf-8") as fh:
             fh.write(
                 "package Failing\n"
@@ -250,7 +265,7 @@ class TestAsilCoverageCheck(unittest.TestCase):
         self.assertEqual(report.count("current version is 1"), 3)
 
     def test_cross_package_pin_and_development_warning(self):
-        upstream = os.path.join(self._tmp.name, "upstream.trlc")
+        upstream = os.path.join(self._tmp, "upstream.trlc")
         with open(upstream, "w", encoding="utf-8") as fh:
             fh.write("package Upstream\nimport ScoreReq\n" + _asr("Asr", "B").replace("version = 1", "version = 2"))
         feat = _feat("Feat", "B", "Upstream.Asr")
@@ -264,7 +279,7 @@ class TestAsilCoverageCheck(unittest.TestCase):
         self.assertIn("current version is 2", report)
 
     def test_check_applies_to_extended_requirement_type(self):
-        spec = os.path.join(self._tmp.name, "extra.rsl")
+        spec = os.path.join(self._tmp, "extra.rsl")
         with open(spec, "w", encoding="utf-8") as fh:
             fh.write("package Extra\nimport ScoreReq\ntype ExtendedFeat extends ScoreReq.FeatReq {}\n")
         feat = _feat("Feat", "B", "Asr").replace("ScoreReq.FeatReq", "Extra.ExtendedFeat").replace("Asr@1", "Asr@2")
@@ -307,7 +322,3 @@ class TestAsilCoverageCheck(unittest.TestCase):
             assessment,
         )
         self.assertEqual(exit_code, 0, report)
-
-
-if __name__ == "__main__":
-    unittest.main()

@@ -17,9 +17,6 @@ import tempfile
 import unittest
 
 import yaml
-from lobster.common.items import Requirement, Tracing_Tag
-from lobster.common.location import Void_Reference
-
 from aou_forwarding_to_lobster import (
     ForwardingEntry,
     build_forwarded_markers,
@@ -27,6 +24,9 @@ from aou_forwarding_to_lobster import (
     load_lobster_items,
     parse_forwarding_yaml,
 )
+from lobster.common.io import lobster_write
+from lobster.common.items import Requirement, Tracing_Tag
+from lobster.common.location import Void_Reference
 
 
 def _req(tag: str, name: str) -> Requirement:
@@ -45,10 +45,9 @@ class TestParseForwardingYaml(unittest.TestCase):
     """Tests for parse_forwarding_yaml."""
 
     def _write_yaml(self, data: dict) -> str:
-        f = tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False)
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
+            yaml.dump(data, f)
         self.addCleanup(os.unlink, f.name)
-        yaml.dump(data, f)
-        f.close()
         return f.name
 
     def test_valid_yaml(self) -> None:
@@ -116,17 +115,16 @@ class TestParseForwardingYaml(unittest.TestCase):
         self.assertIn("'Pkg.AoU1@1' is listed in entries 0 and 1", str(ctx.exception))
 
     def test_entry_lines_are_recorded(self) -> None:
-        f = tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False)
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
+            f.write(
+                "# comment\n"
+                "forwarded_aous:\n"
+                "  - aou_id: A.B@1\n"
+                "    justification: r1\n"
+                "  - aou_id: C.D@1\n"
+                "    justification: r2\n"
+            )
         self.addCleanup(os.unlink, f.name)
-        f.write(
-            "# comment\n"
-            "forwarded_aous:\n"
-            "  - aou_id: A.B@1\n"
-            "    justification: r1\n"
-            "  - aou_id: C.D@1\n"
-            "    justification: r2\n"
-        )
-        f.close()
         self.assertEqual([e.line for e in parse_forwarding_yaml(f.name)], [3, 5])
 
 
@@ -134,13 +132,10 @@ class TestLoadLobsterItems(unittest.TestCase):
     """Tests for load_lobster_items."""
 
     def _write_lobster(self, tags: list[str]) -> str:
-        from lobster.common.io import lobster_write
-
         items = [_req(tag, tag.split(" ", 1)[1].split("@")[0]) for tag in tags]
-        f = tempfile.NamedTemporaryFile(mode="w", suffix=".lobster", delete=False)
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".lobster", delete=False) as f:
+            lobster_write(f, Requirement, "test", items)
         self.addCleanup(os.unlink, f.name)
-        lobster_write(f, Requirement, "test", items)
-        f.close()
         return f.name
 
     def test_loads_items(self) -> None:
@@ -286,7 +281,3 @@ class TestBuildForwardedMarkers(unittest.TestCase):
         items = [_req("req Pkg.AoU1@1", "AoU1")]
         markers = build_forwarded_markers([], items, "aou_forwarding.yaml")
         self.assertEqual(markers, [])
-
-
-if __name__ == "__main__":
-    unittest.main()

@@ -12,11 +12,14 @@
 # *******************************************************************************
 """Unit tests for the safety-analysis page assembler layout logic."""
 
+# ruff: noqa: SLF001  (the tests exercise the assembler's private helpers directly)
+
 import os
 import sys
 import tempfile
 import types
 import unittest
+from typing import cast
 
 import safety_analysis_assembler as fa
 
@@ -46,11 +49,12 @@ class _FakeRenderer:
     def objects_by_fqn(self):
         return self._objs
 
-    def render_records_to_string(self, fqns, fields):
-        return "RECORDS(" + ",".join(fqns) + ")\n"
-
-    def field_value_for(self, fqn, field_name, records=None):
+    def field_value_for(self, fqn, field_name, _records=None):
         return self._objs[fqn].to_python_dict().get(field_name, "")
+
+
+def _renderer(objs) -> fa.TRLCRST:
+    return cast(fa.TRLCRST, _FakeRenderer(objs))
 
 
 def _objs():
@@ -81,7 +85,7 @@ def _objs():
     }
 
 
-def _assessment(name, root_causes, measures, rationale="rationale", file_name="x.trlc", safety="B"):
+def _assessment(name, root_causes, measures, rationale="rationale", safety="B", **obj_kwargs):
     return _Obj(
         name,
         "RootCauseAssessment",
@@ -92,7 +96,7 @@ def _assessment(name, root_causes, measures, rationale="rationale", file_name="x
             "rationale": rationale,
             "version": 1,
         },
-        file_name=file_name,
+        **obj_kwargs,
     )
 
 
@@ -274,7 +278,7 @@ class CheckInputsTest(unittest.TestCase):
 
 class BuildBodyTest(unittest.TestCase):
     def setUp(self):
-        self.renderer = _FakeRenderer(_objs())
+        self.renderer = _renderer(_objs())
         self.diagrams = _DIAGRAMS
 
     def test_overview_and_failure_mode_section_rendered(self):
@@ -337,19 +341,19 @@ class BuildBodyTest(unittest.TestCase):
             "RootCause",
             {"title": "Root cause A", "diagram": "x*y.puml", "line": 2, "failure_modes": ["Lib.FM_A"]},
         )
-        body = fa._build_body(_FakeRenderer(objs), "Title", "Lib", self.diagrams)
+        body = fa._build_body(_renderer(objs), "Title", "Lib", self.diagrams)
         self.assertIn("Source: x\\*y.puml, line 2", body)
 
     def test_root_cause_without_assessment_is_flagged(self):
         objs = _objs()
         objs["Lib.RC_B"] = _root_cause("RC_B")
-        body = fa._build_body(_FakeRenderer(objs), "Title", "Lib", self.diagrams)
+        body = fa._build_body(_renderer(objs), "Title", "Lib", self.diagrams)
         self.assertEqual(body.count(":bdg-danger:`Not assessed`"), 1)
 
     def test_assessment_without_measures_is_rendered_as_not_applicable(self):
         objs = _objs()
         objs["Lib.Asm_A"] = _assessment("Asm_A", ["Lib.RC_A"], [], "does not apply")
-        body = fa._build_body(_FakeRenderer(objs), "Title", "Lib", self.diagrams)
+        body = fa._build_body(_renderer(objs), "Title", "Lib", self.diagrams)
         self.assertEqual(body.count(":bdg-secondary:`Not applicable`"), 1)
         self.assertIn("does not apply", body)
         self.assertNotIn("Not assessed", body)
@@ -358,7 +362,7 @@ class BuildBodyTest(unittest.TestCase):
         objs = _objs()
         objs["Lib.RC_B"] = _root_cause("RC_B")
         objs["Lib.Asm_A"] = _assessment("Asm_A", ["Lib.RC_A", "Lib.RC_B"], ["Lib.AoU_1"], "shared rationale")
-        body = fa._build_body(_FakeRenderer(objs), "Title", "Lib", self.diagrams)
+        body = fa._build_body(_renderer(objs), "Title", "Lib", self.diagrams)
         self.assertEqual(body.count("**Asm_A**"), 2)
         self.assertEqual(body.count("shared rationale"), 2)
 
@@ -369,7 +373,7 @@ class BuildBodyTest(unittest.TestCase):
     def test_assessment_card_shows_assessment_asil(self):
         objs = _objs()
         objs["Lib.Asm_A"] = _assessment("Asm_A", ["Lib.RC_A"], ["Lib.AoU_1"], safety="D")
-        body = fa._build_body(_FakeRenderer(objs), "Title", "Lib", self.diagrams)
+        body = fa._build_body(_renderer(objs), "Title", "Lib", self.diagrams)
         self.assertIn("**Asm_A** :bdg-danger:`ASIL D`", body)
 
     def test_measures_section_shows_record_version(self):
@@ -378,7 +382,7 @@ class BuildBodyTest(unittest.TestCase):
 
     def test_measure_without_version_has_no_version_badge(self):
         objs = {"Lib.AoU_Orphan": _objs()["Lib.AoU_Orphan"]}
-        body = fa._build_body(_FakeRenderer(objs), "Title", "Lib", [])
+        body = fa._build_body(_renderer(objs), "Title", "Lib", [])
         self.assertIn("**AoU_Orphan**", body)
         self.assertNotIn(":bdg-light:", body)
 
@@ -393,7 +397,7 @@ class BuildBodyTest(unittest.TestCase):
             "RootCause",
             {"title": "a*b", "diagram": "fta_a.puml", "line": 2, "failure_modes": ["Lib.FM_A"]},
         )
-        body = fa._build_body(_FakeRenderer(objs), "Title", "Lib", self.diagrams)
+        body = fa._build_body(_renderer(objs), "Title", "Lib", self.diagrams)
         self.assertIn(".. grid-item-card:: a\\*b", body)
 
     def test_global_measures_section_lists_all(self):
@@ -409,7 +413,7 @@ class BuildBodyTest(unittest.TestCase):
         self.assertEqual(body.count(".. rubric:: Root Causes"), 1)
 
     def test_no_fault_trees_renders_all_failure_modes_without_fta(self):
-        renderer = _FakeRenderer(_objs_no_fta())
+        renderer = _renderer(_objs_no_fta())
         body = fa._build_body(renderer, "Title", "Lib", [])
         self.assertIn(".. dropdown:: Lib.FM_A\n", body)
         self.assertIn(".. dropdown:: Lib.FM_Orphan\n", body)
@@ -798,7 +802,3 @@ class MainIntegrationTest(unittest.TestCase):
                     ]
                 )
             self.assertEqual(ctx.exception.code, 1)
-
-
-if __name__ == "__main__":
-    unittest.main()

@@ -50,7 +50,3 @@ class TestInitExternalNeeds(unittest.TestCase):
                 os.chdir(old_cwd)
 
             self.assertEqual(len(config.needs_external_needs), 1)
-
-
-if __name__ == "__main__":
-    unittest.main()

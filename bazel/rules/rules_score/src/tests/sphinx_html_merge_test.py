@@ -12,6 +12,7 @@
 # *******************************************************************************
 """Tests for sphinx_html_merge."""
 
+import shutil
 import tempfile
 import unittest
 from pathlib import Path
@@ -28,12 +29,9 @@ class TestMergeHtmlDirs(unittest.TestCase):
     """Tests for merge_html_dirs / copy_html_files."""
 
     def setUp(self) -> None:
-        self._tmp = tempfile.TemporaryDirectory()
-        self.root = Path(self._tmp.name)
+        self.root = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, self.root)
         self.output = self.root / "output"
-
-    def tearDown(self) -> None:
-        self._tmp.cleanup()
 
     def test_nested_dep_page_rewrites_sibling_link_with_full_depth(self) -> None:
         """Regression test: a dependency's link to a sibling module from a
@@ -366,7 +364,3 @@ class TestMergeHtmlDirs(unittest.TestCase):
         self.assertIn('<script src="../../_static/documentation_options.js"></script>', content)
         # The unrelated script body's example text is still left untouched.
         self.assertIn("var link = '<a href=\"dep_b/x.html\">';", content)
-
-
-if __name__ == "__main__":
-    unittest.main()

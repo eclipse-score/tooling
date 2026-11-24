@@ -29,9 +29,13 @@ jobs:
           disk-cache: true
           repository-cache: true
           bazelisk-cache: true
+      - name: Run ruff and ty (blocking)
+        run: |
+          bazel build --config=lint --@aspect_rules_lint//lint:fail_on_violation //bazel/rules/rules_score/src/tests/...
       - name: Run ruff and ty
         id: lint
         # Findings are reported but do not block until the existing baseline is clean.
+        # //bazel/rules/rules_score/src/tests/... is already clean and gated by the blocking step above.
         continue-on-error: true
         run: |
           bazel build --config=lint --@aspect_rules_lint//lint:fail_on_violation //...
