@@ -1,0 +1,147 @@
+# *******************************************************************************
+# Copyright (c) 2026 Contributors to the Eclipse Foundation
+#
+# See the NOTICE file(s) distributed with this work for additional
+# information regarding copyright ownership.
+#
+# This program and the accompanying materials are made available under the
+# terms of the Apache License Version 2.0 which is available at
+# https://www.apache.org/licenses/LICENSE-2.0
+#
+# SPDX-License-Identifier: Apache-2.0
+# *******************************************************************************
+name: Metamodel drift report
+on:
+  pull_request:
+    types: [opened, reopened, synchronize]
+  schedule:
+    - cron: "0 3 * * *"
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: write
+concurrency:
+  group: metamodel-drift-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+jobs:
+  metamodel-drift:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout tooling
+        uses: actions/checkout@v7.0.1
+        with:
+          path: tooling
+      - name: Free Disk Space (Ubuntu)
+        uses: eclipse-score/more-disk-space@v1
+        with:
+          level: 4
+      - name: Checkout docs-as-code main
+        uses: actions/checkout@v7.0.1
+        with:
+          repository: eclipse-score/docs-as-code
+          ref: main
+          path: docs-as-code
+          sparse-checkout: src/extensions/score_metamodel/metamodel.yaml
+          sparse-checkout-cone-mode: false
+          persist-credentials: false
+      - name: Checkout communication main
+        uses: actions/checkout@v7.0.1
+        with:
+          repository: eclipse-score/communication
+          ref: main
+          path: communication
+          sparse-checkout: third_party/score_requirement_model/score_requirements_model.rsl
+          sparse-checkout-cone-mode: false
+          persist-credentials: false
+      - name: Checkout config_management main
+        uses: actions/checkout@v7.0.1
+        with:
+          repository: eclipse-score/config_management
+          ref: main
+          path: config_management
+          sparse-checkout: third_party/traceability/config/trlc/score_model/score_requirements_model.rsl
+          sparse-checkout-cone-mode: false
+          persist-credentials: false
+      - uses: castler/setup-bazel@cache-optimized
+        with:
+          bazelisk-cache: true
+          disk-cache: metamodel_drift
+          repository-cache: true
+          cache-optimized: true
+          cache-save: ${{ github.ref == 'refs/heads/main' }}
+      - name: Generate head-to-head metamodel drift report
+        working-directory: tooling
+        run: |
+          set -euo pipefail
+
+          workspace="${GITHUB_WORKSPACE}"
+          metamodel="${workspace}/docs-as-code/src/extensions/score_metamodel/metamodel.yaml"
+          mapping="${workspace}/tooling/bazel/rules/rules_score/trlc/config/metamodel_mapping.yaml"
+          report_dir="${workspace}/drift"
+          mkdir -p "${report_dir}"
+
+          if [[ ! -f "${metamodel}" ]]; then
+            message="docs-as-code metamodel is missing: ${metamodel}"
+            echo "::error::${message}"
+            echo "- Error: ${message}" >> "${GITHUB_STEP_SUMMARY}"
+            exit 1
+          fi
+
+          compare_args=()
+          add_compare_if_present() {
+            local name="$1"
+            local path="$2"
+            if [[ -f "${path}" ]]; then
+              compare_args+=(--compare-rsl "${name}=${path}")
+            else
+              local message="Missing ${name} RSL at ${path}; comparison skipped."
+              echo "::warning::${message}"
+              echo "- Warning: ${message}" >> "${GITHUB_STEP_SUMMARY}"
+            fi
+          }
+
+          add_compare_if_present \
+            communication \
+            "${workspace}/communication/third_party/score_requirement_model/score_requirements_model.rsl"
+          add_compare_if_present \
+            config_management \
+            "${workspace}/config_management/third_party/traceability/config/trlc/score_model/score_requirements_model.rsl"
+
+          repo_revision() {
+            local name="$1"
+            local directory="$2"
+            local sha
+            if sha="$(git -C "${directory}" rev-parse HEAD 2>/dev/null)"; then
+              printf -- '- `%s`: `%s`\n' "${name}" "${sha}"
+            else
+              printf -- '- `%s`: not checked out\n' "${name}"
+            fi
+          }
+
+          {
+            echo "## Compared repository revisions"
+            echo
+            repo_revision tooling "${workspace}/tooling"
+            repo_revision docs-as-code "${workspace}/docs-as-code"
+            repo_revision communication "${workspace}/communication"
+            repo_revision config_management "${workspace}/config_management"
+            echo
+          } >> "${GITHUB_STEP_SUMMARY}"
+
+          # Switch to --fail-on error once the open drift errors are resolved.
+          bazel run //bazel/rules/rules_score:metamodel_drift -- \
+            --rsl "${workspace}/tooling/bazel/rules/rules_score/trlc/config/score_requirements_model.rsl" \
+            --metamodel "${metamodel}" \
+            --mapping "${mapping}" \
+            "${compare_args[@]}" \
+            --report-md "${report_dir}/drift_report.md" \
+            --report-json "${report_dir}/drift_report.json" \
+            --fail-on never
+
+          cat "${report_dir}/drift_report.md" >> "${GITHUB_STEP_SUMMARY}"
+      - name: Upload metamodel drift report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: metamodel-drift-report
+          path: ${{ github.workspace }}/drift/

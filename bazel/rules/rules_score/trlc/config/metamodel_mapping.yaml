@@ -1,0 +1,88 @@
+# *******************************************************************************
+# Copyright (c) 2026 Contributors to the Eclipse Foundation
+#
+# See the NOTICE file(s) distributed with this work for additional
+# information regarding copyright ownership.
+#
+# This program and the accompanying materials are made available under the
+# terms of the Apache License Version 2.0 which is available at
+# https://www.apache.org/licenses/LICENSE-2.0
+#
+# SPDX-License-Identifier: Apache-2.0
+# *******************************************************************************
+#
+# Mapping between the TRLC requirements model (score_requirements_model.rsl)
+# and the docs-as-code Sphinx-needs metamodel (score_metamodel/metamodel.yaml).
+#
+# Single source for:
+#   - metamodel_drift: reports every gap between both models
+#   - (planned) the TRLC -> sphinx-needs exporter
+#
+# Anything not listed here is reported by metamodel_drift, never silently dropped.
+version: 1
+# TRLC enum literal -> need option value. Literals not listed map to themselves.
+enums:
+  Asil:
+    QM: QM
+    B: ASIL_B
+    D: ASIL_D
+  Status:
+    valid: valid
+    invalid: invalid
+# TRLC record type -> need type.
+#   options: TRLC field -> need option
+#   links:   TRLC field -> need link
+#   ignored: TRLC field -> reason it is intentionally not exported
+types:
+  AssumedSystemReq:
+    need_type: stkh_req
+    options:
+      description: content
+      version: version
+      safety: safety
+      status: status
+      rationale: rationale
+    links: {}
+    ignored: {}
+  FeatReq:
+    need_type: feat_req
+    options:
+      description: content
+      version: version
+      safety: safety
+      status: status
+    links:
+      derived_from: derived_from
+    ignored: {}
+  CompReq:
+    need_type: comp_req
+    options:
+      description: content
+      version: version
+      safety: safety
+      status: status
+    links:
+      derived_from: derived_from
+    ignored: {}
+  AoU:
+    need_type: aou_req
+    options:
+      description: content
+      version: version
+      safety: safety
+      status: status
+    links: {}
+    ignored: {}
+  FailureMode:
+    need_type: comp_saf_fmea
+    options:
+      description: content
+      version: version
+      status: status
+      failureeffect: failure_effect
+    links: {}
+    ignored: {}
+# Concrete TRLC types with no need-type counterpart (reported as info).
+unmapped_types:
+  RootCause: "No need type; comp_saf_fmea only has a free-text root_cause option."
+  Mitigation: "No need type for safety measures that argue a root cause away."
