@@ -46,10 +46,6 @@ load(
     "assessment_config_test",
 )
 load(
-    ":dependable_element_architecture_test.bzl",
-    "architecture_json_test",
-)
-load(
     ":dependable_element_staged_files_test.bzl",
     "staged_files_test",
 )
@@ -170,7 +166,6 @@ load(
     "component_requirements_transitive_test",
     "component_sphinx_sources_test",
     "component_test_case_coverage_lock_test",
-    "dependable_element_test_case_coverage_lock_check_action_test",
     "unit_certified_scope_test",
     "unit_component_test_suite",
     "unit_provider_test",
@@ -178,12 +173,6 @@ load(
 )
 
 package(default_visibility = ["//visibility:public"])
-
-architecture_json_test(
-    name = "architecture_public_label_test",
-    module_name = "test_dependable_element_nested",
-    target_under_test = ":test_dependable_element_nested_index",
-)
 
 # ============================================================================
 # Sphinx Toolchain — uses score_docs_as_code so score_metamodel is importable
@@ -361,11 +350,6 @@ architectural_design(
 architectural_design(
     name = "arch_design_elem",
     static = ["fixtures/test_dependable_element.puml"],
-)
-
-architectural_design(
-    name = "arch_design_nested",
-    static = ["fixtures/test_dependable_element_nested.puml"],
 )
 
 # Regression fixtures: a generated navigation page and an authored page
@@ -1438,8 +1422,8 @@ sh_test(
         "$(rootpaths :same_name_units_lib_index)",
     ],
     data = [
-        "lib/find_runfile.sh",
         ":same_name_units_lib_index",
+        "//lib:find_runfile.sh",
     ],
 )
 
@@ -1497,8 +1481,8 @@ sh_test(
         "$(rootpaths :same_name_components_lib_index)",
     ],
     data = [
-        "lib/find_runfile.sh",
         ":same_name_components_lib_index",
+        "//lib:find_runfile.sh",
     ],
 )
 
@@ -1905,9 +1889,8 @@ dependable_element(
     tests = [],  # Empty for testing
 )
 
-# Dependable elements wrapping a test_case_coverage_lock component — used to verify the
-# ComponentTestCaseCoverageLockCheck action wiring (mnemonic/inputs/argv) at both
-# maturity levels via test_case_coverage_lock_check_action_{release,development}_test.
+# Release dependable element wrapping a test_case_coverage_lock component, consumed by
+# the coverage, assessment and lobster-ci-report tests.
 dependable_element(
     name = "test_dependable_element_coverage_release",
     testonly = True,
@@ -1916,19 +1899,6 @@ dependable_element(
     dependability_analysis = [":dependability_analysis_target"],
     integrity_level = "B",
     maturity = "release",
-    requirements = [":feat_req"],
-    tags = ["manual"],
-    tests = [],  # Empty for testing
-)
-
-dependable_element(
-    name = "test_dependable_element_coverage_development",
-    testonly = True,
-    architectural_design = [":arch_design_elem"],
-    components = [":test_component_with_test_case_coverage_lock"],
-    dependability_analysis = [":dependability_analysis_target"],
-    integrity_level = "B",
-    maturity = "development",
     requirements = [":feat_req"],
     tags = ["manual"],
     tests = [],  # Empty for testing
@@ -2109,22 +2079,6 @@ component(
     tests = [],
 )
 
-# Dependable element with nested components to test recursive collection.
-# maturity = "development": like ``test_dependable_element`` it has no
-# test_case_coverage.lock.yaml, so the release gate would flag a missing
-# Test Case Coverage element.
-dependable_element(
-    name = "test_dependable_element_nested",
-    testonly = True,
-    architectural_design = [":arch_design_nested"],
-    components = [":test_parent_component"],
-    dependability_analysis = [":dependability_analysis_target"],
-    integrity_level = "B",
-    maturity = "development",
-    requirements = [":feat_req"],
-    tests = [],
-)
-
 # ============================================================================
 # Test Instantiations - HTML Generation Tests
 # ============================================================================
@@ -2228,8 +2182,8 @@ sh_test(
         "$(rootpaths :authored_layout_example_lib_index)",
     ],
     data = [
-        "lib/find_runfile.sh",
         ":authored_layout_example_lib_index",
+        "//lib:find_runfile.sh",
     ],
 )
 
@@ -2244,8 +2198,8 @@ sh_test(
         "$(rootpaths :authored_layout_example_lib_index)",
     ],
     data = [
-        "lib/find_runfile.sh",
         ":authored_layout_example_lib_index",
+        "//lib:find_runfile.sh",
     ],
 )
 
@@ -2260,8 +2214,8 @@ sh_test(
         "$(rootpaths :authored_layout_example_lib_index)",
     ],
     data = [
-        "lib/find_runfile.sh",
         ":authored_layout_example_lib_index",
+        "//lib:find_runfile.sh",
     ],
 )
 
@@ -2286,8 +2240,8 @@ sh_test(
         "$(rootpaths :seooc_test_lib_index)",
     ],
     data = [
-        "lib/find_runfile.sh",
         ":seooc_test_lib_index",
+        "//lib:find_runfile.sh",
     ],
 )
 
@@ -2687,23 +2641,6 @@ component_gwt_derivation_wiring_test(
 component_requirements_transitive_test(
     name = "component_requirements_transitive_test",
     target_under_test = ":test_parent_component",
-)
-
-# Verifies the ComponentTestCaseCoverageLockCheck action is wired up end-to-end through
-# dependable_element (not just component() in isolation), and that
-# --allow-check-failures is only passed for maturity == "development".
-dependable_element_test_case_coverage_lock_check_action_test(
-    name = "test_case_coverage_lock_check_action_release_test",
-    expect_allow_check_failures = False,
-    maturity_under_test = "release",
-    target_under_test = ":test_dependable_element_coverage_release_index",
-)
-
-dependable_element_test_case_coverage_lock_check_action_test(
-    name = "test_case_coverage_lock_check_action_development_test",
-    expect_allow_check_failures = True,
-    maturity_under_test = "development",
-    target_under_test = ":test_dependable_element_coverage_development_index",
 )
 
 # A release element with an own AoU assessing a root cause: the assessments

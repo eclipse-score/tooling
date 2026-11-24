@@ -11,12 +11,11 @@
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
 """
-Test suite for unit, component, and dependable_element rules.
+Test suite for unit and component rules.
 
 Tests the new hierarchical structure for S-CORE process compliance:
 - Unit: smallest testable element
 - Component: collection of units
-- Dependable Element: complete SEooC with full documentation
 """
 
 load("@bazel_skylib//lib:unittest.bzl", "analysistest", "asserts")
@@ -347,85 +346,12 @@ def _component_gwt_derivation_wiring_test_impl(ctx):
 
 component_gwt_derivation_wiring_test = analysistest.make(_component_gwt_derivation_wiring_test_impl)
 
-def _dependable_element_test_case_coverage_lock_check_action_test_impl(ctx):
-    """
-    Given a dependable_element wrapping a component with test_case_coverage_lock set,
-    When the target is analyzed,
-    Then a ComponentTestCaseCoverageLockCheck action must be registered that consumes
-         the committed test_case_coverage.lock.yaml as an input, and it must carry
-         ``--allow-check-failures`` in its argv only when the
-         dependable_element's maturity is "development" (never for "release").
-
-    This exercises the actual component -> ComponentTestCaseCoverageInfo ->
-    dependable_element wiring (unlike component_test_case_coverage_lock_test, which only
-    inspects the component() rule in isolation).
-    """
-    env = analysistest.begin(ctx)
-
-    actions = analysistest.target_actions(env)
-    check_action = None
-    for action in actions:
-        if action.mnemonic == "ComponentTestCaseCoverageLockCheck":
-            check_action = action
-            break
-
-    asserts.true(
-        env,
-        check_action != None,
-        "Expected a ComponentTestCaseCoverageLockCheck action to be registered for a " +
-        "dependable_element wrapping a component with test_case_coverage_lock set",
-    )
-
-    if check_action == None:
-        return analysistest.end(env)
-
-    input_names = [f.basename for f in check_action.inputs.to_list()]
-    asserts.true(
-        env,
-        "test_case_coverage.lock.yaml" in input_names,
-        "ComponentTestCaseCoverageLockCheck action must take the committed " +
-        "test_case_coverage.lock.yaml as an input; got inputs: %s" % input_names,
-    )
-
-    has_allow_flag = "--allow-check-failures" in check_action.argv
-    asserts.equals(
-        env,
-        ctx.attr.expect_allow_check_failures,
-        has_allow_flag,
-        "expected --allow-check-failures presence=%s (maturity=%s) but argv was: %s" % (
-            ctx.attr.expect_allow_check_failures,
-            ctx.attr.maturity_under_test,
-            check_action.argv,
-        ),
-    )
-
-    return analysistest.end(env)
-
-dependable_element_test_case_coverage_lock_check_action_test = analysistest.make(
-    impl = _dependable_element_test_case_coverage_lock_check_action_test_impl,
-    attrs = {
-        "expect_allow_check_failures": attr.bool(
-            mandatory = True,
-            doc = "Whether --allow-check-failures is expected in the check action's argv.",
-        ),
-        "maturity_under_test": attr.string(
-            doc = "The maturity value of the target under test (for assertion messages only).",
-        ),
-    },
-)
-
-# ============================================================================
-# Dependable Element Tests
-# ============================================================================
-# Note: Provider tests removed as dependable_element no longer creates a
-# separate provider target. The main target is now a sphinx_module.
-
 # ============================================================================
 # Test Suite Definition
 # ============================================================================
 
 def unit_component_test_suite(name):
-    """Create test suite for unit, component, and dependable_element rules.
+    """Create test suite for unit and component rules.
 
     Args:
         name: Name of the test suite
@@ -442,7 +368,5 @@ def unit_component_test_suite(name):
             ":component_test_case_coverage_lock_test",
             ":component_gwt_derivation_wiring_test",
             ":component_requirements_transitive_test",
-            ":test_case_coverage_lock_check_action_release_test",
-            ":test_case_coverage_lock_check_action_development_test",
         ],
     )

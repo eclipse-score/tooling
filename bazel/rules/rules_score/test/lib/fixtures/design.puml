@@ -1,5 +1,5 @@
 ' *******************************************************************************
-' Copyright (c) 2025 Contributors to the Eclipse Foundation
+' Copyright (c) 2026 Contributors to the Eclipse Foundation
 '
 ' See the NOTICE file(s) distributed with this work for additional
 ' information regarding copyright ownership.
@@ -11,15 +11,10 @@
 ' SPDX-License-Identifier: Apache-2.0
 ' *******************************************************************************
 
-@startuml test_dependable_element_nested
+@startuml l2_fixture_design
 
-package test_dependable_element_nested <<SEooC>> {
-    component test_parent_component <<component>> {
-        component test_nested_component <<component>> {
-            component test_unit2 <<unit>>
-        }
-        component test_unit <<unit>>
-    }
+package l2_fixture_design <<SEooC>> {
+    component l2_fixture_component <<component>>
 }
 
 @enduml

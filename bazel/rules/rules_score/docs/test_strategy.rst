@@ -62,8 +62,45 @@ are run from their own directory and have their own CI jobs. L1 runs in the root
 CI step ``//bazel/rules/rules_score/... -//bazel/rules/rules_score/examples/...``;
 the L0 tools run there (``src/``) and in the ``//plantuml/...`` step (parsers).
 The legacy ``test/BUILD`` stays in place; its tests move into the level
-directories rule by rule. ``rst_to_trlc`` is the template for new L2 and L3
-tests, the L1 tests below for new L1 tests.
+directories rule by rule. ``analysis/dependable_element`` is the template for
+new L2 tests, ``analysis/rst_to_trlc`` and ``artifacts/rst_to_trlc`` show the
+single-action case, the L1 tests below are the template for new L1 tests.
+
+L2 conventions
+--------------
+
+* One ``<rule>_test.bzl`` per rule in ``test/analysis/<rule>/``, exposing a
+  ``<rule>_test_suite(name)`` macro that is instantiated in that directory's
+  ``BUILD`` (``rules_testing`` ``analysis_test`` + ``test_suite``). Each test is
+  a ``_<case>_test(name)`` function creating its fixtures and an
+  ``_<case>_impl(env, target)`` function with the assertions.
+* Shared helpers live in ``test/lib/``: ``analysis.bzl`` (``find_action``,
+  ``argv_of``, ``flag_value``, ``file_write_json``, ``output_path``,
+  ``expect_maturity_flags``, ``expect_failure_message``) and ``fixtures.bzl``
+  (minimal ``manual`` fixtures such as ``fixture_dependable_element``, built
+  with ``util.helper_target``). Derive fixture labels from the subject's label,
+  not from literal names.
+* The subject is the target that owns the actions, for example
+  ``<name>_index`` of a ``dependable_element``. Pick actions by mnemonic and
+  output name, not by position, and assert flags by presence or absence
+  (``flag_value`` for flag/value pairs).
+* Positive cases check providers, action arguments and ``FileWrite`` content.
+  Negative cases use ``expect_failure = True`` for ``fail()`` paths reachable at
+  analysis time; a ``development`` fixture asserts that the same input does not
+  fail (the warning itself is not observable). Execution-time failures
+  (validation CLI, lobster, coverage lock check) are not observable here; they
+  belong to L0 and L4.
+* Fixtures may violate release gates if the tested contract is analysis-only.
+  This is allowed because they are ``manual`` helper targets that are never
+  built.
+* ``--analysis_testing_deps_limit`` only applies to tests that use a
+  configuration transition (``config_settings``) and counts the direct edges of
+  the test rule (4 for a ``dependable_element`` subject), so the default limit
+  is no obstacle.
+* Migrating a legacy skylib ``analysistest`` from ``test/``: port the assertions
+  into the matching ``analysis/<rule>/`` suite, check the old targets with
+  ``bazel query 'rdeps(//..., <old target>)'``, then delete the old rule, its
+  ``BUILD`` targets, suite entries and fixtures in the same change.
 
 L1 conventions
 --------------
@@ -120,8 +157,8 @@ Level responsibilities
      - Providers, actions
    * - L2
      - Providers, actions, ``FileWrite`` content, analysis errors
-     - Action arguments (maturity flags), ``validation_inputs.json`` content,
-       ``expect_failure`` messages
+     - Action arguments (maturity flags), ``validation_inputs.json`` and
+       ``architecture.json`` content, ``expect_failure`` messages
      - Anything an action produces at execution time
    * - L3
      - Real action outputs of one in-process build
@@ -142,11 +179,11 @@ Golden policy
 -------------
 
 Diff tests are used only at L3 and only for structured, execution-time contract
-outputs (for example ``architecture.json`` and ``*_architecture.lobster``). They
-are not used for pass/fail logs, HTML, or content already readable at L2
-(``validation_inputs.json``). Goldens are declared with ``write_source_files``
-(``aspect_bazel_lib``): ``bazel run`` of the ``<name>`` target refreshes the
-golden, ``<name>_test`` diffs it.
+outputs (for example ``*_architecture.lobster``). They are not used for
+pass/fail logs, HTML, or content already readable at L2
+(``validation_inputs.json``, ``architecture.json``). Goldens are declared with
+``write_source_files`` (``aspect_bazel_lib``): ``bazel run`` of the ``<name>``
+target refreshes the golden, ``<name>_test`` diffs it.
 
 Fixture policy
 --------------
