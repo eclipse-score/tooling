@@ -18,18 +18,17 @@ set -euo pipefail
 # -- see plan_view_layout()'s docstring in puml_utils.bzl.
 #
 # $1 selects which scenario to check: "compose", "override", or "diagram_free".
-# Remaining args are the `$(rootpaths :authored_layout_example_lib_index)`
-# runfiles paths.
-
-source "${TEST_SRCDIR}/${TEST_WORKSPACE}/lib/find_runfile.sh"
+# Remaining args are the staged files of that scenario:
+#   compose, diagram_free: <index.rst> <include file>
+#   override: <overview.rst>
 
 mode="$1"
 shift
 
 case "${mode}" in
     compose)
-        index_file=$(find_runfile "arch_design_authored_index_compose_repro/static/fixtures/authored/index.rst" "$@")
-        inc_file=$(find_runfile "arch_design_authored_index_compose_repro/static/fixtures/authored/index.rst.inc" "$@")
+        index_file="$1"
+        inc_file="$2"
 
         # The generated index.rst must include the authored body instead of
         # emitting its own title/marker.
@@ -54,7 +53,7 @@ case "${mode}" in
         fi
         ;;
     override)
-        overview_file=$(find_runfile "arch_design_authored_rst_override_repro/static/fixtures/authored_override/overview.rst" "$@")
+        overview_file="$1"
 
         # The staged overview.rst must be the authored file verbatim...
         if ! grep -Fq 'Hand-authored prose for the overview diagram' "${overview_file}"; then
@@ -71,8 +70,8 @@ case "${mode}" in
         fi
         ;;
     diagram_free)
-        index_file=$(find_runfile "arch_design_diagram_free_repro/static/fixtures/diagram_free/index.rst" "$@")
-        inc_file=$(find_runfile "arch_design_diagram_free_repro/static/fixtures/diagram_free/index.md.inc" "$@")
+        index_file="$1"
+        inc_file="$2"
 
         # The generated index.rst must include the authored markdown body.
         if ! grep -Fq '.. include:: index.md.inc' "${index_file}"; then

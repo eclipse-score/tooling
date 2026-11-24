@@ -14,5 +14,5 @@
 package(default_visibility = ["//visibility:public"])
 
 exports_files(
-    ["find_runfile.sh"] + glob(["fixtures/*"]),
+    glob(["fixtures/*"]),
 )

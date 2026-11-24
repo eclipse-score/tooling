@@ -13,18 +13,13 @@
 # *******************************************************************************
 set -euo pipefail
 
-# Usage: check_validation_passes.sh <log suffix> <runfile rootpath>...
+# Usage: check_validation_passes.sh <validation log>
 #
 # The dependable element's architecture validation log must report PASS. Under
 # maturity = "development" a failure is only a warning, so the build alone does
 # not prove the architecture matches the diagram.
 
-source "${TEST_SRCDIR}/${TEST_WORKSPACE}/lib/find_runfile.sh"
-
-log_suffix="$1"
-shift
-
-log_file=$(find_runfile "${log_suffix}" "$@")
+log_file="$1"
 
 if [[ "$(cat "${log_file}")" != "PASS" ]]; then
     echo "Error: validation did not pass:" >&2

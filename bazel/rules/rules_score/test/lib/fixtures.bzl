@@ -10,7 +10,7 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
-"""Minimal rules_score fixtures for L2 analysis tests.
+"""Minimal rules_score fixtures for L2 analysis tests (the shared `fixtures/` files also serve L3).
 
 All fixtures are `manual` helper targets created with `util.helper_target`, so
 they are only analysed through the test that uses them. They deliberately are

@@ -38,6 +38,7 @@ load(
 load("@score_tooling//bazel/rules/rules_score:sphinx_toolchain.bzl", "score_sphinx_toolchain")
 load("@score_tooling//cpp/libclang:libclang_toolchain.bzl", "libclang_toolchain")
 load("@trlc//:trlc.bzl", "trlc_requirements", "trlc_requirements_test", "trlc_specification")
+load("//lib:artifacts.bzl", "output_file")
 load(
     ":dependable_element_aou_test.bzl",
     "aou_derived_test",
@@ -1414,17 +1415,18 @@ sh_test(
     data = [":same_name_units_lib_doc"],
 )
 
+output_file(
+    name = "same_name_units_validation_log",
+    src = ":same_name_units_lib_index",
+    output_group = "debug",
+    suffix = "dependable_element.same_name_units_lib_index.log",
+)
+
 sh_test(
     name = "same_name_units_validation_test",
     srcs = ["check_validation_passes.sh"],
-    args = [
-        "dependable_element.same_name_units_lib_index.log",
-        "$(rootpaths :same_name_units_lib_index)",
-    ],
-    data = [
-        ":same_name_units_lib_index",
-        "//lib:find_runfile.sh",
-    ],
+    args = ["$(rootpath :same_name_units_validation_log)"],
+    data = [":same_name_units_validation_log"],
 )
 
 # Same for two components named "dup_comp" (each wrapping its own "dup_unit").
@@ -1473,17 +1475,18 @@ sh_test(
     data = [":same_name_components_lib_doc"],
 )
 
+output_file(
+    name = "same_name_components_validation_log",
+    src = ":same_name_components_lib_index",
+    output_group = "debug",
+    suffix = "dependable_element.same_name_components_lib_index.log",
+)
+
 sh_test(
     name = "same_name_components_validation_test",
     srcs = ["check_validation_passes.sh"],
-    args = [
-        "dependable_element.same_name_components_lib_index.log",
-        "$(rootpaths :same_name_components_lib_index)",
-    ],
-    data = [
-        ":same_name_components_lib_index",
-        "//lib:find_runfile.sh",
-    ],
+    args = ["$(rootpath :same_name_components_validation_log)"],
+    data = [":same_name_components_validation_log"],
 )
 
 sh_test(
@@ -2174,48 +2177,77 @@ sh_test(
 # docstring in puml_utils.bzl. Real HTML rendering isn't exercised here since
 # the `plantuml` renderer binary isn't runnable in this sandbox (see
 # check_clickable_example_link.sh above for the same caveat).
+output_file(
+    name = "authored_layout_compose_index",
+    src = ":authored_layout_example_lib_index",
+    suffix = "arch_design_authored_index_compose_repro/static/fixtures/authored/index.rst",
+)
+
+output_file(
+    name = "authored_layout_compose_inc",
+    src = ":authored_layout_example_lib_index",
+    suffix = "arch_design_authored_index_compose_repro/static/fixtures/authored/index.rst.inc",
+)
+
 sh_test(
     name = "authored_layout_compose_test",
     srcs = ["check_authored_layout_content.sh"],
     args = [
         "compose",
-        "$(rootpaths :authored_layout_example_lib_index)",
+        "$(rootpath :authored_layout_compose_index)",
+        "$(rootpath :authored_layout_compose_inc)",
     ],
     data = [
-        ":authored_layout_example_lib_index",
-        "//lib:find_runfile.sh",
+        ":authored_layout_compose_inc",
+        ":authored_layout_compose_index",
     ],
 )
 
 # Regression test: an authored overview.rst *overrides* (suppresses) the
 # generated ".. uml::" wrapper page for the same-named overview.puml, so the
 # staged page is the hand-authored prose verbatim, not the placeholder.
+output_file(
+    name = "authored_layout_override_overview",
+    src = ":authored_layout_example_lib_index",
+    suffix = "arch_design_authored_rst_override_repro/static/fixtures/authored_override/overview.rst",
+)
+
 sh_test(
     name = "authored_layout_override_test",
     srcs = ["check_authored_layout_content.sh"],
     args = [
         "override",
-        "$(rootpaths :authored_layout_example_lib_index)",
+        "$(rootpath :authored_layout_override_overview)",
     ],
-    data = [
-        ":authored_layout_example_lib_index",
-        "//lib:find_runfile.sh",
-    ],
+    data = [":authored_layout_override_overview"],
 )
 
 # Regression test: a diagram-free view (only a hand-authored index.md, no
 # .puml at all) must still stage a root index whose toctree is empty and
 # whose body is the authored markdown, not a crash or a bogus generated page.
+output_file(
+    name = "authored_layout_diagram_free_index",
+    src = ":authored_layout_example_lib_index",
+    suffix = "arch_design_diagram_free_repro/static/fixtures/diagram_free/index.rst",
+)
+
+output_file(
+    name = "authored_layout_diagram_free_inc",
+    src = ":authored_layout_example_lib_index",
+    suffix = "arch_design_diagram_free_repro/static/fixtures/diagram_free/index.md.inc",
+)
+
 sh_test(
     name = "authored_layout_diagram_free_test",
     srcs = ["check_authored_layout_content.sh"],
     args = [
         "diagram_free",
-        "$(rootpaths :authored_layout_example_lib_index)",
+        "$(rootpath :authored_layout_diagram_free_index)",
+        "$(rootpath :authored_layout_diagram_free_inc)",
     ],
     data = [
-        ":authored_layout_example_lib_index",
-        "//lib:find_runfile.sh",
+        ":authored_layout_diagram_free_inc",
+        ":authored_layout_diagram_free_index",
     ],
 )
 
@@ -2232,17 +2264,17 @@ seooc_artifacts_copied_test(
 # Regression test: generated submodule links must point to
 # <repo>/<package>/<dep>_doc/index.html, and that page must exist in the
 # merged HTML.
+output_file(
+    name = "seooc_test_lib_index_rst",
+    src = ":seooc_test_lib_index",
+    suffix = "seooc_test_lib_index/index.rst",
+)
+
 sh_test(
     name = "seooc_tests_dep_links_use_doc_dir",
     srcs = ["check_seooc_dep_links.sh"],
-    args = [
-        "seooc_test_lib_index/index.rst",
-        "$(rootpaths :seooc_test_lib_index)",
-    ],
-    data = [
-        ":seooc_test_lib_index",
-        "//lib:find_runfile.sh",
-    ],
+    args = ["$(rootpath :seooc_test_lib_index_rst)"],
+    data = [":seooc_test_lib_index_rst"],
 )
 
 sh_test(

@@ -64,7 +64,8 @@ the L0 tools run there (``src/``) and in the ``//plantuml/...`` step (parsers).
 The legacy ``test/BUILD`` stays in place; its tests move into the level
 directories rule by rule. ``analysis/dependable_element`` is the template for
 new L2 tests, ``analysis/rst_to_trlc`` and ``artifacts/rst_to_trlc`` show the
-single-action case, the L1 tests below are the template for new L1 tests.
+single-action case, ``artifacts/component`` is the template for new L3 tests,
+the L1 tests below are the template for new L1 tests.
 
 L2 conventions
 --------------
@@ -101,6 +102,28 @@ L2 conventions
   into the matching ``analysis/<rule>/`` suite, check the old targets with
   ``bazel query 'rdeps(//..., <old target>)'``, then delete the old rule, its
   ``BUILD`` targets, suite entries and fixtures in the same change.
+
+L3 conventions
+--------------
+
+* One package per rule in ``test/artifacts/<rule>/``. Its ``BUILD`` builds a
+  real chain (requirements → rule) and diffs the output against a checked-in
+  golden. ``component`` and ``dependable_element`` are test rules: tag them
+  ``manual`` so ``bazel test //...`` only runs the golden and log checks.
+* Helpers live in ``test/lib/artifacts.bzl``: ``golden_test`` (wraps
+  ``write_source_files``; its ``<name>`` target refreshes the golden, it is not
+  a test itself), ``output_file`` (exposes the one file whose path ends in
+  ``suffix`` from ``DefaultInfo`` or an output group) and
+  ``component_architecture_lobster`` (reads ``ComponentInfo.architecture``).
+  They are ``testonly``; no output group is added to the shipped rules for
+  tests.
+* Name goldens ``<output>.golden``. The suffix keeps formatters and the header
+  check off generated content.
+* ``bazel run //artifacts/<rule>:<name>`` refreshes a golden,
+  ``//artifacts/<rule>:<name>_test`` diffs it. Review the golden diff like code.
+* Execution-time logs (for example validation PASS/FAIL) are read with
+  ``output_file`` from the ``debug`` output group and checked by a small
+  ``sh_test``; they are not goldens.
 
 L1 conventions
 --------------
@@ -183,7 +206,8 @@ outputs (for example ``*_architecture.lobster``). They are not used for
 pass/fail logs, HTML, or content already readable at L2
 (``validation_inputs.json``, ``architecture.json``). Goldens are declared with
 ``write_source_files`` (``aspect_bazel_lib``): ``bazel run`` of the ``<name>``
-target refreshes the golden, ``<name>_test`` diffs it.
+target refreshes the golden, ``<name>_test`` diffs it. The ``.golden`` suffix
+keeps formatters and header checks off generated content.
 
 Fixture policy
 --------------

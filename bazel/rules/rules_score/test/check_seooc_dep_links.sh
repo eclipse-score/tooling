@@ -13,18 +13,9 @@
 # *******************************************************************************
 set -euo pipefail
 
-# $1 is the expected index.rst path (suffix match against runfiles paths),
-# e.g. "seooc_test_lib_index/index.rst" -- required because dependable_element
-# generates many index.rst files (one per architectural_design view/directory
-# plus its own top-level index), so a bare "*/index.rst" suffix match is
-# ambiguous.
+# $1 is the dependable element's top-level index.rst.
 
-source "${TEST_SRCDIR}/${TEST_WORKSPACE}/lib/find_runfile.sh"
-
-expected_suffix="$1"
-shift
-
-index_file=$(find_runfile "${expected_suffix}" "$@")
+index_file="$1"
 
 if ! grep -Fq '* `//:dep_seooc_lib <_main/dep_seooc_lib_doc/index.html>`_' "${index_file}"; then
     echo "Error: expected submodule link to _main/dep_seooc_lib_doc/index.html in ${index_file}" >&2

@@ -10,13 +10,13 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  ********************************************************************************/
-package L2Fixture
+package TestFixture
 
 import ScoreReq
 
-ScoreReq.AssumedSystemReq ASR_L2_001 {
-    description = "The system shall provide a minimal interface for analysis tests"
+ScoreReq.AssumedSystemReq ASR_FIXTURE_001 {
+    description = "The system shall provide a minimal interface for tests"
     safety = ScoreReq.Asil.B
     version = 1
-    rationale = "Fixture requirement for the L2 analysis tests"
+    rationale = "Fixture requirement for the rules_score tests"
 }

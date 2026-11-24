@@ -32,6 +32,7 @@ Architecture map: [docs/tooling_architecture.rst](docs/tooling_architecture.rst)
   provider to `providers.bzl` if data flows to other rules, and update the `README.md` section.
 - Tests: layered by level, see [docs/test_strategy.rst](docs/test_strategy.rst). Existing analysis
   tests are in `test/` (`*_test.bzl`, registered in `test/BUILD`); reuse the helpers in `test/lib`
+  (`analysis.bzl` for L2, `artifacts.bzl` for L3)
   and fixtures in `test/fixtures`. New tests go into the level directories (`test/analysis/`,
   `test/artifacts/`, `private/tests/`, `integration_test/`).
 - User-visible change: also update `docs/`, the matching example under `examples/`, and the
