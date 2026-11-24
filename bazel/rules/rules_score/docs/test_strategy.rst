@@ -77,6 +77,7 @@ L2 conventions
   ``_<case>_impl(env, target)`` function with the assertions.
 * Shared helpers live in ``test/lib/``: ``analysis.bzl`` (``find_action``,
   ``argv_of``, ``flag_value``, ``file_write_json``, ``output_path``,
+  ``template_substitutions``,
   ``expect_maturity_flags``, ``expect_failure_message``) and ``fixtures.bzl``
   (minimal ``manual`` fixtures such as ``fixture_dependable_element``, built
   with ``util.helper_target``). Derive fixture labels from the subject's label,

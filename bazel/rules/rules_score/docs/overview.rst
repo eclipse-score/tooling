@@ -188,6 +188,7 @@ lacks full up/down traceability.
       node [shape=box, style=filled, fontname="Helvetica", margin="0.3,0.1"];
       edge [arrowhead=open];
 
+      "Assumed System Requirements" [fillcolor="#2196F3", fontcolor="white"];
       "Feature Requirements" [fillcolor="#2196F3", fontcolor="white"];
       "Received AoUs" [fillcolor="#2196F3", fontcolor="white"];
       "Forwarded AoUs" [fillcolor="#2196F3", fontcolor="white"];
@@ -202,7 +203,9 @@ lacks full up/down traceability.
       "Root Causes" [fillcolor="#FF9800", fontcolor="white"];
       "Root Cause Assessments" [fillcolor="#2196F3", fontcolor="white"];
       "Forwarded AoUs" -> "Received AoUs";
+      "Feature Requirements" -> "Assumed System Requirements";
       "Component Requirements" -> "Feature Requirements";
+      "Component Requirements" -> "Assumed System Requirements" [style=dashed];
       "Component Requirements" -> "Received AoUs";
       "Manual Analysis" -> "Received AoUs";
       "Unit Test" -> "Component Requirements";
@@ -213,6 +216,14 @@ lacks full up/down traceability.
       "Root Cause Assessments" -> "Root Causes";
       "Root Cause Assessments" -> "Assumptions of Use";
    }
+
+Dashed: direct derivation, optional when Feature Requirements exist. An
+assumed system requirement must be covered by a feature or component requirement.
+Feature requirements pin the ``@version`` of the ASRs they derive from, so a
+version bump of an ASR flags its feature requirements. In ``maturity = "release"``
+uncovered ASRs fail the traceability test, in ``"development"`` they only warn.
+ASR documents are staged only for ``assumed_system_requirements`` targets listed
+in the ``requirements`` of the ``dependable_element``.
 
 Execution Overview (Current Behavior)
 -------------------------------------

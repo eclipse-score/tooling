@@ -95,6 +95,7 @@ FeatureRequirementsInfo = provider(
     doc = "Provider for feature requirements artifacts.",
     fields = {
         "srcs": "Depset of .lobster traceability files generated from TRLC requirement sources.",
+        "assumed_system_srcs": "Depset of .lobster files of the assumed_system_requirements targets in `deps`, so `derived_from` references resolve.",
         "name": "Name of the requirements target.",
     },
 )

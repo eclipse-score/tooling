@@ -119,6 +119,15 @@ def _requirements_impl(ctx):
     if ctx.attr.req_kind == "feature":
         req_provider = FeatureRequirementsInfo(
             srcs = depset([lobster_file]),
+            assumed_system_srcs = depset(transitive = [
+                dep[AssumedSystemRequirementsInfo].srcs
+                for dep in deps
+                if AssumedSystemRequirementsInfo in dep
+            ] + [
+                dep[FeatureRequirementsInfo].assumed_system_srcs
+                for dep in deps
+                if FeatureRequirementsInfo in dep
+            ]),
             name = ctx.label.name,
         )
     elif ctx.attr.req_kind == "component":
