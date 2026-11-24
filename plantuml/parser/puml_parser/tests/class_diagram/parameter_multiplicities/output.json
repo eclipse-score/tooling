@@ -44,7 +44,7 @@
                 "name": "Optional",
                 "template_parameters": null,
                 "params": [
-                  { "name": "x", "param_type": "Shared<T>", "direction": "in", "multiplicity": "0..1" },
+                  { "name": "x", "param_type": "Shared<T>", "direction": "in", "multiplicity": "0..1", "template_instantiation": { "name": "Shared", "arguments": ["T"], "outer_decorators": [] } },
                   { "name": "count", "param_type": "int" }
                 ],
                 "type": "void",
@@ -56,7 +56,7 @@
                 "name": "ZeroOrMore",
                 "template_parameters": null,
                 "params": [
-                  { "name": "x", "param_type": "Shared<T>", "direction": "in", "multiplicity": "0..*" },
+                  { "name": "x", "param_type": "Shared<T>", "direction": "in", "multiplicity": "0..*", "template_instantiation": { "name": "Shared", "arguments": ["T"], "outer_decorators": [] } },
                   { "name": "count", "param_type": "int" }
                 ],
                 "type": "void",
@@ -68,7 +68,7 @@
                 "name": "OneOrMore",
                 "template_parameters": null,
                 "params": [
-                  { "name": "x", "param_type": "Shared<T>", "direction": "in", "multiplicity": "1..*" },
+                  { "name": "x", "param_type": "Shared<T>", "direction": "in", "multiplicity": "1..*", "template_instantiation": { "name": "Shared", "arguments": ["T"], "outer_decorators": [] } },
                   { "name": "count", "param_type": "int" }
                 ],
                 "type": "void",
@@ -80,7 +80,7 @@
                 "name": "Star",
                 "template_parameters": null,
                 "params": [
-                  { "name": "x", "param_type": "Shared<T>", "direction": "in", "multiplicity": "*" },
+                  { "name": "x", "param_type": "Shared<T>", "direction": "in", "multiplicity": "*", "template_instantiation": { "name": "Shared", "arguments": ["T"], "outer_decorators": [] } },
                   { "name": "count", "param_type": "int" }
                 ],
                 "type": "void",
@@ -92,7 +92,7 @@
                 "name": "Range",
                 "template_parameters": null,
                 "params": [
-                  { "name": "x", "param_type": "Shared<T>", "direction": "in", "multiplicity": "2..5" },
+                  { "name": "x", "param_type": "Shared<T>", "direction": "in", "multiplicity": "2..5", "template_instantiation": { "name": "Shared", "arguments": ["T"], "outer_decorators": [] } },
                   { "name": "count", "param_type": "int" }
                 ],
                 "type": "void",
@@ -104,7 +104,7 @@
                 "name": "EqualBounds",
                 "template_parameters": null,
                 "params": [
-                  { "name": "x", "param_type": "Shared<T>", "direction": "in", "multiplicity": "0..0" },
+                  { "name": "x", "param_type": "Shared<T>", "direction": "in", "multiplicity": "0..0", "template_instantiation": { "name": "Shared", "arguments": ["T"], "outer_decorators": [] } },
                   { "name": "count", "param_type": "int" }
                 ],
                 "type": "void",
@@ -116,7 +116,7 @@
                 "name": "LeadingZeros",
                 "template_parameters": null,
                 "params": [
-                  { "name": "x", "param_type": "Shared<T>", "direction": "in", "multiplicity": "01..02" },
+                  { "name": "x", "param_type": "Shared<T>", "direction": "in", "multiplicity": "01..02", "template_instantiation": { "name": "Shared", "arguments": ["T"], "outer_decorators": [] } },
                   { "name": "count", "param_type": "int" }
                 ],
                 "type": "void",
@@ -128,7 +128,7 @@
                 "name": "Whitespace",
                 "template_parameters": null,
                 "params": [
-                  { "name": "x", "param_type": "Shared<T>", "direction": "in", "multiplicity": " 0 .. * " },
+                  { "name": "x", "param_type": "Shared<T>", "direction": "in", "multiplicity": " 0 .. * ", "template_instantiation": { "name": "Shared", "arguments": ["T"], "outer_decorators": [] } },
                   { "name": "count", "param_type": "int" }
                 ],
                 "type": "void",
@@ -140,7 +140,7 @@
                 "name": "MaxLowerBound",
                 "template_parameters": null,
                 "params": [
-                  { "name": "x", "param_type": "Shared<T>", "direction": "in", "multiplicity": "18446744073709551615..*" },
+                  { "name": "x", "param_type": "Shared<T>", "direction": "in", "multiplicity": "18446744073709551615..*", "template_instantiation": { "name": "Shared", "arguments": ["T"], "outer_decorators": [] } },
                   { "name": "count", "param_type": "int" }
                 ],
                 "type": "void",
@@ -152,10 +152,10 @@
                 "name": "DirectionsAndDefaults",
                 "template_parameters": null,
                 "params": [
-                  { "name": "output", "param_type": "Shared<T>", "direction": "out", "multiplicity": "0..1" },
-                  { "name": "state", "param_type": "Shared<T>", "direction": "inout", "multiplicity": "1..*" },
-                  { "name": "plain", "param_type": "Shared<T>", "multiplicity": "*" },
-                  { "name": "maximum", "param_type": "Shared<T>", "multiplicity": "0..18446744073709551615" }
+                  { "name": "output", "param_type": "Shared<T>", "direction": "out", "multiplicity": "0..1", "template_instantiation": { "name": "Shared", "arguments": ["T"], "outer_decorators": [] } },
+                  { "name": "state", "param_type": "Shared<T>", "direction": "inout", "multiplicity": "1..*", "template_instantiation": { "name": "Shared", "arguments": ["T"], "outer_decorators": [] } },
+                  { "name": "plain", "param_type": "Shared<T>", "multiplicity": "*", "template_instantiation": { "name": "Shared", "arguments": ["T"], "outer_decorators": [] } },
+                  { "name": "maximum", "param_type": "Shared<T>", "multiplicity": "0..18446744073709551615", "template_instantiation": { "name": "Shared", "arguments": ["T"], "outer_decorators": [] } }
                 ],
                 "type": "void",
                 "modifiers": [],

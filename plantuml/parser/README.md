@@ -34,6 +34,102 @@ Rust-based parser that produces an AST for the following PlantUML diagram types:
 
 Outputs are `.fbs.bin` FlatBuffers binaries (diagram AST).
 
+## Class template instantiation metadata
+
+### Metadata example
+
+Each C++ example is independent. Template declarations introduce parameters;
+uses supply arguments, which may themselves be template instantiations:
+
+```cpp
+template <typename T> class Inner {};
+template <typename Value, typename Policy> class Outer {};
+
+using Example = const Outer<Inner<int>*, const double&>*;
+```
+
+Here, `<int>` belongs to `Inner`; the outer `<...>` supplies two arguments to
+`Outer`: `Inner<int>*` and `const double&`.
+
+The parser retains the original type string and records:
+
+| Field | Example value | Meaning |
+|-------|---------------|---------|
+| `name` | `Outer` | Outermost template name. |
+| `arguments` | `Inner<int>*`, `const double&` | Complete explicit arguments; only boundary whitespace is trimmed. |
+| `outer_decorators` | `[const, *]` | Outer cv/pointer/reference layers, inner-to-outer; cv order is canonicalized per layer. |
+
+Type aliases, attributes and typed parameters use `template_instantiation`;
+method and free-function returns use `return_template_instantiation`.
+Extraction is syntactic, not C++ name lookup: a named argument is not proven to
+be a type.
+
+**Return qualifiers versus method qualifiers:**
+
+```cpp
+template <typename T> class Box {};
+
+class Service {
+public:
+  Box<int>* const call();
+};
+```
+
+PUML `call(): Box<int>* const` means a const pointer return;
+`call() const : Box<int>*` means a const method.
+
+### Unsupported metadata cases
+
+Each row is independent; declarations appear before their uses.
+
+| Case | C++ template definition | Use example | Limitation |
+|------|-------------------------|-------------|------------|
+| Non-type or mixed arguments | `template <typename T, int Size> class Mixed {};` | `Mixed<int, 3>` | `3` is a value. Clang omits non-type argument metadata; PUML rejects numeric, boolean, null and quoted literals. |
+| Function arguments | `template <typename T> class Box {};` | `Box<void (*)(int)>` | Clang rejects function-like nodes; PUML supports only limited function syntax. |
+| Array arguments | `template <typename T> class Box {};` | `Box<int[3]>` | Array nodes are unsupported metadata arguments. |
+| Member-pointer arguments | `struct C {};`<br>`template <typename T> class Box {};` | `Box<int C::*>` | PUML excludes member pointers, expressions, brace-wrapped types and internal pack expansions; some also fail parsing. |
+| Dependent types | `template <typename T> class Box {};` | `template <typename T> struct Holder { using DependentBox = Box<typename T::type>; };` | `T::type` depends on `T`. PUML rejects explicit `typename`/`template` and `auto`; Clang rejects `Unknown` and `Dependent` nodes. |
+
+**Fallback:** one unsupported nested node removes metadata for the whole
+instantiation; this does not imply invalid C++. If PUML parsing succeeds, the
+original type string remains available for complete-type comparison.
+
+### Matching limits
+
+#### Template name and empty arguments
+
+| C++ template definition | Use example | Matching behavior |
+|-------------------------|-------------|-------------------|
+| `template <typename T = int> class Box {};` | `Box` | No template metadata; not an argument-list wildcard. |
+| `template <typename T = int> class Box {};` | `Box<>` | Empty explicit list; matches only an empty list. The C++ default `int` is not expanded. |
+
+#### Nested argument omission
+
+```cpp
+struct DefaultPolicy {};
+template <typename Value, typename Extra = double> class Inner {};
+template <typename Value, typename Policy = DefaultPolicy> class Outer {};
+
+```
+
+Only the **outermost** list allows omission. With the definitions above:
+
+| Design type | Implementation type | Matching behavior |
+|-------------|---------------------|-------------------|
+| `Outer<Inner<int>>` | `Outer<Inner<int, double>, DefaultPolicy>` | No match: nested argument strings differ despite equivalent C++ defaults. |
+| `Outer<Inner<int, double>>` | `Outer<Inner<int, double>, DefaultPolicy>` | Prefix match: the nested argument is identical. |
+
+#### Conditions for prefix matching
+
+- The prefix must be nonempty; omitted tails need not come from defaults.
+- Both inputs need supported template and outer-decorator metadata; Clang must
+  confirm supported type arguments throughout the implementation's argument tree.
+- Outer decorators remain constrained. Missing metadata means complete-type
+  comparison, without prefix relaxation.
+
+See [Type Normalization](../../validation/core/docs/specifications/class_design_implementation.md#type-normalization)
+for comparison rules, including parameter top-level `const` handling.
+
 ## Usage
 
 ### Build:

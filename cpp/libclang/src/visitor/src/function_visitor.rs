@@ -24,7 +24,7 @@ use cpp_semantics::{
 use std::collections::HashSet;
 
 use crate::callable_declaration::{
-    parse_callable_parameters, parse_callable_return_type, parse_template_parameters,
+    parse_callable_parameters, parse_callable_return, parse_template_parameters,
 };
 use crate::clang_adapter::exception_specification::has_plain_noexcept;
 use crate::clang_adapter::scope::{
@@ -166,21 +166,23 @@ impl FunctionVisitor {
         let is_noexcept_method =
             has_noexcept_token && has_plain_noexcept(entity.get_exception_specification());
 
-        let return_type = if matches!(kind, FunctionKind::Constructor | FunctionKind::Destructor) {
-            None
-        } else {
-            parse_callable_return_type(entity)
-        };
+        let (return_type, return_template_instantiation) =
+            if matches!(kind, FunctionKind::Constructor | FunctionKind::Destructor) {
+                (None, None)
+            } else {
+                parse_callable_return(entity)
+            };
 
         let method = Method {
             name: id.name.clone(),
             conversion_target: if Self::is_conversion(entity) {
-                parse_callable_return_type(entity)
+                return_type.clone()
             } else {
                 None
             },
             return_type,
             return_multiplicity: None,
+            return_template_instantiation,
             visibility: parse_visibility(entity),
             parameters: parsed_parameters.parameters,
             template_parameters: parse_template_parameters(entity),
@@ -231,13 +233,15 @@ impl FunctionVisitor {
             return None;
         }
 
+        let (return_type, return_template_instantiation) = parse_callable_return(entity);
         Some(ExtractedFreeFunctionDeclaration {
             key,
             declaration: FreeFunctionDecl {
                 name: id.name.clone(),
                 enclosing_namespace_id: namespace_id(entity),
-                return_type: parse_callable_return_type(entity),
+                return_type,
                 return_multiplicity: None,
+                return_template_instantiation,
                 parameters: parsed_parameters.parameters,
                 template_parameters: parse_template_parameters(entity),
                 source_location: parse_source_location(entity),
@@ -320,7 +324,7 @@ impl FunctionVisitor {
             name: if Self::is_conversion(entity) {
                 // The semantic result spelling retains aliases and dependent parameter
                 // names, unlike get_name() on member-template conversion cursors.
-                format!("operator {}", parse_callable_return_type(entity)?)
+                format!("operator {}", parse_callable_return(entity).0?)
             } else {
                 entity.get_name()?
             },

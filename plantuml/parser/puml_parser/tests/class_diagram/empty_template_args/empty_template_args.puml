@@ -19,6 +19,11 @@ class "lola::SkeletonMethod" as lola_SkeletonMethod {
     +Wrap(std::vector<Foo<>> items, Bar<Baz<>, int>* ptr)
     +Stop() <<const>>
     +scope : safecpp::Scope<>
+    using Alias = Outer<Inner<int>*, const ns::Value*>
+    using Plain = ns::Value* const
+    +field : Box<ns::Value>* const
+    +Plain(unsigned long long int, ns::Value* const value, volatile ns::Value, item: const ns::Value volatile*): unsigned long int
+    +Templates(Box<unsigned long long int>, Box<ns::Value>* const value, volatile Box<ns::Value>, item: const Box<ns::Value> volatile*, bare: Box<N>, pack: Box<int>..., ...): const Box<unsigned long int>*
 }
 
 @enduml

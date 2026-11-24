@@ -307,6 +307,7 @@ pub(super) fn method(name: &str) -> Method {
         conversion_target: None,
         return_type: None,
         return_multiplicity: None,
+        return_template_instantiation: None,
         source_location: dummy_source_location(),
         visibility: Visibility::Public,
         parameters: Vec::new(),

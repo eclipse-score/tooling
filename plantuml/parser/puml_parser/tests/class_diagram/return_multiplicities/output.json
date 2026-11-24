@@ -25,6 +25,7 @@
                   { "name": "path", "param_type": "Path[1]", "direction": "in" }
                 ],
                 "type": "Shared<ISharedMemoryResource>",
+                "return_template_instantiation": { "name": "Shared", "arguments": ["ISharedMemoryResource"], "outer_decorators": [] },
                 "return_multiplicity": "0..1",
                 "modifiers": [],
                 "source_location": { "file": "", "line": 16 }
@@ -35,6 +36,7 @@
                 "template_parameters": null,
                 "params": [],
                 "type": "Shared<T>",
+                "return_template_instantiation": { "name": "Shared", "arguments": ["T"], "outer_decorators": [] },
                 "return_multiplicity": "0..*",
                 "modifiers": [],
                 "source_location": { "file": "", "line": 17 }
@@ -45,6 +47,7 @@
                 "template_parameters": null,
                 "params": [],
                 "type": "Shared<T>",
+                "return_template_instantiation": { "name": "Shared", "arguments": ["T"], "outer_decorators": [] },
                 "return_multiplicity": "1..*",
                 "modifiers": [],
                 "source_location": { "file": "", "line": 18 }
@@ -55,6 +58,7 @@
                 "template_parameters": null,
                 "params": [],
                 "type": "Shared<T>",
+                "return_template_instantiation": { "name": "Shared", "arguments": ["T"], "outer_decorators": [] },
                 "return_multiplicity": "*",
                 "modifiers": [],
                 "source_location": { "file": "", "line": 19 }
@@ -65,6 +69,7 @@
                 "template_parameters": null,
                 "params": [],
                 "type": "Shared<T>",
+                "return_template_instantiation": { "name": "Shared", "arguments": ["T"], "outer_decorators": [] },
                 "return_multiplicity": " 01 .. 02 ",
                 "modifiers": [],
                 "source_location": { "file": "", "line": 20 }
@@ -128,6 +133,7 @@
                 "template_parameters": null,
                 "params": [],
                 "type": "Shared<T>",
+                "return_template_instantiation": { "name": "Shared", "arguments": ["T"], "outer_decorators": [] },
                 "return_multiplicity": "0..1",
                 "modifiers": [],
                 "source_location": { "file": "", "line": 27 }
@@ -158,6 +164,7 @@
                 "template_parameters": null,
                 "params": [],
                 "type": "Shared<T>",
+                "return_template_instantiation": { "name": "Shared", "arguments": ["T"], "outer_decorators": [] },
                 "return_multiplicity": "*",
                 "modifiers": [],
                 "source_location": { "file": "", "line": 31 }

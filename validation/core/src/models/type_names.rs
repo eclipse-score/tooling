@@ -14,7 +14,9 @@
 //! Normalization of C++ type spellings and method identities, shared by the
 //! class declaration merge and the design-vs-implementation validator.
 
-use class_diagram::{FunctionArgument, Method, MethodModifier, TemplateParameter};
+use class_diagram::{
+    FunctionArgument, Method, MethodModifier, TemplateInstantiation, TemplateParameter,
+};
 use source_location::SourceLocation;
 
 pub(crate) fn method_key(method: &Method) -> String {
@@ -74,6 +76,7 @@ pub(crate) fn normalized_method(method: &Method) -> Method {
     }
     normalize_callable_types(
         &mut normalized.return_type,
+        &mut normalized.return_template_instantiation,
         &mut normalized.parameters,
         &mut normalized.template_parameters,
     );
@@ -82,15 +85,30 @@ pub(crate) fn normalized_method(method: &Method) -> Method {
 
 pub(crate) fn normalize_callable_types(
     return_type: &mut Option<String>,
+    return_metadata: &mut Option<TemplateInstantiation>,
     parameters: &mut [FunctionArgument],
     template_parameters: &mut Option<Vec<TemplateParameter>>,
 ) {
     *return_type = return_type.as_deref().map(render_type_name);
+    normalize_template_metadata(return_metadata);
     for parameter in parameters {
         parameter.param_type = parameter.param_type.as_deref().map(render_type_name);
+        normalize_template_metadata(&mut parameter.template_instantiation);
     }
     if let Some(parameters) = template_parameters {
         normalize_template_declarations(parameters);
+    }
+}
+
+fn normalize_template_metadata(metadata: &mut Option<TemplateInstantiation>) {
+    if let Some(metadata) = metadata {
+        metadata.name = render_type_name(&metadata.name);
+        for argument in &mut metadata.arguments {
+            *argument = render_type_name(argument);
+        }
+        if let Some(decorators) = &mut metadata.outer_decorators {
+            class_diagram::TypeDecorator::canonicalize(decorators);
+        }
     }
 }
 
