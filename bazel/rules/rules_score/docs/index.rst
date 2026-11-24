@@ -60,6 +60,7 @@ Rules SCORE for Bazel
 
    integration_guide
    tooling_architecture
+   test_strategy
    tool_reference/index
 
 .. toctree::

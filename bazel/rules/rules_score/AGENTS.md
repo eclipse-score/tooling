@@ -29,8 +29,10 @@ Architecture map: [docs/tooling_architecture.rst](docs/tooling_architecture.rst)
 
 - New or changed rule/attr: implement in `private/`, re-export in `rules_score.bzl`, add the
   provider to `providers.bzl` if data flows to other rules, and update the `README.md` section.
-- Tests: add to `test/` (analysis tests in `*_test.bzl`, registered in `test/BUILD`).
-  Reuse the helpers in `test/lib` and fixtures in `test/fixtures`.
+- Tests: layered by level, see [docs/test_strategy.rst](docs/test_strategy.rst). Existing analysis
+  tests are in `test/` (`*_test.bzl`, registered in `test/BUILD`); reuse the helpers in `test/lib`
+  and fixtures in `test/fixtures`. New tests go into the level directories (`test/analysis/`,
+  `test/artifacts/`, `private/tests/`, `integration_test/`).
 - User-visible change: also update `docs/`, the matching example under `examples/`, and the
   `score-*` skill in `.github/skills`.
 - New or changed tool: update `docs/tooling_architecture.rst`, `trlc/config/tools.trlc` and the
@@ -43,6 +45,7 @@ Architecture map: [docs/tooling_architecture.rst](docs/tooling_architecture.rst)
 
 ```bash
 cd bazel/rules/rules_score/test && bazel test //...
+cd bazel/rules/rules_score/integration_test && bazel test //...
 cd bazel/rules/rules_score/examples/<name> && bazel build //... && bazel test //...
 bazel test -- //bazel/rules/rules_score/... -//bazel/rules/rules_score/examples/...   # from repo root
 ```
