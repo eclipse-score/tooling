@@ -164,7 +164,6 @@ Bazel
 
     unit(
         name           = "unit_1",
-        scope          = ["//unit_1:unit_1_lib"],
         implementation = [":unit_1_lib"],
         unit_design    = ["//unit_1/docs:unit_design"],
         tests          = [":unit_1_test"],

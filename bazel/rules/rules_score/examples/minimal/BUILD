@@ -84,7 +84,7 @@ unit_design(
 
 unit(
     name = "MyUnit",
-    scope = [":my_unit_hdr"],
+    scope_targets = [":my_unit_hdr"],
     tests = [":my_unit_test"],
     unit_design = [":MyUnit_design"],
     implementation = [":my_unit_lib"],

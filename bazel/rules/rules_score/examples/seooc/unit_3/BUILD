@@ -17,7 +17,7 @@ load(
 
 unit(
     name = "unit_3",
-    scope = ["//unit_3:__subpackages__"],
+    scope_packages = ["//unit_3/..."],
     tests = [
         ":unit_3_test",
     ],

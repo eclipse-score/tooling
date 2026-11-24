@@ -19,9 +19,6 @@ load("@score_tooling//manual_analysis:context_from_cc_library.bzl", "manual_anal
 
 unit(
     name = "unit_1",
-    #    scope = ["//bazel/rules/rules_score/examples/seooc/unit_1:__pkg__"],
-    #    scope = ["//bazel/rules/rules_score/examples/seooc:__subpackages__"],
-    scope = ["//unit_1:unit_1_lib"],
     test_specs = [
         ":get_number_spec",
     ],

@@ -18,6 +18,7 @@ load(
     "build_scope_index",
     "collect_scope_violations",
     "find_scope_violation",
+    "package_scope_label",
 )
 
 def certified_scope_matching_test_suite(name):
@@ -233,3 +234,25 @@ def certified_scope_index_test_suite(name):
         combined_index,
         build_scope_index(declarations + declarations),
     )
+
+def certified_scope_selector_test_suite(name):
+    """Defines loading-phase tests for package selector translation."""
+    env = loadingtest.make(name)
+    expected = {
+        "//": "//:__pkg__",
+        "//...": "//:__subpackages__",
+        "//pkg": "//pkg:__pkg__",
+        "//pkg/...": "//pkg:__subpackages__",
+        "//a/b/...": "//a/b:__subpackages__",
+        "@repo//": "@repo//:__pkg__",
+        "@repo//...": "@repo//:__subpackages__",
+        "@repo//pkg": "@repo//pkg:__pkg__",
+        "@repo//pkg/...": "@repo//pkg:__subpackages__",
+    }
+    for selector, label in expected.items():
+        loadingtest.equals(
+            env,
+            "selector_{}".format(selector.replace("/", "_").replace("@", "at_").replace(".", "dot")),
+            label,
+            package_scope_label(selector),
+        )

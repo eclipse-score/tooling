@@ -68,7 +68,6 @@ BUILD
    unit(
        name = "MyUnit",
        implementation = [":my_unit_lib"],
-       scope = ["//:my_unit_lib"],
        unit_design = [":MyUnit_design"],
        tests = [":my_unit_test"],
    )

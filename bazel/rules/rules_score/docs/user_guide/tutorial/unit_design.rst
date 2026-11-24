@@ -69,15 +69,15 @@ from the ``unit``:
    unit(
        name           = "MyUnit",
        implementation = [":my_unit_lib"],
-       scope          = ["//:my_unit_lib"],
        unit_design    = [":MyUnit_design"],
        tests          = [],
    )
 
 The ``unit_design.static`` attribute accepts PlantUML files (class, state,
 object diagrams); use ``dynamic`` for sequence and activity diagrams.
-``scope`` declares which targets the unit "owns" — targets outside the scope
-that appear in the transitive implementation closure fail the scope check at
+A unit certifies its ``implementation`` targets; targets outside them that
+appear in the transitive implementation closure must be declared via
+``scope_targets`` / ``scope_packages``, otherwise the scope check fails at
 build time.
 
 → Full guide: :doc:`../unit_design`

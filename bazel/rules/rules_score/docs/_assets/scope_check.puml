@@ -19,7 +19,7 @@ skinparam packageStyle rectangle
 hide stereotype
 
 package "dependable_element" as de {
-    rectangle "unit MyUnit\nscope = [\"//third_party/foo:__subpackages__\"]" as MyUnit
+    rectangle "unit MyUnit\nscope_packages = [\"//third_party/foo/...\"]" as MyUnit
 
     rectangle "//pkg:my_unit_lib\n(implementation)" as impl #LightBlue
     rectangle "//third_party/foo/bar:baz\n(transitive dep)" as instscope #LightGreen
