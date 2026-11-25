@@ -1,0 +1,27 @@
+{
+  "data": [
+    {
+      "tag": "arch //artifacts/component:comp",
+      "location": {
+        "kind": "file",
+        "file": "artifacts/component/BUILD",
+        "line": 1,
+        "column": null
+      },
+      "name": "//artifacts/component:comp",
+      "messages": [],
+      "just_up": [],
+      "just_down": [],
+      "just_global": [],
+      "refs": [
+        "req L3Component.REQ_L3_001@1",
+        "req L3Component.REQ_L3_002@1"
+      ],
+      "language": "Bazel",
+      "kind": "Architecture"
+    }
+  ],
+  "generator": "score_arch_to_lobster",
+  "schema": "lobster-imp-trace",
+  "version": 3
+}

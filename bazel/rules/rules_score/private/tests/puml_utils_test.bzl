@@ -23,7 +23,7 @@ target_under_test / analysis phase is needed.
 
 load("@bazel_skylib//lib:unittest.bzl", "loadingtest")
 load(
-    "@score_tooling//bazel/rules/rules_score/private:puml_utils.bzl",
+    "//bazel/rules/rules_score/private:puml_utils.bzl",
     "plan_view_layout",
 )
 
@@ -37,7 +37,7 @@ def _fake_file(short_path, owner_repo = None):
     owner = struct(workspace_name = owner_repo) if owner_repo != None else None
     return struct(short_path = short_path, extension = extension, path = short_path, owner = owner)
 
-def puml_layout_test_suite(name):
+def puml_utils_test_suite(name):
     """Defines the loading-phase test suite for plan_view_layout().
 
     Args:
@@ -237,6 +237,19 @@ def puml_layout_test_suite(name):
         "plan_index_collides_with_literal_inc",
         ["two files would both stage as 'static/index.rst.inc': 'static/index.rst' and 'static/index.rst.inc'"],
         inc_plan.errors,
+    )
+
+    # --- authored .rst and .md for the same stem are rejected -------------------
+
+    both_rst = _fake_file("static/overview.rst")
+    both_md = _fake_file("static/overview.md")
+    both_plan = plan_view_layout([both_rst, both_md], "")
+
+    loadingtest.equals(
+        env,
+        "same_stem_rst_and_md_rejected",
+        ["both 'overview.rst' and 'overview.md' exist for 'overview' in directory 'static'; keep only one"],
+        both_plan.errors,
     )
 
     # --- a diagram literally named "index" is rejected --------------------------

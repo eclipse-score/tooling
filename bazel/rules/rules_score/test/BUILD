@@ -38,22 +38,13 @@ load(
 load("@score_tooling//bazel/rules/rules_score:sphinx_toolchain.bzl", "score_sphinx_toolchain")
 load("@score_tooling//cpp/libclang:libclang_toolchain.bzl", "libclang_toolchain")
 load("@trlc//:trlc.bzl", "trlc_requirements", "trlc_requirements_test", "trlc_specification")
-load(
-    ":certified_scope_test.bzl",
-    "certified_scope_index_test_suite",
-    "certified_scope_matching_test_suite",
-)
+load("//lib:artifacts.bzl", "output_file")
 load(
     ":dependable_element_aou_test.bzl",
     "aou_derived_test",
     "aou_merged_test",
     "aou_none_test",
     "assessment_config_test",
-)
-load(
-    ":dependable_element_architecture_test.bzl",
-    "architecture_collection_test_suite",
-    "architecture_json_test",
 )
 load(
     ":dependable_element_staged_files_test.bzl",
@@ -87,16 +78,8 @@ load(
 )
 load(":lobster_ci_report_test.bzl", "lobster_ci_report_test")
 load(
-    ":lobster_config_test.bzl",
-    "lobster_config_test_suite",
-)
-load(
     ":puml_includes_test.bzl",
     "includes_fails_test",
-)
-load(
-    ":puml_layout_test.bzl",
-    "puml_layout_test_suite",
 )
 load(
     ":puml_stem_collision_test.bzl",
@@ -175,7 +158,6 @@ load(
     "test_specification_test_suite",
     "unit_test_specs_test",
 )
-load(":tooling_provenance_test.bzl", "tooling_provenance_test_suite")
 load(
     ":unit_component_test.bzl",
     "component_direct_asr_test",
@@ -185,7 +167,6 @@ load(
     "component_requirements_transitive_test",
     "component_sphinx_sources_test",
     "component_test_case_coverage_lock_test",
-    "dependable_element_test_case_coverage_lock_check_action_test",
     "unit_certified_scope_test",
     "unit_component_test_suite",
     "unit_provider_test",
@@ -193,16 +174,6 @@ load(
 )
 
 package(default_visibility = ["//visibility:public"])
-
-tooling_provenance_test_suite(name = "tooling_provenance")
-
-architecture_collection_test_suite(name = "architecture_collection_test_suite")
-
-architecture_json_test(
-    name = "architecture_public_label_test",
-    module_name = "test_dependable_element_nested",
-    target_under_test = ":test_dependable_element_nested_index",
-)
 
 # ============================================================================
 # Sphinx Toolchain — uses score_docs_as_code so score_metamodel is importable
@@ -380,11 +351,6 @@ architectural_design(
 architectural_design(
     name = "arch_design_elem",
     static = ["fixtures/test_dependable_element.puml"],
-)
-
-architectural_design(
-    name = "arch_design_nested",
-    static = ["fixtures/test_dependable_element_nested.puml"],
 )
 
 # Regression fixtures: a generated navigation page and an authored page
@@ -1449,17 +1415,18 @@ sh_test(
     data = [":same_name_units_lib_doc"],
 )
 
+output_file(
+    name = "same_name_units_validation_log",
+    src = ":same_name_units_lib_index",
+    output_group = "debug",
+    suffix = "dependable_element.same_name_units_lib_index.log",
+)
+
 sh_test(
     name = "same_name_units_validation_test",
     srcs = ["check_validation_passes.sh"],
-    args = [
-        "dependable_element.same_name_units_lib_index.log",
-        "$(rootpaths :same_name_units_lib_index)",
-    ],
-    data = [
-        "lib/find_runfile.sh",
-        ":same_name_units_lib_index",
-    ],
+    args = ["$(rootpath :same_name_units_validation_log)"],
+    data = [":same_name_units_validation_log"],
 )
 
 # Same for two components named "dup_comp" (each wrapping its own "dup_unit").
@@ -1508,17 +1475,18 @@ sh_test(
     data = [":same_name_components_lib_doc"],
 )
 
+output_file(
+    name = "same_name_components_validation_log",
+    src = ":same_name_components_lib_index",
+    output_group = "debug",
+    suffix = "dependable_element.same_name_components_lib_index.log",
+)
+
 sh_test(
     name = "same_name_components_validation_test",
     srcs = ["check_validation_passes.sh"],
-    args = [
-        "dependable_element.same_name_components_lib_index.log",
-        "$(rootpaths :same_name_components_lib_index)",
-    ],
-    data = [
-        "lib/find_runfile.sh",
-        ":same_name_components_lib_index",
-    ],
+    args = ["$(rootpath :same_name_components_validation_log)"],
+    data = [":same_name_components_validation_log"],
 )
 
 sh_test(
@@ -1924,9 +1892,8 @@ dependable_element(
     tests = [],  # Empty for testing
 )
 
-# Dependable elements wrapping a test_case_coverage_lock component — used to verify the
-# ComponentTestCaseCoverageLockCheck action wiring (mnemonic/inputs/argv) at both
-# maturity levels via test_case_coverage_lock_check_action_{release,development}_test.
+# Release dependable element wrapping a test_case_coverage_lock component, consumed by
+# the coverage, assessment and lobster-ci-report tests.
 dependable_element(
     name = "test_dependable_element_coverage_release",
     testonly = True,
@@ -1935,19 +1902,6 @@ dependable_element(
     dependability_analysis = [":dependability_analysis_target"],
     integrity_level = "B",
     maturity = "release",
-    requirements = [":feat_req"],
-    tags = ["manual"],
-    tests = [],  # Empty for testing
-)
-
-dependable_element(
-    name = "test_dependable_element_coverage_development",
-    testonly = True,
-    architectural_design = [":arch_design_elem"],
-    components = [":test_component_with_test_case_coverage_lock"],
-    dependability_analysis = [":dependability_analysis_target"],
-    integrity_level = "B",
-    maturity = "development",
     requirements = [":feat_req"],
     tags = ["manual"],
     tests = [],  # Empty for testing
@@ -2128,22 +2082,6 @@ component(
     tests = [],
 )
 
-# Dependable element with nested components to test recursive collection.
-# maturity = "development": like ``test_dependable_element`` it has no
-# test_case_coverage.lock.yaml, so the release gate would flag a missing
-# Test Case Coverage element.
-dependable_element(
-    name = "test_dependable_element_nested",
-    testonly = True,
-    architectural_design = [":arch_design_nested"],
-    components = [":test_parent_component"],
-    dependability_analysis = [":dependability_analysis_target"],
-    integrity_level = "B",
-    maturity = "development",
-    requirements = [":feat_req"],
-    tests = [],
-)
-
 # ============================================================================
 # Test Instantiations - HTML Generation Tests
 # ============================================================================
@@ -2239,48 +2177,77 @@ sh_test(
 # docstring in puml_utils.bzl. Real HTML rendering isn't exercised here since
 # the `plantuml` renderer binary isn't runnable in this sandbox (see
 # check_clickable_example_link.sh above for the same caveat).
+output_file(
+    name = "authored_layout_compose_index",
+    src = ":authored_layout_example_lib_index",
+    suffix = "arch_design_authored_index_compose_repro/static/fixtures/authored/index.rst",
+)
+
+output_file(
+    name = "authored_layout_compose_inc",
+    src = ":authored_layout_example_lib_index",
+    suffix = "arch_design_authored_index_compose_repro/static/fixtures/authored/index.rst.inc",
+)
+
 sh_test(
     name = "authored_layout_compose_test",
     srcs = ["check_authored_layout_content.sh"],
     args = [
         "compose",
-        "$(rootpaths :authored_layout_example_lib_index)",
+        "$(rootpath :authored_layout_compose_index)",
+        "$(rootpath :authored_layout_compose_inc)",
     ],
     data = [
-        "lib/find_runfile.sh",
-        ":authored_layout_example_lib_index",
+        ":authored_layout_compose_inc",
+        ":authored_layout_compose_index",
     ],
 )
 
 # Regression test: an authored overview.rst *overrides* (suppresses) the
 # generated ".. uml::" wrapper page for the same-named overview.puml, so the
 # staged page is the hand-authored prose verbatim, not the placeholder.
+output_file(
+    name = "authored_layout_override_overview",
+    src = ":authored_layout_example_lib_index",
+    suffix = "arch_design_authored_rst_override_repro/static/fixtures/authored_override/overview.rst",
+)
+
 sh_test(
     name = "authored_layout_override_test",
     srcs = ["check_authored_layout_content.sh"],
     args = [
         "override",
-        "$(rootpaths :authored_layout_example_lib_index)",
+        "$(rootpath :authored_layout_override_overview)",
     ],
-    data = [
-        "lib/find_runfile.sh",
-        ":authored_layout_example_lib_index",
-    ],
+    data = [":authored_layout_override_overview"],
 )
 
 # Regression test: a diagram-free view (only a hand-authored index.md, no
 # .puml at all) must still stage a root index whose toctree is empty and
 # whose body is the authored markdown, not a crash or a bogus generated page.
+output_file(
+    name = "authored_layout_diagram_free_index",
+    src = ":authored_layout_example_lib_index",
+    suffix = "arch_design_diagram_free_repro/static/fixtures/diagram_free/index.rst",
+)
+
+output_file(
+    name = "authored_layout_diagram_free_inc",
+    src = ":authored_layout_example_lib_index",
+    suffix = "arch_design_diagram_free_repro/static/fixtures/diagram_free/index.md.inc",
+)
+
 sh_test(
     name = "authored_layout_diagram_free_test",
     srcs = ["check_authored_layout_content.sh"],
     args = [
         "diagram_free",
-        "$(rootpaths :authored_layout_example_lib_index)",
+        "$(rootpath :authored_layout_diagram_free_index)",
+        "$(rootpath :authored_layout_diagram_free_inc)",
     ],
     data = [
-        "lib/find_runfile.sh",
-        ":authored_layout_example_lib_index",
+        ":authored_layout_diagram_free_inc",
+        ":authored_layout_diagram_free_index",
     ],
 )
 
@@ -2297,17 +2264,17 @@ seooc_artifacts_copied_test(
 # Regression test: generated submodule links must point to
 # <repo>/<package>/<dep>_doc/index.html, and that page must exist in the
 # merged HTML.
+output_file(
+    name = "seooc_test_lib_index_rst",
+    src = ":seooc_test_lib_index",
+    suffix = "seooc_test_lib_index/index.rst",
+)
+
 sh_test(
     name = "seooc_tests_dep_links_use_doc_dir",
     srcs = ["check_seooc_dep_links.sh"],
-    args = [
-        "seooc_test_lib_index/index.rst",
-        "$(rootpaths :seooc_test_lib_index)",
-    ],
-    data = [
-        "lib/find_runfile.sh",
-        ":seooc_test_lib_index",
-    ],
+    args = ["$(rootpath :seooc_test_lib_index_rst)"],
+    data = [":seooc_test_lib_index_rst"],
 )
 
 sh_test(
@@ -2708,23 +2675,6 @@ component_requirements_transitive_test(
     target_under_test = ":test_parent_component",
 )
 
-# Verifies the ComponentTestCaseCoverageLockCheck action is wired up end-to-end through
-# dependable_element (not just component() in isolation), and that
-# --allow-check-failures is only passed for maturity == "development".
-dependable_element_test_case_coverage_lock_check_action_test(
-    name = "test_case_coverage_lock_check_action_release_test",
-    expect_allow_check_failures = False,
-    maturity_under_test = "release",
-    target_under_test = ":test_dependable_element_coverage_release_index",
-)
-
-dependable_element_test_case_coverage_lock_check_action_test(
-    name = "test_case_coverage_lock_check_action_development_test",
-    expect_allow_check_failures = True,
-    maturity_under_test = "development",
-    target_under_test = ":test_dependable_element_coverage_development_index",
-)
-
 # A release element with an own AoU assessing a root cause: the assessments
 # level traces to Root Causes and Assumptions of Use.
 dependable_element(
@@ -3096,23 +3046,6 @@ assumed_system_requirements(
 requirements_multi_spec_test_suite(name = "requirements_multi_spec_tests")
 
 # ============================================================================
-# lobster_config.bzl unit tests (format_lobster_sources / format_lobster_block)
-# ============================================================================
-lobster_config_test_suite(name = "lobster_config")
-
-# ============================================================================
-# certified_scope.bzl unit tests
-# ============================================================================
-certified_scope_matching_test_suite(name = "certified_scope_matching")
-
-certified_scope_index_test_suite(name = "certified_scope_index")
-
-# ============================================================================
-# puml_utils.bzl unit tests (plan_view_layout)
-# ============================================================================
-puml_layout_test_suite(name = "puml_layout")
-
-# ============================================================================
 # Image srcs Tests (defined in sub-package to avoid workspace-root edge case)
 # ============================================================================
 # feat_req_with_image and image_srcs_sphinx_sources_test live in
@@ -3163,7 +3096,6 @@ test_suite(
         ":assessment_config_own_aou_test",
         ":comp_req_measure_builds",
         ":fta_default_package_test",
-        ":lobster_config_tests",
         ":measure_deps_are_context_only_test",
         ":measure_spec_is_merged_test",
         ":requirements_multi_spec_tests",

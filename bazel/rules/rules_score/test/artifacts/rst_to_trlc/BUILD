@@ -11,8 +11,8 @@
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
 
-load("@aspect_bazel_lib//lib:write_source_files.bzl", "write_source_files")
 load("@score_tooling//bazel/rules/rules_score:rules_score.bzl", "rst_to_trlc")
+load("//lib:artifacts.bzl", "golden_test")
 
 # L3: tests of real action outputs (golden diffs, assertions on generated artifacts).
 rst_to_trlc(
@@ -21,7 +21,8 @@ rst_to_trlc(
 )
 
 # Refresh with: bazel run //artifacts/rst_to_trlc:aou_golden
-write_source_files(
+golden_test(
     name = "aou_golden",
-    files = {"aou.trlc.golden": ":aou_trlc"},
+    src = ":aou_trlc",
+    golden = "aou.trlc.golden",
 )

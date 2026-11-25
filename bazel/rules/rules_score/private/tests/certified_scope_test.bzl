@@ -14,7 +14,7 @@
 
 load("@bazel_skylib//lib:unittest.bzl", "loadingtest")
 load(
-    "@score_tooling//bazel/rules/rules_score/private:certified_scope.bzl",
+    "//bazel/rules/rules_score/private:certified_scope.bzl",
     "build_scope_index",
     "collect_scope_violations",
     "find_scope_violation",
@@ -197,15 +197,21 @@ def certified_scope_index_test_suite(name):
         mixed_depth_scope_index,
     )
 
-    external_scope = Label("@score_tooling//bazel/rules/rules_score:__pkg__")
+    external_scope = Label("@bazel_skylib//lib:__pkg__")
     external_scope_index = build_scope_index([external_scope])
 
+    loadingtest.equals(
+        env,
+        "external_scope_fixture_is_not_main_repository",
+        True,
+        external_scope.workspace_name != "",
+    )
     loadingtest.equals(
         env,
         "external_scope_uses_repository_name_as_index_key",
         {
             external_scope.workspace_name: {
-                "bazel/rules/rules_score": {
+                "lib": {
                     "targets": {},
                     "covers_package": True,
                     "covers_subpackages": False,

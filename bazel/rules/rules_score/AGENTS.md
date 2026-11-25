@@ -20,7 +20,8 @@ Architecture map: [docs/tooling_architecture.rst](docs/tooling_architecture.rst)
 
 - `private/*.bzl`: rule implementations. `providers.bzl`: provider contracts between rules.
   `rules_score.bzl`: the only public entry point; every public rule or provider is re-exported there.
-- `src/`: Python helpers run by actions (tests live in `src/tests/<tool>_test.py`).
+- `src/`: Python helpers run by actions (tests live in `src/tests/<tool>_test.py`; the
+  `src/test_case_coverage/` package keeps its tests next to its sources).
   `templates/`: Sphinx/RST templates. `lobster/config/`: LOBSTER configs. `trlc/config/`: metamodel
   (`.rsl`) and tool qualification records (`tools.trlc`).
 - `README.md` (per-rule reference), `docs/` (user guide, architecture, tool qualification).
@@ -31,6 +32,7 @@ Architecture map: [docs/tooling_architecture.rst](docs/tooling_architecture.rst)
   provider to `providers.bzl` if data flows to other rules, and update the `README.md` section.
 - Tests: layered by level, see [docs/test_strategy.rst](docs/test_strategy.rst). Existing analysis
   tests are in `test/` (`*_test.bzl`, registered in `test/BUILD`); reuse the helpers in `test/lib`
+  (`analysis.bzl` for L2, `artifacts.bzl` for L3)
   and fixtures in `test/fixtures`. New tests go into the level directories (`test/analysis/`,
   `test/artifacts/`, `private/tests/`, `integration_test/`).
 - User-visible change: also update `docs/`, the matching example under `examples/`, and the

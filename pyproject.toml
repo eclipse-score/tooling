@@ -24,6 +24,9 @@ select = ["E", "F", "W", "I", "B", "N", "UP", "SIM", "PL", "D1", "ARG", "SLF", "
 # The test names state the checked behaviour; docstrings would only repeat them.
 "bazel/rules/rules_score/src/tests/*_test.py" = ["D101", "D102"]
 
-[tool.ty.analysis]
+[[tool.ty.overrides]]
 # The ty lint aspect only searches PyInfo.imports, which @lobster does not declare.
+include = ["bazel/rules/rules_score/src/**"]
+
+[tool.ty.overrides.analysis]
 allowed-unresolved-imports = ["lobster.**"]
