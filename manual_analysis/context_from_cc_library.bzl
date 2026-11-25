@@ -61,17 +61,15 @@ def _cc_library_direct_files(ctx):
             files.extend(getattr(ctx.rule.files, attr_name))
     return files
 
-def _normalize_attr_value(value):
-    if type(value) == type(""):
-        return value
-    if type(value) == type([]):
-        return _normalize_list_attr_value(value)
-    if type(value) == type(True) or type(value) == type(0) or value == None:
+def _normalize_scalar(value):
+    if type(value) == type("") or type(value) == type(True) or type(value) == type(0) or value == None:
         return value
     return str(value)
 
-def _normalize_list_attr_value(value):
-    return [_normalize_attr_value(item) for item in value]
+def _normalize_attr_value(value):
+    if type(value) == type([]):
+        return [_normalize_scalar(item) for item in value]
+    return _normalize_scalar(value)
 
 def _cc_library_direct_rules(target, ctx):
     """Build canonical attribute form for hashing in Python.
