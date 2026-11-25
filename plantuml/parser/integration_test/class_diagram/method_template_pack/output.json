@@ -16,13 +16,13 @@
             "parameters": [
               {
                 "name": "",
-                "param_type": "ValueType",
+                "param_type": { "raw_text": "ValueType" },
                 "is_variadic": false,
                 "is_pack_expansion": false
               },
               {
                 "name": "",
-                "param_type": "ArgumentTypes&&",
+                "param_type": { "raw_text": "ArgumentTypes&&" },
                 "is_variadic": false,
                 "is_pack_expansion": true
               }
@@ -71,13 +71,13 @@
             "parameters": [
               {
                 "name": "",
-                "param_type": "ValueType",
+                "param_type": { "raw_text": "ValueType" },
                 "is_variadic": false,
                 "is_pack_expansion": false
               },
               {
                 "name": "",
-                "param_type": "ArgumentTypes",
+                "param_type": { "raw_text": "ArgumentTypes" },
                 "is_variadic": false,
                 "is_pack_expansion": true
               }
@@ -126,13 +126,13 @@
             "parameters": [
               {
                 "name": "",
-                "param_type": "ValueType",
+                "param_type": { "raw_text": "ValueType" },
                 "is_variadic": false,
                 "is_pack_expansion": false
               },
               {
                 "name": "",
-                "param_type": "ArgumentTypes&&",
+                "param_type": { "raw_text": "ArgumentTypes&&" },
                 "is_variadic": false,
                 "is_pack_expansion": true
               }
@@ -181,13 +181,13 @@
             "parameters": [
               {
                 "name": "",
-                "param_type": "ValueType",
+                "param_type": { "raw_text": "ValueType" },
                 "is_variadic": false,
                 "is_pack_expansion": false
               },
               {
                 "name": "",
-                "param_type": "ArgumentTypes",
+                "param_type": { "raw_text": "ArgumentTypes" },
                 "is_variadic": false,
                 "is_pack_expansion": true
               }

@@ -13,7 +13,7 @@
 @startuml qualified_method_name
 
 class Logger {
-    + score::mw::LogFatal(): LogStream
+    + score::mw::LogFatal(dotted : score.mw.LogStream, scoped : score::mw::LogStream, global : .score.mw.LogStream, entries : ::std::array<LogStream, 8>): LogStream
     + LogError: ::score::mw::LogStream
 }
 

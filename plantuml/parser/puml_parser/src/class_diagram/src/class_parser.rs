@@ -13,13 +13,13 @@
 use crate::class_ast::{
     Arrow, Attribute, ClassLikeDef, ClassLikeKind, ClassUmlFile, ClassUmlTopLevel,
     DeclarationCommon, EntityDef, EnumDef, EnumItem, EnumValue, Method, Name, Namespace, Package,
-    Param, ParameterDirection, Relationship, TemplateParameter, TypeAlias, TypeDefinition,
-    Visibility,
+    Param, ParameterDirection, QualifiedTypeName, Relationship, TemplateParameter, TypeAlias,
+    TypeArgument, TypeDefinition, TypeDescription, TypeExpr, Visibility,
 };
 use crate::source_map::{
     normalize_multiline_member_signatures, remap_syntax_error_to_original_source, NormalizedContent,
 };
-use log::{debug, trace};
+use log::{debug, trace, warn};
 use parser_core::common_parser::{parse_arrow, PlantUmlCommonParser, Rule};
 use parser_core::{
     find_note_alias, format_parse_tree, pest_to_syntax_error, BaseParseError, DiagramParser,
@@ -146,6 +146,243 @@ struct ClassParseSession<'a> {
     ignored_objects: IgnoredObjectRegistry,
     ignored_notes: IgnoredNoteRegistry,
     relationships: Vec<Relationship>,
+}
+
+fn parse_type(pair: pest::iterators::Pair<Rule>) -> TypeDescription {
+    TypeDescription {
+        raw_text: pair.as_str().trim().to_string(),
+        expression: parse_type_expr(pair),
+    }
+}
+
+fn parse_type_expr(pair: pest::iterators::Pair<Rule>) -> Option<TypeExpr> {
+    match pair.as_rule() {
+        Rule::type_name => parse_type_expr(pair.into_inner().next()?),
+        Rule::type_expr => {
+            let raw_text = pair.as_str();
+            let mut expression = None;
+            let mut leading_const = false;
+            let mut leading_volatile = false;
+            for child in pair.into_inner() {
+                match child.as_rule() {
+                    Rule::const_qualifier => {
+                        if leading_const {
+                            warn!("Duplicate const qualifier in type expression {raw_text:?}; preserving raw text only");
+                            return None;
+                        }
+                        leading_const = true;
+                    }
+                    Rule::volatile_qualifier => {
+                        if leading_volatile {
+                            warn!("Duplicate volatile qualifier in type expression {raw_text:?}; preserving raw text only");
+                            return None;
+                        }
+                        leading_volatile = true;
+                    }
+                    Rule::builtin_type => {
+                        expression = Some(TypeExpr::Builtin(
+                            child
+                                .as_str()
+                                .split_whitespace()
+                                .collect::<Vec<_>>()
+                                .join(" "),
+                        ));
+                    }
+                    Rule::qualified_type => {
+                        // Preserve decltype(...) as raw text to avoid mistaking it for a function type;
+                        // add dedicated parsing later if needed.
+                        if child.as_str() == "decltype" {
+                            return None;
+                        }
+                        let normalized = child.as_str().replace("::", ".");
+                        let name = normalized.strip_prefix('.').unwrap_or(&normalized);
+                        if name.split('.').any(|segment| {
+                            segment
+                                .chars()
+                                .next()
+                                .is_some_and(|character| character.is_ascii_digit())
+                        }) {
+                            return None;
+                        }
+                        expression = Some(TypeExpr::NamedType(QualifiedTypeName {
+                            segments: name.split('.').map(str::to_string).collect(),
+                            is_global: normalized.starts_with('.'),
+                        }));
+                    }
+                    Rule::generic_type_args => {
+                        let TypeExpr::NamedType(name) = expression.take()? else {
+                            return None;
+                        };
+                        let arguments = parse_type_arguments(child)?;
+                        expression = Some(TypeExpr::Template { name, arguments });
+                    }
+                    Rule::type_suffix
+                    | Rule::function_type_suffix
+                    | Rule::function_pointer_suffix => {
+                        let mut inner = expression.take()?;
+                        if leading_const {
+                            inner = TypeExpr::Const(Box::new(inner));
+                        }
+                        if leading_volatile {
+                            inner = TypeExpr::Volatile(Box::new(inner));
+                        }
+                        leading_const = false;
+                        leading_volatile = false;
+                        expression = Some(match child.as_rule() {
+                            Rule::function_type_suffix => parse_function_type(inner, child, false)?,
+                            Rule::function_pointer_suffix => {
+                                parse_function_pointer(inner, child, raw_text)?
+                            }
+                            _ => parse_type_suffix(inner, child, raw_text)?,
+                        });
+                    }
+                    Rule::function_type_noexcept => {
+                        let TypeExpr::Function { is_noexcept, .. } = expression.as_mut()? else {
+                            return None;
+                        };
+                        *is_noexcept = true;
+                    }
+                    _ => return None,
+                }
+            }
+            let mut expression = expression?;
+            if leading_const {
+                expression = TypeExpr::Const(Box::new(expression));
+            }
+            if leading_volatile {
+                expression = TypeExpr::Volatile(Box::new(expression));
+            }
+            Some(expression)
+        }
+        _ => None,
+    }
+}
+
+fn parse_function_type(
+    return_type: TypeExpr,
+    parameters: pest::iterators::Pair<Rule>,
+    is_noexcept: bool,
+) -> Option<TypeExpr> {
+    let mut parameter_types = Vec::new();
+    let mut is_variadic = false;
+    for child in parameters.into_inner() {
+        match child.as_rule() {
+            Rule::type_expr_list => {
+                parameter_types = child
+                    .into_inner()
+                    .map(parse_type_expr)
+                    .collect::<Option<_>>()?;
+            }
+            Rule::varargs => is_variadic = true,
+            _ => return None,
+        }
+    }
+    if matches!(parameter_types.as_slice(), [TypeExpr::Builtin(name)] if name == "void") {
+        parameter_types.clear();
+    }
+    Some(TypeExpr::Function {
+        return_type: Box::new(return_type),
+        parameter_types,
+        is_variadic,
+        is_noexcept,
+    })
+}
+
+fn parse_function_pointer(
+    return_type: TypeExpr,
+    suffix: pest::iterators::Pair<Rule>,
+    raw_text: &str,
+) -> Option<TypeExpr> {
+    let mut children = suffix.into_inner();
+    let declarator = children.next()?;
+    let parameters = children.next()?;
+    let expression = parse_function_type(return_type, parameters, children.next().is_some())?;
+    parse_type_suffix(expression, declarator, raw_text)
+}
+
+// Parses template actual arguments: types recurse, while literal values retain their text.
+// An empty list is valid; any unsupported argument makes the whole list return None.
+fn parse_type_arguments(pair: pest::iterators::Pair<Rule>) -> Option<Vec<TypeArgument>> {
+    pair.into_inner()
+        .map(|argument| {
+            let value = argument.into_inner().next()?;
+            if value
+                .as_str()
+                .bytes()
+                .all(|character| character.is_ascii_digit())
+            {
+                return Some(TypeArgument::Value(value.as_str().to_string()));
+            }
+            match value.as_rule() {
+                Rule::template_value => {
+                    Some(TypeArgument::Value(value.as_str().trim().to_string()))
+                }
+                Rule::type_expr => parse_type_expr(value).map(TypeArgument::Type),
+                _ => None,
+            }
+        })
+        .collect()
+}
+
+fn append_array_dimension(expression: TypeExpr, size: Option<String>) -> TypeExpr {
+    match expression {
+        TypeExpr::Array {
+            element,
+            size: outer_size,
+        } => TypeExpr::Array {
+            element: Box::new(append_array_dimension(*element, size)),
+            size: outer_size,
+        },
+        element => TypeExpr::Array {
+            element: Box::new(element),
+            size,
+        },
+    }
+}
+
+// Wraps the existing type with pointer/reference qualifiers or an array suffix.
+// Later array dimensions are nested inside earlier ones: T[3][8] has outer size 3.
+fn parse_type_suffix(
+    mut expression: TypeExpr,
+    suffix: pest::iterators::Pair<Rule>,
+    raw_text: &str,
+) -> Option<TypeExpr> {
+    let mut pointer_const = false;
+    let mut pointer_volatile = false;
+    for child in suffix.into_inner() {
+        expression = match child.as_rule() {
+            Rule::array_suffix => {
+                let size = child
+                    .into_inner()
+                    .next()
+                    .map(|size| size.as_str().to_string());
+                append_array_dimension(expression, size)
+            }
+            Rule::pointer_suffix => TypeExpr::Pointer(Box::new(expression)),
+            Rule::reference_suffix if child.as_str() == "&&" => {
+                TypeExpr::RValueReference(Box::new(expression))
+            }
+            Rule::reference_suffix => TypeExpr::Reference(Box::new(expression)),
+            Rule::const_qualifier => {
+                if pointer_const {
+                    warn!("Duplicate const qualifier on pointer in type expression {raw_text:?}; preserving raw text only");
+                    return None;
+                }
+                pointer_const = true;
+                TypeExpr::Const(Box::new(expression))
+            }
+            Rule::volatile_qualifier => {
+                if pointer_volatile {
+                    warn!("Duplicate volatile qualifier on pointer in type expression {raw_text:?}; preserving raw text only");
+                    return None;
+                }
+                pointer_volatile = true;
+                TypeExpr::Volatile(Box::new(expression))
+            }
+            _ => return None,
+        };
+    }
+    Some(expression)
 }
 
 impl ClassParseSession<'_> {
@@ -292,7 +529,7 @@ impl ClassParseSession<'_> {
                         parts.internal = Some(strip_quotes(&raw));
                     }
                 }
-                Rule::STRING | Rule::class_name_path => {
+                Rule::STRING | Rule::qualified_type => {
                     if parts.internal.is_none() {
                         parts.internal = Some(strip_quotes(pair.as_str()));
                     }
@@ -343,7 +580,9 @@ impl ClassParseSession<'_> {
                     for inner in p.into_inner() {
                         match inner.as_rule() {
                             Rule::identifier => name = Some(inner.as_str().to_string()),
-                            Rule::type_name => typ = Some(inner.as_str().trim().to_string()),
+                            Rule::type_name => {
+                                typ = Some(parse_type(inner));
+                            }
                             Rule::static_modifier | Rule::constexpr_modifier => {
                                 attr.modifiers.push(inner.as_str().to_string())
                             }
@@ -354,7 +593,7 @@ impl ClassParseSession<'_> {
                 Rule::unnamed_attribute => {
                     for inner in p.into_inner() {
                         if inner.as_rule() == Rule::type_name {
-                            typ = Some(inner.as_str().trim().to_string());
+                            typ = Some(parse_type(inner));
                         }
                     }
                 }
@@ -381,7 +620,9 @@ impl ClassParseSession<'_> {
             for inner in p.into_inner() {
                 match inner.as_rule() {
                     Rule::identifier => alias = Some(inner.as_str().to_string()),
-                    Rule::type_name => original_type = Some(inner.as_str().trim().to_string()),
+                    Rule::type_name => {
+                        original_type = Some(parse_type(inner));
+                    }
                     _ => {}
                 }
             }
@@ -466,7 +707,7 @@ impl ClassParseSession<'_> {
         }
 
         let mut name: Option<String> = None;
-        let mut ty: Option<String> = None;
+        let mut ty: Option<TypeDescription> = None;
         let mut direction = None;
         let mut multiplicity = None;
         let is_pack_expansion = pair.as_rule() == Rule::typed_param_pack;
@@ -496,7 +737,7 @@ impl ClassParseSession<'_> {
                             name = Some(p.as_str().to_string());
                         }
                         Rule::type_name => {
-                            ty = Some(p.as_str().trim().to_string());
+                            ty = Some(parse_type(p));
                         }
                         Rule::param_multiplicity => {
                             let raw = p.as_str();
@@ -511,7 +752,7 @@ impl ClassParseSession<'_> {
                 for p in inner.into_inner() {
                     match p.as_rule() {
                         Rule::type_name => {
-                            ty = Some(p.as_str().trim().to_string());
+                            ty = Some(parse_type(p));
                         }
                         Rule::identifier => {
                             name = Some(p.as_str().to_string());
@@ -524,12 +765,16 @@ impl ClassParseSession<'_> {
             Rule::param_unnamed => {
                 for p in inner.into_inner() {
                     if p.as_rule() == Rule::type_name {
-                        let raw = p.as_str().trim().to_string();
+                        let parsed_type = parse_type(p);
 
-                        if is_likely_type_only_param(&raw) {
-                            ty = Some(raw);
+                        if matches!(
+                            &parsed_type.expression,
+                            Some(TypeExpr::Builtin(_) | TypeExpr::Const(_) | TypeExpr::Volatile(_))
+                        ) || is_likely_type_only_param(&parsed_type.raw_text)
+                        {
+                            ty = Some(parsed_type);
                         } else {
-                            name = Some(raw);
+                            name = Some(parsed_type.raw_text);
                         }
                     }
                 }
@@ -669,7 +914,7 @@ impl ClassParseSession<'_> {
                                     .push(return_type_inner.as_str().to_string());
                             }
                             Rule::type_name => {
-                                method.r#type = Some(return_type_inner.as_str().trim().to_string());
+                                method.r#type = Some(parse_type(return_type_inner));
                             }
                             Rule::return_multiplicity => {
                                 let raw = return_type_inner.as_str();
@@ -703,7 +948,7 @@ impl ClassParseSession<'_> {
             }
             // Preserve explicit return spelling; validation checks type consistency.
             if method.r#type.is_none() {
-                method.r#type = Some(target.clone());
+                method.r#type = Some(target.clone().into());
             }
             method.name = format!("operator {target}");
             method.conversion_target = Some(target);
@@ -1479,8 +1724,752 @@ impl DiagramParser for PumlClassParser {
 mod tests {
     use super::*;
 
-    /// Both separators and both root markers, for every qualified position.
-    const NAME_SPELLINGS: [&str; 6] = ["a.b.C", "a::b::C", "a.b::C", ".a.C", "::a::C", "::a.C"];
+    #[test]
+    fn test_parsed_type_preserves_raw_and_optional_structure() {
+        for (input, expression) in [
+            ("int", Some(TypeExpr::Builtin("int".into()))),
+            (
+                "void(int)",
+                Some(TypeExpr::Function {
+                    return_type: Box::new(TypeExpr::Builtin("void".into())),
+                    parameter_types: vec![TypeExpr::Builtin("int".into())],
+                    is_variadic: false,
+                    is_noexcept: false,
+                }),
+            ),
+            ("decltype(value)", None),
+        ] {
+            let pair = PlantUmlCommonParser::parse(Rule::type_name, input)
+                .unwrap()
+                .next()
+                .unwrap();
+            assert_eq!(pair.as_span().end(), input.len());
+            assert_eq!(
+                parse_type(pair),
+                TypeDescription {
+                    raw_text: input.into(),
+                    expression,
+                },
+            );
+        }
+    }
+
+    fn structured_type(input: &str) -> Option<TypeExpr> {
+        let pair = PlantUmlCommonParser::parse(Rule::type_name, input)
+            .unwrap()
+            .next()
+            .unwrap();
+        assert_eq!(pair.as_span().end(), input.len(), "{input}");
+        parse_type_expr(pair)
+    }
+
+    fn named_type(segments: &[&str]) -> TypeExpr {
+        TypeExpr::NamedType(QualifiedTypeName {
+            segments: segments.iter().map(|segment| segment.to_string()).collect(),
+            is_global: false,
+        })
+    }
+
+    #[test]
+    fn test_structured_type_nested_templates() {
+        assert_eq!(
+            structured_type("std::map<int, std::vector<const vehicle::Payload*>>&"),
+            Some(TypeExpr::Reference(Box::new(TypeExpr::Template {
+                name: QualifiedTypeName {
+                    segments: vec!["std".into(), "map".into()],
+                    is_global: false,
+                },
+                arguments: vec![
+                    TypeArgument::Type(TypeExpr::Builtin("int".into())),
+                    TypeArgument::Type(TypeExpr::Template {
+                        name: QualifiedTypeName {
+                            segments: vec!["std".into(), "vector".into()],
+                            is_global: false,
+                        },
+                        arguments: vec![TypeArgument::Type(TypeExpr::Pointer(Box::new(
+                            TypeExpr::Const(Box::new(named_type(&["vehicle", "Payload"]))),
+                        )))],
+                    }),
+                ],
+            })))
+        );
+    }
+
+    #[test]
+    fn test_structured_type_qualified_names() {
+        for input in [
+            "::vehicle::Payload",
+            "::vehicle.Payload",
+            ".vehicle.Payload",
+            ".vehicle::Payload",
+        ] {
+            assert_eq!(
+                structured_type(input),
+                Some(TypeExpr::NamedType(QualifiedTypeName {
+                    segments: vec!["vehicle".into(), "Payload".into()],
+                    is_global: true,
+                })),
+                "{input}",
+            );
+        }
+        for input in ["vehicle::Payload", "vehicle.Payload"] {
+            assert_eq!(
+                structured_type(input),
+                Some(named_type(&["vehicle", "Payload"])),
+                "{input}",
+            );
+        }
+        assert_eq!(structured_type("Payload"), Some(named_type(&["Payload"])));
+        assert_eq!(structured_type("constant"), Some(named_type(&["constant"])));
+    }
+
+    #[test]
+    fn test_structured_type_preserves_const_position_and_reference_kind() {
+        let payload = named_type(&["Payload"]);
+        for (input, expected) in [
+            (
+                "const Payload*",
+                TypeExpr::Pointer(Box::new(TypeExpr::Const(Box::new(payload.clone())))),
+            ),
+            (
+                "Payload* const",
+                TypeExpr::Const(Box::new(TypeExpr::Pointer(Box::new(payload.clone())))),
+            ),
+            (
+                "Payload&&",
+                TypeExpr::RValueReference(Box::new(payload.clone())),
+            ),
+            (
+                "Payload**",
+                TypeExpr::Pointer(Box::new(TypeExpr::Pointer(Box::new(payload.clone())))),
+            ),
+            ("const Payload", TypeExpr::Const(Box::new(payload))),
+        ] {
+            assert_eq!(structured_type(input), Some(expected), "{input}");
+        }
+    }
+
+    #[test]
+    fn test_structured_type_value_and_empty_template_arguments() {
+        for (input, arguments) in [
+            ("Buffer<8>", vec![TypeArgument::Value("8".into())]),
+            ("Buffer<>", vec![]),
+        ] {
+            assert_eq!(
+                structured_type(input),
+                Some(TypeExpr::Template {
+                    name: QualifiedTypeName {
+                        segments: vec!["Buffer".into()],
+                        is_global: false,
+                    },
+                    arguments,
+                })
+            );
+        }
+    }
+
+    #[test]
+    fn test_structured_type_cv_qualifiers() {
+        for input in ["const Payload&", "Payload const&"] {
+            assert_eq!(
+                structured_type(input),
+                Some(TypeExpr::Reference(Box::new(TypeExpr::Const(Box::new(
+                    named_type(&["Payload"]),
+                ))))),
+                "{input}",
+            );
+        }
+        for input in ["volatile int", "int volatile"] {
+            assert_eq!(
+                structured_type(input),
+                Some(TypeExpr::Volatile(Box::new(TypeExpr::Builtin(
+                    "int".into()
+                )))),
+                "{input}",
+            );
+        }
+        let qualified_int = TypeExpr::Volatile(Box::new(TypeExpr::Const(Box::new(
+            TypeExpr::Builtin("int".into()),
+        ))));
+        let qualified_pointer = TypeExpr::Volatile(Box::new(TypeExpr::Const(Box::new(
+            TypeExpr::Pointer(Box::new(qualified_int)),
+        ))));
+        assert_eq!(
+            structured_type("const volatile int* const volatile"),
+            Some(qualified_pointer),
+        );
+        let const_int = TypeExpr::Const(Box::new(TypeExpr::Builtin("int".into())));
+        let const_pointer = TypeExpr::Const(Box::new(TypeExpr::Pointer(Box::new(const_int))));
+        assert_eq!(
+            structured_type("const int* const* const"),
+            Some(TypeExpr::Const(Box::new(TypeExpr::Pointer(Box::new(
+                const_pointer,
+            ))))),
+        );
+    }
+
+    #[test]
+    fn test_structured_type_duplicate_cv_qualifiers_preserve_raw_only() {
+        for input in [
+            "const const Payload",
+            "volatile volatile int",
+            "const Payload const&",
+            "volatile int volatile*",
+            "int* const const",
+            "int* volatile volatile",
+            "int* const volatile const",
+            "int* const* volatile volatile",
+            "Buffer<const const int>",
+        ] {
+            let pair = PlantUmlCommonParser::parse(Rule::type_name, input)
+                .unwrap()
+                .next()
+                .unwrap();
+            assert_eq!(pair.as_span().end(), input.len(), "{input}");
+            assert_eq!(
+                parse_type(pair),
+                TypeDescription {
+                    raw_text: input.into(),
+                    expression: None,
+                },
+                "{input}",
+            );
+        }
+    }
+
+    #[test]
+    fn test_structured_template_literal_arguments() {
+        for value in ["8", "8U", "8u", "8UL", "8LLU", "8ull", "true", "false"] {
+            assert_eq!(
+                structured_type(&format!("Value<{value}>")),
+                Some(TypeExpr::Template {
+                    name: QualifiedTypeName {
+                        segments: vec!["Value".into()],
+                        is_global: false,
+                    },
+                    arguments: vec![TypeArgument::Value(value.into())],
+                }),
+                "{value}",
+            );
+        }
+        assert_eq!(
+            structured_type("Value<true_type>"),
+            Some(TypeExpr::Template {
+                name: QualifiedTypeName {
+                    segments: vec!["Value".into()],
+                    is_global: false,
+                },
+                arguments: vec![TypeArgument::Type(named_type(&["true_type"]))],
+            }),
+        );
+    }
+
+    #[test]
+    fn test_cv_parameters_preserve_name_and_type() {
+        for (parameters, expected_name, expected_type) in [
+            ("volatile int", None, "volatile int"),
+            ("volatile\tint", None, "volatile\tint"),
+            ("volatile int entry", Some("entry"), "volatile int"),
+            ("entry : volatile int", Some("entry"), "volatile int"),
+            ("Payload const&", None, "Payload const&"),
+            ("Payload const& entry", Some("entry"), "Payload const&"),
+            ("entry : Payload const&", Some("entry"), "Payload const&"),
+            ("payload const", None, "payload const"),
+            ("payload\tconst", None, "payload\tconst"),
+            ("int* volatile", None, "int* volatile"),
+        ] {
+            let result = parse_single_class_member_file(&format!("+ Set({parameters})")).unwrap();
+            let ClassUmlTopLevel::Type(TypeDefinition::ClassLikeDef(class)) = &result.elements[0]
+            else {
+                panic!("expected a class");
+            };
+            let method = &class.members.methods[0];
+            assert_eq!(method.params.len(), 1, "{parameters}");
+            let parameter = &method.params[0];
+            assert_eq!(parameter.name.as_deref(), expected_name, "{parameters}");
+            assert_eq!(
+                parameter.param_type.as_ref().map(|ty| ty.raw_text.as_str()),
+                Some(expected_type),
+                "{parameters}",
+            );
+            assert_eq!(
+                parameter
+                    .param_type
+                    .as_ref()
+                    .and_then(|ty| ty.expression.clone()),
+                structured_type(expected_type),
+                "{parameters}",
+            );
+        }
+    }
+
+    #[test]
+    fn test_template_literal_arguments_in_members() {
+        let result = parse_single_class_member_file(
+            "value : std::array<int, 8U>\nusing Flag = std::integral_constant<bool, true>\n+ Set(entry : std::array<int, 8U>) : std::integral_constant<bool, true>",
+        )
+        .unwrap();
+        let ClassUmlTopLevel::Type(TypeDefinition::ClassLikeDef(class)) = &result.elements[0]
+        else {
+            panic!("expected a class element");
+        };
+        let array = "std::array<int, 8U>";
+        let flag = "std::integral_constant<bool, true>";
+        assert_eq!(
+            class.members.attributes[0]
+                .r#type
+                .as_ref()
+                .map(|ty| ty.raw_text.as_str()),
+            Some(array)
+        );
+        assert_eq!(
+            class.members.attributes[0]
+                .r#type
+                .as_ref()
+                .and_then(|ty| ty.expression.clone()),
+            structured_type(array)
+        );
+        assert_eq!(class.members.type_aliases[0].original_type.raw_text, flag);
+        assert_eq!(
+            class.members.type_aliases[0].original_type.expression,
+            structured_type(flag)
+        );
+        let method = &class.members.methods[0];
+        assert_eq!(method.params[0].name.as_deref(), Some("entry"));
+        assert_eq!(
+            method.params[0]
+                .param_type
+                .as_ref()
+                .map(|ty| ty.raw_text.as_str()),
+            Some(array)
+        );
+        assert_eq!(
+            method.params[0]
+                .param_type
+                .as_ref()
+                .and_then(|ty| ty.expression.clone()),
+            structured_type(array)
+        );
+        assert_eq!(
+            method.r#type.as_ref().map(|ty| ty.raw_text.as_str()),
+            Some(flag)
+        );
+        assert_eq!(
+            method.r#type.as_ref().and_then(|ty| ty.expression.clone()),
+            structured_type(flag)
+        );
+    }
+
+    #[test]
+    fn test_structured_type_arrays() {
+        let array = |element, size: Option<&str>| TypeExpr::Array {
+            element: Box::new(element),
+            size: size.map(str::to_string),
+        };
+        for (input, expected) in [
+            ("Payload[8]", array(named_type(&["Payload"]), Some("8"))),
+            ("Payload[8U]", array(named_type(&["Payload"]), Some("8U"))),
+            (
+                "Payload[8ull]",
+                array(named_type(&["Payload"]), Some("8ull")),
+            ),
+            ("Payload[]", array(named_type(&["Payload"]), None)),
+            ("Payload[N]", array(named_type(&["Payload"]), Some("N"))),
+            (
+                "Payload[3][8]",
+                array(array(named_type(&["Payload"]), Some("8")), Some("3")),
+            ),
+            (
+                "Payload[][8]",
+                array(array(named_type(&["Payload"]), Some("8")), None),
+            ),
+            (
+                "Payload*[8]",
+                array(
+                    TypeExpr::Pointer(Box::new(named_type(&["Payload"]))),
+                    Some("8"),
+                ),
+            ),
+            (
+                "const Payload[8]",
+                array(
+                    TypeExpr::Const(Box::new(named_type(&["Payload"]))),
+                    Some("8"),
+                ),
+            ),
+            ("int[8]", array(TypeExpr::Builtin("int".into()), Some("8"))),
+            (
+                "Buffer<Payload[8]>",
+                TypeExpr::Template {
+                    name: QualifiedTypeName {
+                        segments: vec!["Buffer".into()],
+                        is_global: false,
+                    },
+                    arguments: vec![TypeArgument::Type(array(
+                        named_type(&["Payload"]),
+                        Some("8"),
+                    ))],
+                },
+            ),
+        ] {
+            assert_eq!(structured_type(input), Some(expected), "{input}");
+        }
+        for suffix in ["[-1]", "[+8]", "[N + 1]"] {
+            assert!(
+                PlantUmlCommonParser::parse(Rule::array_suffix, suffix).is_err(),
+                "{suffix}"
+            );
+        }
+    }
+
+    #[test]
+    fn test_structured_type_function_pointers() {
+        let function =
+            |return_type, parameter_types, is_variadic, is_noexcept| TypeExpr::Function {
+                return_type: Box::new(return_type),
+                parameter_types,
+                is_variadic,
+                is_noexcept,
+            };
+        let pointer = |inner| TypeExpr::Pointer(Box::new(inner));
+        let builtin = |name: &str| TypeExpr::Builtin(name.into());
+        for (input, expected) in [
+            (
+                "void (*)()",
+                pointer(function(builtin("void"), vec![], false, false)),
+            ),
+            (
+                "void (*)(void)",
+                pointer(function(builtin("void"), vec![], false, false)),
+            ),
+            (
+                "int (*)(Payload&, double)",
+                pointer(function(
+                    builtin("int"),
+                    vec![
+                        TypeExpr::Reference(Box::new(named_type(&["Payload"]))),
+                        builtin("double"),
+                    ],
+                    false,
+                    false,
+                )),
+            ),
+            (
+                "const Payload* (*)(int)",
+                pointer(function(
+                    pointer(TypeExpr::Const(Box::new(named_type(&["Payload"])))),
+                    vec![builtin("int")],
+                    false,
+                    false,
+                )),
+            ),
+            (
+                "void (* const)(int)",
+                TypeExpr::Const(Box::new(pointer(function(
+                    builtin("void"),
+                    vec![builtin("int")],
+                    false,
+                    false,
+                )))),
+            ),
+            (
+                "void (* volatile)(int)",
+                TypeExpr::Volatile(Box::new(pointer(function(
+                    builtin("void"),
+                    vec![builtin("int")],
+                    false,
+                    false,
+                )))),
+            ),
+            (
+                "void (*)(int, ...)",
+                pointer(function(builtin("void"), vec![builtin("int")], true, false)),
+            ),
+            (
+                "void (*)(...)",
+                pointer(function(builtin("void"), vec![], true, false)),
+            ),
+            (
+                "void (*)() noexcept",
+                pointer(function(builtin("void"), vec![], false, true)),
+            ),
+            (
+                "Wrapper<void (*)(int)>",
+                TypeExpr::Template {
+                    name: QualifiedTypeName {
+                        segments: vec!["Wrapper".into()],
+                        is_global: false,
+                    },
+                    arguments: vec![TypeArgument::Type(pointer(function(
+                        builtin("void"),
+                        vec![builtin("int")],
+                        false,
+                        false,
+                    )))],
+                },
+            ),
+            (
+                "void (*)(void (*)(int))",
+                pointer(function(
+                    builtin("void"),
+                    vec![pointer(function(
+                        builtin("void"),
+                        vec![builtin("int")],
+                        false,
+                        false,
+                    ))],
+                    false,
+                    false,
+                )),
+            ),
+        ] {
+            assert_eq!(structured_type(input), Some(expected), "{input}");
+        }
+        for input in ["void (* const const)(int)", "void (*)(const const Payload)"] {
+            assert_eq!(structured_type(input), None, "{input}");
+        }
+    }
+
+    #[test]
+    fn test_structured_type_functions() {
+        let builtin = |name: &str| TypeExpr::Builtin(name.into());
+        let function =
+            |return_type, parameter_types, is_variadic, is_noexcept| TypeExpr::Function {
+                return_type: Box::new(return_type),
+                parameter_types,
+                is_variadic,
+                is_noexcept,
+            };
+        for (input, expected) in [
+            ("void()", function(builtin("void"), vec![], false, false)),
+            (
+                "void(void)",
+                function(builtin("void"), vec![], false, false),
+            ),
+            (
+                "void(int)",
+                function(builtin("void"), vec![builtin("int")], false, false),
+            ),
+            (
+                "int(Payload&, double)",
+                function(
+                    builtin("int"),
+                    vec![
+                        TypeExpr::Reference(Box::new(named_type(&["Payload"]))),
+                        builtin("double"),
+                    ],
+                    false,
+                    false,
+                ),
+            ),
+            (
+                "const Payload*(int)",
+                function(
+                    TypeExpr::Pointer(Box::new(TypeExpr::Const(Box::new(named_type(&[
+                        "Payload",
+                    ]))))),
+                    vec![builtin("int")],
+                    false,
+                    false,
+                ),
+            ),
+            (
+                "Payload&(int)",
+                function(
+                    TypeExpr::Reference(Box::new(named_type(&["Payload"]))),
+                    vec![builtin("int")],
+                    false,
+                    false,
+                ),
+            ),
+            (
+                "void(int, ...)",
+                function(builtin("void"), vec![builtin("int")], true, false),
+            ),
+            ("void(...)", function(builtin("void"), vec![], true, false)),
+            (
+                "void(int) noexcept",
+                function(builtin("void"), vec![builtin("int")], false, true),
+            ),
+            (
+                "std::function<void(int)>",
+                TypeExpr::Template {
+                    name: QualifiedTypeName {
+                        segments: vec!["std".into(), "function".into()],
+                        is_global: false,
+                    },
+                    arguments: vec![TypeArgument::Type(function(
+                        builtin("void"),
+                        vec![builtin("int")],
+                        false,
+                        false,
+                    ))],
+                },
+            ),
+            (
+                "void(void (*)(int))",
+                function(
+                    builtin("void"),
+                    vec![TypeExpr::Pointer(Box::new(function(
+                        builtin("void"),
+                        vec![builtin("int")],
+                        false,
+                        false,
+                    )))],
+                    false,
+                    false,
+                ),
+            ),
+        ] {
+            assert_eq!(structured_type(input), Some(expected), "{input}");
+        }
+    }
+
+    #[test]
+    fn test_structured_type_unsupported_shapes_are_not_partially_represented() {
+        for input in [
+            "[]Payload",
+            "void(const const Payload)",
+            "{Payload}",
+            "std::function<void(const const Payload)>",
+            "decltype(value)",
+            "const decltype(value)",
+            "std::function<decltype(value)>",
+            "Value<0xGG>",
+        ] {
+            assert_eq!(structured_type(input), None, "{input}");
+        }
+    }
+
+    #[test]
+    fn test_structured_types_preserve_member_strings() {
+        let result = parse_single_class_member_file(
+            "value : std::map<int, Payload*>\nusing Buffer = std::map<int, Payload*>\n+ Store(data : std::map<int, Payload*>&, Payload&&) : ::vehicle::Payload*",
+        )
+        .unwrap();
+        let ClassUmlTopLevel::Type(TypeDefinition::ClassLikeDef(class_def)) = &result.elements[0]
+        else {
+            panic!("expected class element");
+        };
+        let attribute = &class_def.members.attributes[0];
+        assert_eq!(
+            attribute.r#type.as_ref().map(|ty| ty.raw_text.as_str()),
+            Some("std::map<int, Payload*>")
+        );
+        assert_eq!(
+            attribute
+                .r#type
+                .as_ref()
+                .and_then(|ty| ty.expression.clone()),
+            structured_type("std::map<int, Payload*>"),
+        );
+        let alias = &class_def.members.type_aliases[0];
+        assert_eq!(alias.original_type.raw_text, "std::map<int, Payload*>");
+        assert_eq!(
+            alias.original_type.expression,
+            attribute
+                .r#type
+                .as_ref()
+                .and_then(|ty| ty.expression.clone())
+        );
+        let method = &class_def.members.methods[0];
+        assert_eq!(
+            method.r#type.as_ref().map(|ty| ty.raw_text.as_str()),
+            Some("::vehicle::Payload*")
+        );
+        assert_eq!(
+            method.r#type.as_ref().and_then(|ty| ty.expression.clone()),
+            structured_type("::vehicle::Payload*")
+        );
+        assert_eq!(method.params[0].name.as_deref(), Some("data"));
+        assert_eq!(
+            method.params[0]
+                .param_type
+                .as_ref()
+                .map(|ty| ty.raw_text.as_str()),
+            Some("std::map<int, Payload*>&"),
+        );
+        assert_eq!(
+            method.params[0]
+                .param_type
+                .as_ref()
+                .and_then(|ty| ty.expression.clone()),
+            structured_type("std::map<int, Payload*>&"),
+        );
+        assert_eq!(
+            method.params[1]
+                .param_type
+                .as_ref()
+                .map(|ty| ty.raw_text.as_str()),
+            Some("Payload&&")
+        );
+        assert_eq!(
+            method.params[1]
+                .param_type
+                .as_ref()
+                .and_then(|ty| ty.expression.clone()),
+            structured_type("Payload&&")
+        );
+    }
+
+    #[test]
+    fn test_array_member_types_preserve_strings_and_structure() {
+        let result = parse_single_class_member_file(
+            "values : Payload[8U]\nusing Buffer = Payload[8U]\n+ Store(data : Payload[8U]) : Payload[8U]",
+        )
+        .unwrap();
+        let ClassUmlTopLevel::Type(TypeDefinition::ClassLikeDef(class_def)) = &result.elements[0]
+        else {
+            panic!("expected class element");
+        };
+        assert_eq!(
+            class_def.members.attributes[0]
+                .r#type
+                .as_ref()
+                .map(|ty| ty.raw_text.as_str()),
+            Some("Payload[8U]"),
+        );
+        let expected = structured_type("Payload[8U]");
+        assert!(expected.is_some());
+        assert_eq!(
+            class_def.members.attributes[0]
+                .r#type
+                .as_ref()
+                .and_then(|ty| ty.expression.clone()),
+            expected
+        );
+        assert_eq!(
+            class_def.members.type_aliases[0].original_type.raw_text,
+            "Payload[8U]"
+        );
+        assert_eq!(
+            class_def.members.type_aliases[0].original_type.expression,
+            expected
+        );
+        let method = &class_def.members.methods[0];
+        assert_eq!(
+            method.r#type.as_ref().map(|ty| ty.raw_text.as_str()),
+            Some("Payload[8U]")
+        );
+        assert_eq!(
+            method.r#type.as_ref().and_then(|ty| ty.expression.clone()),
+            expected
+        );
+        assert_eq!(
+            method.params[0]
+                .param_type
+                .as_ref()
+                .map(|ty| ty.raw_text.as_str()),
+            Some("Payload[8U]")
+        );
+        assert_eq!(
+            method.params[0]
+                .param_type
+                .as_ref()
+                .and_then(|ty| ty.expression.clone()),
+            expected
+        );
+    }
 
     fn make_test_session(normalized_content: &NormalizedContent) -> ClassParseSession<'_> {
         ClassParseSession {
@@ -1540,7 +2529,10 @@ mod tests {
         let param = super::ClassParseSession::parse_param(pair);
 
         assert_eq!(param.name, None);
-        assert_eq!(param.param_type.as_deref(), Some("int"));
+        assert_eq!(
+            param.param_type.as_ref().map(|ty| ty.raw_text.as_str()),
+            Some("int")
+        );
         assert!(param.is_pack_expansion);
     }
 
@@ -1556,6 +2548,13 @@ mod tests {
 
         assert_eq!(param.name.as_deref(), Some("callable"));
         assert_eq!(param.param_type, None);
+        assert_eq!(
+            param
+                .param_type
+                .as_ref()
+                .and_then(|ty| ty.expression.clone()),
+            None
+        );
         assert!(!param.is_pack_expansion);
     }
 
@@ -1570,7 +2569,10 @@ mod tests {
         let param = super::ClassParseSession::parse_param(pair);
 
         assert_eq!(param.name, None);
-        assert_eq!(param.param_type.as_deref(), Some("InfrastructureContext"));
+        assert_eq!(
+            param.param_type.as_ref().map(|ty| ty.raw_text.as_str()),
+            Some("InfrastructureContext")
+        );
         assert!(!param.is_pack_expansion);
     }
 
@@ -1588,7 +2590,11 @@ mod tests {
 
             let param = super::ClassParseSession::parse_param(pair);
 
-            assert_eq!(param.param_type.as_deref(), Some(expected_type), "{input}");
+            assert_eq!(
+                param.param_type.as_ref().map(|ty| ty.raw_text.as_str()),
+                Some(expected_type),
+                "{input}"
+            );
             assert_eq!(param.name.as_deref(), expected_name, "{input}");
         }
     }
@@ -1603,13 +2609,33 @@ mod tests {
 
         let param = super::ClassParseSession::parse_param(pair);
 
-        assert_eq!(param.param_type.as_deref(), Some("void*"));
+        assert_eq!(
+            param.param_type.as_ref().map(|ty| ty.raw_text.as_str()),
+            Some("void*")
+        );
         assert_eq!(param.name.as_deref(), Some("constant"));
     }
 
     #[test]
     fn test_parse_param_const_keyword_is_not_a_name() {
-        assert!(parse_single_class_member_file("+ f(int const)").is_err());
+        let result = parse_single_class_member_file("+ f(int const)").unwrap();
+        let ClassUmlTopLevel::Type(TypeDefinition::ClassLikeDef(class_def)) = &result.elements[0]
+        else {
+            panic!("expected class element");
+        };
+        let parameter = &class_def.members.methods[0].params[0];
+        assert_eq!(parameter.name, None);
+        assert_eq!(
+            parameter.param_type.as_ref().map(|ty| ty.raw_text.as_str()),
+            Some("int const")
+        );
+        assert_eq!(
+            parameter
+                .param_type
+                .as_ref()
+                .and_then(|ty| ty.expression.clone()),
+            Some(TypeExpr::Const(Box::new(TypeExpr::Builtin("int".into())))),
+        );
     }
 
     #[test]
@@ -1628,7 +2654,12 @@ mod tests {
         let params: Vec<_> = method
             .params
             .iter()
-            .map(|param| (param.name.as_deref(), param.param_type.as_deref()))
+            .map(|param| {
+                (
+                    param.name.as_deref(),
+                    param.param_type.as_ref().map(|ty| ty.raw_text.as_str()),
+                )
+            })
             .collect();
         assert_eq!(
             params,
@@ -1662,15 +2693,44 @@ mod tests {
             };
 
             let method = &class_def.members.methods[0];
-            assert_eq!(method.r#type.as_deref(), Some(return_type), "{member}");
+            assert_eq!(
+                method.r#type.as_ref().map(|ty| ty.raw_text.as_str()),
+                Some(return_type),
+                "{member}"
+            );
             assert_eq!(method.modifiers, modifiers, "{member}");
         }
     }
 
     #[test]
-    fn test_parse_bare_const_after_return_type_rejected() {
-        assert!(parse_single_class_member_file("+ Get() : bool const").is_err());
-        assert!(parse_single_class_member_file("+ Get() : std::string const noexcept").is_err());
+    fn test_parse_bare_const_after_return_type_qualifies_type() {
+        for (member, return_type, modifiers) in [
+            ("+ Get() : bool const", "bool const", vec![]),
+            (
+                "+ Get() : std::string const noexcept",
+                "std::string const",
+                vec!["noexcept"],
+            ),
+        ] {
+            let result = parse_single_class_member_file(member).expect(member);
+            let ClassUmlTopLevel::Type(TypeDefinition::ClassLikeDef(class_def)) =
+                &result.elements[0]
+            else {
+                panic!("expected class element");
+            };
+            let method = &class_def.members.methods[0];
+            assert_eq!(
+                method.r#type.as_ref().map(|ty| ty.raw_text.as_str()),
+                Some(return_type),
+                "{member}"
+            );
+            assert_eq!(
+                method.r#type.as_ref().and_then(|ty| ty.expression.clone()),
+                structured_type(return_type),
+                "{member}"
+            );
+            assert_eq!(method.modifiers, modifiers, "{member}");
+        }
     }
 
     #[test]
@@ -1684,11 +2744,14 @@ mod tests {
         };
 
         assert_eq!(
-            class_def.members.attributes[0].r#type.as_deref(),
+            class_def.members.attributes[0]
+                .r#type
+                .as_ref()
+                .map(|ty| ty.raw_text.as_str()),
             Some("int* const")
         );
         assert_eq!(
-            class_def.members.type_aliases[0].original_type,
+            class_def.members.type_aliases[0].original_type.raw_text,
             "int* const"
         );
     }
@@ -1753,7 +2816,10 @@ mod tests {
         assert_eq!(class_def.members.attributes.len(), 1);
         assert_eq!(class_def.members.attributes[0].name, "");
         assert_eq!(
-            class_def.members.attributes[0].r#type.as_deref(),
+            class_def.members.attributes[0]
+                .r#type
+                .as_ref()
+                .map(|ty| ty.raw_text.as_str()),
             Some("std::mutex")
         );
         assert_eq!(class_def.members.attributes[0].source_location.line, 3);
@@ -1782,7 +2848,11 @@ mod tests {
                     let attr = &def.members.attributes[0];
                     assert_eq!(attr.visibility, visibility, "{member}");
                     assert_eq!(attr.name, "mock_", "{member}");
-                    assert_eq!(attr.r#type.as_deref(), Some("A*"), "{member}");
+                    assert_eq!(
+                        attr.r#type.as_ref().map(|ty| ty.raw_text.as_str()),
+                        Some("A*"),
+                        "{member}"
+                    );
                     assert_eq!(attr.modifiers, vec![modifier.to_string()], "{member}");
                 }
             }
@@ -1850,7 +2920,11 @@ mod tests {
             let method = &def.members.methods[0];
             assert_eq!(method.name, name, "{member}");
             assert_eq!(method.conversion_target, None, "{member}");
-            assert_eq!(method.r#type.as_deref(), Some(return_type), "{member}");
+            assert_eq!(
+                method.r#type.as_ref().map(|ty| ty.raw_text.as_str()),
+                Some(return_type),
+                "{member}"
+            );
             assert_eq!(method.params.len(), parameter_count, "{member}");
         }
     }
@@ -1877,7 +2951,13 @@ mod tests {
                 def.members.methods[0].conversion_target.as_deref(),
                 Some(target)
             );
-            assert_eq!(def.members.methods[0].r#type.as_deref(), Some(target));
+            assert_eq!(
+                def.members.methods[0]
+                    .r#type
+                    .as_ref()
+                    .map(|ty| ty.raw_text.as_str()),
+                Some(target)
+            );
         }
         for target in ["T&*", "T&&&", "T&&*", "T& &"] {
             assert!(
@@ -1976,14 +3056,23 @@ mod tests {
 
         let method = &class_def.members.methods[0];
         assert_eq!(
-            method.params[0].param_type.as_deref(),
+            method.params[0]
+                .param_type
+                .as_ref()
+                .map(|ty| ty.raw_text.as_str()),
             Some("const safecpp::Scope<>&")
         );
         assert_eq!(
-            method.params[1].param_type.as_deref(),
+            method.params[1]
+                .param_type
+                .as_ref()
+                .map(|ty| ty.raw_text.as_str()),
             Some("std::vector<Foo<>>")
         );
-        assert_eq!(method.r#type.as_deref(), Some("Bar<>"));
+        assert_eq!(
+            method.r#type.as_ref().map(|ty| ty.raw_text.as_str()),
+            Some("Bar<>")
+        );
     }
 
     #[test]
@@ -1996,7 +3085,10 @@ mod tests {
         };
 
         assert_eq!(
-            class_def.members.attributes[0].r#type.as_deref(),
+            class_def.members.attributes[0]
+                .r#type
+                .as_ref()
+                .map(|ty| ty.raw_text.as_str()),
             Some("safecpp::Scope<>")
         );
     }
@@ -2372,6 +3464,25 @@ mod tests {
             ("int*... Ps", non_type_parameter("int*", "Ps", true)),
             ("int&... Rs", non_type_parameter("int&", "Rs", true)),
             ("const int* P", non_type_parameter("const int*", "P", false)),
+            ("const int N", non_type_parameter("const int", "N", false)),
+            (
+                "const Widget",
+                non_type_parameter("const Widget", "", false),
+            ),
+            (
+                "const unsigned long N",
+                non_type_parameter("const unsigned long", "N", false),
+            ),
+            (
+                "volatile int N",
+                non_type_parameter("volatile int", "N", false),
+            ),
+            ("int const N", non_type_parameter("int const", "N", false)),
+            ("int* const P", non_type_parameter("int* const", "P", false)),
+            (
+                "const volatile Widget* const* volatile P",
+                non_type_parameter("const volatile Widget* const* volatile", "P", false),
+            ),
             (
                 "unsigned\tlong\tN",
                 non_type_parameter("unsigned\tlong", "N", false),
@@ -2550,7 +3661,10 @@ mod tests {
         };
 
         assert_eq!(
-            class_def.members.methods[0].r#type.as_deref(),
+            class_def.members.methods[0]
+                .r#type
+                .as_ref()
+                .map(|ty| ty.raw_text.as_str()),
             Some("Foo<>")
         );
         assert_eq!(class_def.members.methods[0].modifiers, vec!["<<const>>"]);
@@ -2588,7 +3702,7 @@ mod tests {
         assert_eq!(class_def.members.type_aliases.len(), 1);
         assert_eq!(class_def.members.type_aliases[0].alias, "Byte");
         assert_eq!(
-            class_def.members.type_aliases[0].original_type,
+            class_def.members.type_aliases[0].original_type.raw_text,
             "std::uint8_t"
         );
         assert_eq!(class_def.members.type_aliases[0].source_location.line, 3);
@@ -2675,6 +3789,9 @@ mod tests {
         assert_eq!(rel.left, "::a::A");
         assert_eq!(rel.right, "::b::B");
     }
+
+    /// Both separators and both root markers, for every qualified position.
+    const NAME_SPELLINGS: [&str; 6] = ["a.b.C", "a::b::C", "a.b::C", ".a.C", "::a::C", "::a.C"];
 
     #[test]
     fn test_declaration_names_accept_both_separators_and_root_markers() {

@@ -88,7 +88,7 @@ fn read_type_aliases(entity: fb_class::SimpleEntity<'_>) -> Vec<TypeAlias> {
                 .iter()
                 .map(|value| TypeAlias {
                     alias: value.alias().to_string(),
-                    original_type: value.original_type().to_string(),
+                    original_type: value.original_type().into(),
                     source_location: to_source_location(
                         value.source_location().file(),
                         value.source_location().line(),
@@ -111,7 +111,7 @@ fn read_variables(
                 .map(|value| {
                     Ok(MemberVariable {
                         name: value.name().to_string(),
-                        data_type: value.data_type().map(|s| s.to_string()),
+                        data_type: value.data_type().map(|s| s.into()),
                         visibility: map_visibility(
                             value.visibility(),
                             &format!("{path}:entity:{}:variable:{}", entity.id(), value.name()),
@@ -162,7 +162,7 @@ fn read_method(
     Ok(Method {
         name: method.name().to_string(),
         conversion_target: method.conversion_target().map(str::to_string),
-        return_type: method.return_type().map(|s| s.to_string()),
+        return_type: method.return_type().map(|s| s.into()),
         return_multiplicity: method.return_multiplicity().map(str::to_string),
         visibility: map_visibility(
             method.visibility(),
@@ -191,7 +191,7 @@ fn read_function_arguments(
                 .map(|parameter| {
                     Ok(FunctionArgument {
                         name: parameter.name().to_string(),
-                        param_type: parameter.param_type().map(|value| value.to_string()),
+                        param_type: parameter.param_type().map(|value| value.into()),
                         direction: match parameter.direction() {
                             fb_class::ParameterDirection::Unspecified => None,
                             fb_class::ParameterDirection::In => Some(ParameterDirection::In),
@@ -327,7 +327,7 @@ fn read_free_functions(
                         enclosing_namespace_id: function
                             .enclosing_namespace_id()
                             .map(uid_utils::normalize),
-                        return_type: function.return_type().map(|value| value.to_string()),
+                        return_type: function.return_type().map(|value| value.into()),
                         return_multiplicity: function.return_multiplicity().map(str::to_string),
                         parameters: read_function_arguments(
                             function.parameters(),

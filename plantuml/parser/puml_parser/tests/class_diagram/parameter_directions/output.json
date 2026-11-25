@@ -27,25 +27,25 @@
                 "params": [
                   {
                     "name": "input",
-                    "param_type": "int",
+                    "param_type": { "raw_text": "int" },
                     "direction": "in"
                   },
                   {
                     "name": "output",
-                    "param_type": "int",
+                    "param_type": { "raw_text": "int" },
                     "direction": "out"
                   },
                   {
                     "name": "state",
-                    "param_type": "int",
+                    "param_type": { "raw_text": "int" },
                     "direction": "inout"
                   },
                   {
                     "name": "plain",
-                    "param_type": "int"
+                    "param_type": { "raw_text": "int" }
                   }
                 ],
-                "type": "void",
+                "type": { "raw_text": "void" },
                 "modifiers": [],
                 "source_location": {
                   "file": "",
@@ -59,18 +59,18 @@
                 "params": [
                   {
                     "name": "in",
-                    "param_type": "int"
+                    "param_type": { "raw_text": "int" }
                   },
                   {
                     "name": "out",
-                    "param_type": "int"
+                    "param_type": { "raw_text": "int" }
                   },
                   {
                     "name": "inout",
-                    "param_type": "int"
+                    "param_type": { "raw_text": "int" }
                   }
                 ],
-                "type": "void",
+                "type": { "raw_text": "void" },
                 "modifiers": [],
                 "source_location": {
                   "file": "",
@@ -84,18 +84,18 @@
                 "params": [
                   {
                     "name": "input",
-                    "param_type": "in"
+                    "param_type": { "raw_text": "in" }
                   },
                   {
                     "name": "output",
-                    "param_type": "out"
+                    "param_type": { "raw_text": "out" }
                   },
                   {
                     "name": "state",
-                    "param_type": "inout"
+                    "param_type": { "raw_text": "inout" }
                   }
                 ],
-                "type": "void",
+                "type": { "raw_text": "void" },
                 "modifiers": [],
                 "source_location": {
                   "file": "",
@@ -120,7 +120,7 @@
                     "param_type": null
                   }
                 ],
-                "type": "void",
+                "type": { "raw_text": "void" },
                 "modifiers": [],
                 "source_location": {
                   "file": "",
@@ -134,18 +134,18 @@
                 "params": [
                   {
                     "name": "in",
-                    "param_type": "int"
+                    "param_type": { "raw_text": "int" }
                   },
                   {
                     "name": "out",
-                    "param_type": "int"
+                    "param_type": { "raw_text": "int" }
                   },
                   {
                     "name": "inout",
-                    "param_type": "int"
+                    "param_type": { "raw_text": "int" }
                   }
                 ],
-                "type": "void",
+                "type": { "raw_text": "void" },
                 "modifiers": [],
                 "source_location": {
                   "file": "",
@@ -159,18 +159,18 @@
                 "params": [
                   {
                     "name": "input",
-                    "param_type": "in"
+                    "param_type": { "raw_text": "in" }
                   },
                   {
                     "name": "output",
-                    "param_type": "out"
+                    "param_type": { "raw_text": "out" }
                   },
                   {
                     "name": "state",
-                    "param_type": "inout"
+                    "param_type": { "raw_text": "inout" }
                   }
                 ],
-                "type": "void",
+                "type": { "raw_text": "void" },
                 "modifiers": [],
                 "source_location": {
                   "file": "",

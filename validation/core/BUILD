@@ -87,6 +87,7 @@ rust_library(
     crate_root = "src/lib.rs",
     visibility = ["//visibility:public"],
     deps = [
+        "//plantuml/parser/puml_parser/src/parser_core:puml_parser_core",
         "//tools/metamodel/class:class_diagram",
         "//tools/metamodel/common:source_location",
         "//tools/metamodel/common:uid_utils",
@@ -98,6 +99,7 @@ rust_library(
         "@crates_score_tooling//:clap",
         "@crates_score_tooling//:flatbuffers",
         "@crates_score_tooling//:log",
+        "@crates_score_tooling//:pest",
         "@crates_score_tooling//:serde",
         "@crates_score_tooling//:serde_json",
         "@crates_score_tooling//:strsim",

@@ -24,14 +24,29 @@
                 "params": [
                   {
                     "name": "a",
-                    "param_type": "int"
+                    "param_type": {
+                      "raw_text": "int",
+                      "expression": {
+                        "Builtin": "int"
+                      }
+                    }
                   },
                   {
                     "name": "b",
-                    "param_type": "int"
+                    "param_type": {
+                      "raw_text": "long int",
+                      "expression": {
+                        "Builtin": "long int"
+                      }
+                    }
                   }
                 ],
-                "type": "int",
+                "type": {
+                  "raw_text": "std::int64_t",
+                  "expression": {
+                    "NamedType": { "segments": ["std", "int64_t"] }
+                  }
+                },
                 "template_parameters": null,
                 "modifiers": [],
                 "source_location": {

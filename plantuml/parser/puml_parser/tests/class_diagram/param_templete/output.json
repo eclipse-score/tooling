@@ -15,19 +15,22 @@
               "file": "",
               "line": 15
             },
-            "type_aliases": [],
-            "attributes": [],
             "methods": [
               {
                 "visibility": "Public",
                 "name": "Create",
                 "template_parameters": [
-                  {"Type": {"name": "T", "is_pack": false}}
+                  {
+                    "Type": {
+                      "name": "T",
+                      "is_pack": false
+                    }
+                  }
                 ],
                 "params": [
                   {
                     "name": "id",
-                    "param_type": "int"
+                    "param_type": { "raw_text": "int" }
                   }
                 ],
                 "type": null,
@@ -36,6 +39,300 @@
                   "file": "",
                   "line": 16
                 }
+              },
+              {
+                "visibility": "Public",
+                "name": "Run",
+                "template_parameters": [
+                  { "Type": { "name": "T", "is_pack": false } },
+                  {
+                    "NonType": {
+                      "name": "N",
+                      "value_type": "std::size_t",
+                      "is_pack": false
+                    }
+                  }
+                ],
+                "params": [
+                  {
+                    "name": "data",
+                    "param_type": {
+                      "raw_text": "Payload[N]",
+                      "expression": {
+                        "Array": { "element": { "NamedType": { "segments": ["Payload"] } }, "size": "N" }
+                      }
+                    }
+                  },
+                  {
+                    "name": "fixed",
+                    "param_type": {
+                      "raw_text": "const Payload[8]",
+                      "expression": {
+                        "Array": { "element": { "Const": { "NamedType": { "segments": ["Payload"] } } }, "size": "8" }
+                      }
+                    }
+                  }
+                ],
+                "type": {
+                  "raw_text": "void",
+                  "expression": {
+                    "Builtin": "void"
+                  }
+                },
+                "modifiers": [],
+                "source_location": { "file": "", "line": 17 }
+              },
+              {
+                "visibility": "Public",
+                "name": "Set",
+                "template_parameters": null,
+                "params": [
+                  {
+                    "name": "value",
+                    "param_type": {
+                      "raw_text": "std::array<Payload, 0x10>",
+                      "expression": {
+                        "Template": {
+                          "name": { "segments": ["std", "array"] },
+                          "arguments": [
+                            { "NamedType": { "segments": ["Payload"] } },
+                            "0x10"
+                          ]
+                        }
+                      }
+                    }
+                  },
+                  {
+                    "name": "offset",
+                    "param_type": {
+                      "raw_text": "std::integral_constant<int, -1>",
+                      "expression": {
+                        "Template": {
+                          "name": { "segments": ["std", "integral_constant"] },
+                          "arguments": [
+                            { "Builtin": "int" },
+                            "-1"
+                          ]
+                        }
+                      }
+                    }
+                  }
+                ],
+                "type": {
+                  "raw_text": "void",
+                  "expression": {
+                    "Builtin": "void"
+                  }
+                },
+                "modifiers": [],
+                "source_location": { "file": "", "line": 18 }
+              },
+              {
+                "visibility": "Public",
+                "name": "Flag",
+                "template_parameters": null,
+                "params": [
+                  {
+                    "name": "disabled",
+                    "param_type": {
+                      "raw_text": "std::integral_constant<bool, false>",
+                      "expression": {
+                        "Template": {
+                          "name": { "segments": ["std", "integral_constant"] },
+                          "arguments": [
+                            { "Builtin": "bool" },
+                            "false"
+                          ]
+                        }
+                      }
+                    }
+                  },
+                  {
+                    "name": "tag",
+                    "param_type": {
+                      "raw_text": "std::type_identity<true_type>",
+                      "expression": {
+                        "Template": {
+                          "name": { "segments": ["std", "type_identity"] },
+                          "arguments": [
+                            { "NamedType": { "segments": ["true_type"] } }
+                          ]
+                        }
+                      }
+                    }
+                  }
+                ],
+                "type": {
+                  "raw_text": "std::integral_constant<bool, true>",
+                  "expression": {
+                    "Template": {
+                      "name": { "segments": ["std", "integral_constant"] },
+                      "arguments": [
+                        { "Builtin": "bool" },
+                        "true"
+                      ]
+                    }
+                  }
+                },
+                "modifiers": [],
+                "source_location": { "file": "", "line": 19 }
+              }
+            ],
+            "attributes": [
+              {
+                "visibility": "Public",
+                "name": "values",
+                "type": {
+                  "raw_text": "std::array<Payload, 0b100>",
+                  "expression": {
+                    "Template": {
+                      "name": { "segments": ["std", "array"] },
+                      "arguments": [
+                        { "NamedType": { "segments": ["Payload"] } },
+                        "0b100"
+                      ]
+                    }
+                  }
+                },
+                "modifiers": [],
+                "source_location": { "file": "", "line": 21 }
+              },
+              {
+                "visibility": "Public",
+                "name": "raw_values",
+                "type": {
+                  "raw_text": "Payload[8]",
+                  "expression": {
+                    "Array": { "element": { "NamedType": { "segments": ["Payload"] } }, "size": "8" }
+                  }
+                },
+                "modifiers": [],
+                "source_location": { "file": "", "line": 22 }
+              },
+              {
+                "visibility": "Public",
+                "name": "grid",
+                "type": {
+                  "raw_text": "Payload[3][8]",
+                  "expression": {
+                    "Array": {
+                      "element": { "Array": { "element": { "NamedType": { "segments": ["Payload"] } }, "size": "8" } },
+                      "size": "3"
+                    }
+                  }
+                },
+                "modifiers": [],
+                "source_location": { "file": "", "line": 23 }
+              },
+              {
+                "visibility": "Public",
+                "name": "unbounded",
+                "type": {
+                  "raw_text": "Payload[]",
+                  "expression": {
+                    "Array": { "element": { "NamedType": { "segments": ["Payload"] } }, "size": null }
+                  }
+                },
+                "modifiers": [],
+                "source_location": { "file": "", "line": 24 }
+              },
+              {
+                "visibility": "Public",
+                "name": "pointers",
+                "type": {
+                  "raw_text": "Payload*[8]",
+                  "expression": {
+                    "Array": { "element": { "Pointer": { "NamedType": { "segments": ["Payload"] } } }, "size": "8" }
+                  }
+                },
+                "modifiers": [],
+                "source_location": { "file": "", "line": 25 }
+              },
+              {
+                "visibility": "Public",
+                "name": "nested",
+                "type": {
+                  "raw_text": "std::array<Payload[8], +8>",
+                  "expression": {
+                    "Template": {
+                      "name": { "segments": ["std", "array"] },
+                      "arguments": [
+                        { "Array": { "element": { "NamedType": { "segments": ["Payload"] } }, "size": "8" } },
+                        "+8"
+                      ]
+                    }
+                  }
+                },
+                "modifiers": [],
+                "source_location": { "file": "", "line": 28 }
+              },
+              {
+                "visibility": "Public",
+                "name": "invalid",
+                "type": { "raw_text": "Value<0xGG>" },
+                "modifiers": [],
+                "source_location": { "file": "", "line": 30 }
+              },
+              {
+                "visibility": "Public",
+                "name": "callback",
+                "type": {
+                  "raw_text": "std::function<void(int)>",
+                  "expression": {
+                    "Template": {
+                      "name": { "segments": ["std", "function"] },
+                      "arguments": [
+                        {
+                          "Function": {
+                            "return_type": { "Builtin": "void" },
+                            "parameter_types": [
+                              { "Builtin": "int" }
+                            ],
+                            "is_variadic": false,
+                            "is_noexcept": false
+                          }
+                        }
+                      ]
+                    }
+                  }
+                },
+                "modifiers": [],
+                "source_location": { "file": "", "line": 33 }
+              }
+            ],
+            "type_aliases": [
+              {
+                "alias": "Buffer",
+                "original_type": {
+                  "raw_text": "std::array<Payload, 8U>",
+                  "expression": {
+                    "Template": {
+                      "name": { "segments": ["std", "array"] },
+                      "arguments": [
+                        { "NamedType": { "segments": ["Payload"] } },
+                        "8U"
+                      ]
+                    }
+                  }
+                },
+                "source_location": { "file": "", "line": 27 }
+              },
+              {
+                "alias": "Signature",
+                "original_type": {
+                  "raw_text": "const Payload*(const Payload&)",
+                  "expression": {
+                    "Function": {
+                      "return_type": { "Pointer": { "Const": { "NamedType": { "segments": ["Payload"] } } } },
+                      "parameter_types": [
+                        { "Reference": { "Const": { "NamedType": { "segments": ["Payload"] } } } }
+                      ],
+                      "is_variadic": false,
+                      "is_noexcept": false
+                    }
+                  }
+                },
+                "source_location": { "file": "", "line": 32 }
               }
             ],
             "kind": {

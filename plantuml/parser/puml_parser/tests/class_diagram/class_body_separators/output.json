@@ -14,7 +14,7 @@
               {
                 "visibility": "Public",
                 "name": "__value",
-                "type": "int",
+                "type": { "raw_text": "int" },
                 "modifiers": [],
                 "source_location": { "file": "", "line": 15 }
               }
@@ -24,7 +24,7 @@
                 "visibility": "Public",
                 "name": "operator--",
                 "params": [],
-                "type": "A&",
+                "type": { "raw_text": "A&" },
                 "template_parameters": null,
                 "modifiers": [],
                 "source_location": { "file": "", "line": 28 }
@@ -33,7 +33,7 @@
                 "visibility": "Public",
                 "name": "operator==",
                 "params": [],
-                "type": "bool",
+                "type": { "raw_text": "bool" },
                 "template_parameters": null,
                 "modifiers": [],
                 "source_location": { "file": "", "line": 29 }

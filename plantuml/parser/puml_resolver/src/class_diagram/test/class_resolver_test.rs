@@ -12,7 +12,7 @@
 // *******************************************************************************
 use std::collections::{HashMap, HashSet};
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::rc::Rc;
 
 use class_diagram::ClassDiagram;
@@ -22,7 +22,59 @@ use class_resolver::{ClassPumlResolverError, ClassResolver};
 use parser_core::DiagramParser;
 use puml_utils::LogLevel;
 use resolver_traits::DiagramResolver;
-use test_framework::{run_case, DefaultExpectationChecker, DiagramProcessor, ResolverGroupRunner};
+use serde_json::Value as JsonValue;
+use serde_yaml::Value as YamlValue;
+use test_framework::{
+    run_case, DefaultExpectationChecker, DiagramProcessor, ExpectationChecker, Expected,
+    ResolverGroupRunner,
+};
+
+struct ClassExpectationChecker;
+
+fn omit_unchecked_type_expressions(actual: &mut JsonValue, expected: &JsonValue) {
+    match (actual, expected) {
+        (JsonValue::Object(actual), JsonValue::Object(expected)) => {
+            if expected.contains_key("raw_text") && !expected.contains_key("expression") {
+                actual.remove("expression");
+            }
+            for (key, value) in actual.iter_mut() {
+                if let Some(expected) = expected.get(key) {
+                    omit_unchecked_type_expressions(value, expected);
+                }
+            }
+        }
+        (JsonValue::Array(actual), JsonValue::Array(expected)) => {
+            for (actual, expected) in actual.iter_mut().zip(expected) {
+                omit_unchecked_type_expressions(actual, expected);
+            }
+        }
+        _ => {}
+    }
+}
+
+impl ExpectationChecker<ClassPumlResolverError, ClassDiagram> for ClassExpectationChecker {
+    fn check_ok(&self, actual: &ClassDiagram, expected: &Expected<ClassDiagram>) {
+        if let Expected::Ast(expected) = expected {
+            let mut actual = serde_json::to_value(actual).unwrap();
+            let expected = serde_json::to_value(expected).unwrap();
+            omit_unchecked_type_expressions(&mut actual, &expected);
+            <DefaultExpectationChecker as ExpectationChecker<ClassPumlResolverError, JsonValue>>::check_ok(
+                &DefaultExpectationChecker, &actual, &Expected::Ast(expected),
+            );
+        } else {
+            <DefaultExpectationChecker as ExpectationChecker<
+                ClassPumlResolverError,
+                ClassDiagram,
+            >>::check_ok(&DefaultExpectationChecker, actual, expected);
+        }
+    }
+
+    fn check_err(&self, error: &ClassPumlResolverError, expected: &YamlValue, base_dir: &Path) {
+        <DefaultExpectationChecker as ExpectationChecker<ClassPumlResolverError, ClassDiagram>>::check_err(
+            &DefaultExpectationChecker, error, expected, base_dir,
+        );
+    }
+}
 
 // ===== Class Resolver adapter DiagramProcessor =====
 struct ClassResolverRunner;
@@ -58,7 +110,7 @@ fn run_class_resolver_case(case_name: &str) {
         "integration_test/class_diagram",
         case_name,
         ClassResolverRunner,
-        DefaultExpectationChecker,
+        ClassExpectationChecker,
     );
 }
 
@@ -67,7 +119,7 @@ fn run_class_resolver_group_case(case_name: &str) {
         "integration_test/class_diagram",
         case_name,
         ResolverGroupRunner::<_, ClassResolver>::new(PumlClassParser),
-        DefaultExpectationChecker,
+        ClassExpectationChecker,
     );
 }
 
@@ -134,6 +186,62 @@ fn test_class_negative() {
 #[test]
 fn test_cpp_members() {
     run_class_resolver_case("class_diagram_cpp_members");
+}
+
+#[test]
+fn test_structured_member_types_survive_resolution() {
+    let path = Rc::new(PathBuf::from("structured_types.puml"));
+    let source = "@startuml
+class Registry {
+    + using Buffer = std::array<::app::Payload, 8U>
+    + values : const app::Payload*[8U]
+    + callback : void (* const)(const app::Payload&) noexcept
+    + unsupported : decltype(value)
+    + Store(data : std::array<app::Payload, 8U>) : const app::Payload*
+}
+entity Functions <<function>> {
+    + Make(value : app::Payload&) : std::vector<app::Payload>
+}
+@enduml
+";
+    let parsed = PumlClassParser
+        .parse_file(&path, source, LogLevel::Error)
+        .unwrap();
+    let resolved = ClassResolver::new().resolve(&parsed).unwrap();
+    let class_parser::ClassUmlTopLevel::Type(class_parser::TypeDefinition::ClassLikeDef(class)) =
+        &parsed.elements[0]
+    else {
+        panic!("expected a class");
+    };
+    let entity = &resolved.entities[0];
+    let alias = &class.members.type_aliases[0].original_type;
+    assert!(alias.expression.is_some());
+    assert_eq!(&entity.type_aliases[0].original_type, alias);
+    assert_eq!(entity.variables.len(), class.members.attributes.len());
+    for (variable, attribute) in entity.variables.iter().zip(&class.members.attributes) {
+        assert_eq!(variable.data_type, attribute.r#type);
+    }
+    let unsupported = entity.variables[2].data_type.as_ref().unwrap();
+    assert_eq!(unsupported.raw_text, "decltype(value)");
+    assert!(unsupported.expression.is_none());
+    let method = &class.members.methods[0];
+    assert_eq!(entity.methods[0].return_type, method.r#type);
+    assert_eq!(
+        entity.methods[0].parameters[0].param_type,
+        method.params[0].param_type
+    );
+    let class_parser::ClassUmlTopLevel::Type(class_parser::TypeDefinition::EntityDef(functions)) =
+        &parsed.elements[1]
+    else {
+        panic!("expected a function entity");
+    };
+    let function = &functions.methods[0];
+    assert_eq!(resolved.free_functions.len(), 1);
+    assert_eq!(resolved.free_functions[0].return_type, function.r#type);
+    assert_eq!(
+        resolved.free_functions[0].parameters[0].param_type,
+        function.params[0].param_type
+    );
 }
 
 #[test]

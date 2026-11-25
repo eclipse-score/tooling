@@ -15,7 +15,7 @@ use std::{path::PathBuf, str::FromStr};
 
 /// Expected `source_location.file == ""` ignores the actual file; otherwise both
 /// must match after dropping a leading `./`.
-fn normalize_source_files(expected: &mut serde_json::Value, actual: &mut serde_json::Value) {
+fn normalize_expectations(expected: &mut serde_json::Value, actual: &mut serde_json::Value) {
     use serde_json::Value;
 
     match (expected, actual) {
@@ -39,13 +39,20 @@ fn normalize_source_files(expected: &mut serde_json::Value, actual: &mut serde_j
             }
             for (key, expected_value) in expected_map.iter_mut() {
                 if let Some(actual_value) = actual_map.get_mut(key) {
-                    normalize_source_files(expected_value, actual_value);
+                    if matches!(
+                        key.as_str(),
+                        "original_type" | "data_type" | "param_type" | "return_type"
+                    ) && expected_value.is_string()
+                    {
+                        *expected_value = serde_json::json!({"raw_text": expected_value.take()});
+                    }
+                    normalize_expectations(expected_value, actual_value);
                 }
             }
         }
         (Value::Array(expected_array), Value::Array(actual_array)) => {
             for (expected_value, actual_value) in expected_array.iter_mut().zip(actual_array) {
-                normalize_source_files(expected_value, actual_value);
+                normalize_expectations(expected_value, actual_value);
             }
         }
         _ => {}
@@ -63,7 +70,7 @@ fn compare(expected_path: &str, output_path: &str) {
     let mut actual_json: serde_json::Value =
         serde_json::from_str(&std::fs::read_to_string(output).unwrap()).unwrap();
 
-    normalize_source_files(&mut expected_json, &mut actual_json);
+    normalize_expectations(&mut expected_json, &mut actual_json);
     assert_json_diff::assert_json_eq!(expected_json, actual_json);
 }
 

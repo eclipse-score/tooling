@@ -81,7 +81,11 @@ fn render_template_parameter(parameter: &TemplateParameter) -> String {
 }
 
 fn render_parameter(parameter: &FunctionArgument) -> String {
-    let mut ty = parameter.param_type.clone().unwrap_or_default();
+    let mut ty = parameter
+        .param_type
+        .as_ref()
+        .map(|ty| ty.raw_text.clone())
+        .unwrap_or_default();
     if let Some(multiplicity) = &parameter.multiplicity {
         ty.push_str(&format!("[{multiplicity}]"));
     }

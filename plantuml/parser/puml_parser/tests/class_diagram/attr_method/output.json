@@ -20,7 +20,7 @@
               {
                 "visibility": "Public",
                 "name": "name",
-                "type": "string",
+                "type": { "raw_text": "string" },
                 "modifiers": [],
                 "source_location": {
                   "file": "",
@@ -30,7 +30,7 @@
               {
                 "visibility": "Private",
                 "name": "id",
-                "type": "int",
+                "type": { "raw_text": "int" },
                 "modifiers": [],
                 "source_location": {
                   "file": "",
@@ -43,7 +43,7 @@
                 "visibility": "Public",
                 "name": "getName",
                 "params": [],
-                "type": "string",
+                "type": { "raw_text": "string" },
                 "template_parameters": null,
                 "modifiers": [],
                 "source_location": {

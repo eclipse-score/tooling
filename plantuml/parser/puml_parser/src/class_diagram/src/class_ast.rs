@@ -10,7 +10,10 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 // *******************************************************************************
-pub use class_diagram::{ParameterDirection, TemplateParameter};
+pub use class_diagram::{
+    ParameterDirection, QualifiedTypeName, TemplateParameter, TypeArgument, TypeDescription,
+    TypeExpr,
+};
 pub use parser_core::common_ast::Arrow;
 use serde::{Deserialize, Serialize};
 use source_location::SourceLocation;
@@ -79,7 +82,7 @@ pub struct Relationship {
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub struct Param {
     pub name: Option<String>,
-    pub param_type: Option<String>,
+    pub param_type: Option<TypeDescription>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub direction: Option<ParameterDirection>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -96,7 +99,7 @@ pub struct Param {
 pub struct Attribute {
     pub visibility: Visibility,
     pub name: String,
-    pub r#type: Option<String>,
+    pub r#type: Option<TypeDescription>,
     pub modifiers: Vec<String>,
     pub source_location: SourceLocation,
 }
@@ -115,7 +118,7 @@ impl Default for Attribute {
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone, Default)]
 pub struct TypeAlias {
     pub alias: String,
-    pub original_type: String,
+    pub original_type: TypeDescription,
     pub source_location: SourceLocation,
 }
 
@@ -127,7 +130,7 @@ pub struct Method {
     pub conversion_target: Option<String>,
     pub template_parameters: Option<Vec<TemplateParameter>>,
     pub params: Vec<Param>,
-    pub r#type: Option<String>,
+    pub r#type: Option<TypeDescription>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub return_multiplicity: Option<String>,
     pub modifiers: Vec<String>,
@@ -468,7 +471,10 @@ mod tests {
 
         class.members.type_aliases.push(TypeAlias {
             alias: "Byte".into(),
-            original_type: "std::uint8_t".into(),
+            original_type: TypeDescription {
+                raw_text: "std::uint8_t".into(),
+                expression: None,
+            },
             ..Default::default()
         });
 

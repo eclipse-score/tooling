@@ -11,18 +11,18 @@
                 "methods": [
                     {
                         "name": "OnFinished",
-                        "return_type": "Result<void>",
+                        "return_type": { "raw_text": "Result<void>" },
                         "visibility": "public",
                         "parameters": [
                             {
                                 "name": "scope",
-                                "param_type": "const safecpp::Scope<>&",
+                                "param_type": { "raw_text": "const safecpp::Scope<>&" },
                                 "is_variadic": false,
                                 "is_pack_expansion": false
                             },
                             {
                                 "name": "comparator",
-                                "param_type": "std::less<>",
+                                "param_type": { "raw_text": "std::less<>" },
                                 "is_variadic": false,
                                 "is_pack_expansion": false
                             }
@@ -40,7 +40,7 @@
                 "variables": [
                     {
                         "name": "scope",
-                        "data_type": "safecpp::Scope<>",
+                        "data_type": { "raw_text": "safecpp::Scope<>" },
                         "visibility": "public",
                         "is_static": false,
                         "source_location": {

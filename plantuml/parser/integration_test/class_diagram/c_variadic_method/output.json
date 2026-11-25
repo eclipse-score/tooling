@@ -11,7 +11,7 @@
         "methods": [
           {
             "name": "AllocAndWrite",
-            "return_type": "void",
+            "return_type": { "raw_text": "void" },
             "visibility": "public",
             "parameters": [
               {

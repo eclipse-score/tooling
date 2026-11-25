@@ -7,14 +7,14 @@
       "source_location": {"file": "", "line": 14},
       "type_aliases": [], "attributes": [],
       "methods": [
-        {"visibility": "Public", "name": "operator bool", "conversion_target": "bool", "params": [], "type": "bool", "template_parameters": null, "modifiers": ["const", "noexcept"], "source_location": {"file": "", "line": 15}},
-        {"visibility": "Public", "name": "operator pointer", "conversion_target": "pointer", "params": [], "type": "pointer", "template_parameters": null, "modifiers": [], "source_location": {"file": "", "line": 16}},
-        {"visibility": "Public", "name": "operator T*", "conversion_target": "T*", "params": [], "type": "T*", "template_parameters": [{"Type": {"name": "U", "is_pack": false}}], "modifiers": ["const"], "source_location": {"file": "", "line": 17}},
-        {"visibility": "Public", "name": "operator ns::Value&", "conversion_target": "ns::Value&", "params": [], "type": "ns::Value&", "template_parameters": null, "modifiers": [], "source_location": {"file": "", "line": 18}},
-        {"visibility": "Public", "name": "operator const T*", "conversion_target": "const T*", "params": [], "type": "const T*", "template_parameters": null, "modifiers": [], "source_location": {"file": "", "line": 19}},
-        {"visibility": "Public", "name": "operator()", "params": [], "type": "int", "template_parameters": null, "modifiers": [], "source_location": {"file": "", "line": 20}},
-        {"visibility": "Public", "name": "operator[]", "params": [{"name": "index", "param_type": "int"}], "type": "int", "template_parameters": null, "modifiers": [], "source_location": {"file": "", "line": 21}},
-        {"visibility": "Public", "name": "operatorX", "params": [], "type": "bool", "template_parameters": null, "modifiers": [], "source_location": {"file": "", "line": 22}}
+        {"visibility": "Public", "name": "operator bool", "conversion_target": "bool", "params": [], "type": {"raw_text": "bool"}, "template_parameters": null, "modifiers": ["const", "noexcept"], "source_location": {"file": "", "line": 15}},
+        {"visibility": "Public", "name": "operator pointer", "conversion_target": "pointer", "params": [], "type": {"raw_text": "pointer"}, "template_parameters": null, "modifiers": [], "source_location": {"file": "", "line": 16}},
+        {"visibility": "Public", "name": "operator T*", "conversion_target": "T*", "params": [], "type": {"raw_text": "T*"}, "template_parameters": [{"Type": {"name": "U", "is_pack": false}}], "modifiers": ["const"], "source_location": {"file": "", "line": 17}},
+        {"visibility": "Public", "name": "operator ns::Value&", "conversion_target": "ns::Value&", "params": [], "type": {"raw_text": "ns::Value&"}, "template_parameters": null, "modifiers": [], "source_location": {"file": "", "line": 18}},
+        {"visibility": "Public", "name": "operator const T*", "conversion_target": "const T*", "params": [], "type": {"raw_text": "const T*"}, "template_parameters": null, "modifiers": [], "source_location": {"file": "", "line": 19}},
+        {"visibility": "Public", "name": "operator()", "params": [], "type": {"raw_text": "int"}, "template_parameters": null, "modifiers": [], "source_location": {"file": "", "line": 20}},
+        {"visibility": "Public", "name": "operator[]", "params": [{"name": "index", "param_type": {"raw_text": "int"}}], "type": {"raw_text": "int"}, "template_parameters": null, "modifiers": [], "source_location": {"file": "", "line": 21}},
+        {"visibility": "Public", "name": "operatorX", "params": [], "type": {"raw_text": "bool"}, "template_parameters": null, "modifiers": [], "source_location": {"file": "", "line": 22}}
       ],
       "kind": {"Class": {"is_abstract": false, "extends": [], "implements": []}}
     }}}],

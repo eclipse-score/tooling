@@ -14,7 +14,7 @@
 //! Normalization of C++ type spellings and method identities, shared by the
 //! class declaration merge and the design-vs-implementation validator.
 
-use class_diagram::{FunctionArgument, Method, MethodModifier, TemplateParameter};
+use class_diagram::{FunctionArgument, Method, MethodModifier, TemplateParameter, TypeDescription};
 use source_location::SourceLocation;
 
 pub(crate) fn method_key(method: &Method) -> String {
@@ -40,8 +40,8 @@ pub(crate) fn parameter_signature(parameters: &[FunctionArgument]) -> String {
                 "{}{}",
                 parameter
                     .param_type
-                    .as_deref()
-                    .map(render_type_name)
+                    .as_ref()
+                    .map(|ty| render_type_name(&ty.raw_text))
                     .unwrap_or_default(),
                 variadic
             )
@@ -81,13 +81,18 @@ pub(crate) fn normalized_method(method: &Method) -> Method {
 }
 
 pub(crate) fn normalize_callable_types(
-    return_type: &mut Option<String>,
+    return_type: &mut Option<TypeDescription>,
     parameters: &mut [FunctionArgument],
     template_parameters: &mut Option<Vec<TemplateParameter>>,
 ) {
-    *return_type = return_type.as_deref().map(render_type_name);
+    *return_type = return_type
+        .as_ref()
+        .map(|ty| render_type_name(&ty.raw_text).into());
     for parameter in parameters {
-        parameter.param_type = parameter.param_type.as_deref().map(render_type_name);
+        parameter.param_type = parameter
+            .param_type
+            .as_ref()
+            .map(|ty| render_type_name(&ty.raw_text).into());
     }
     if let Some(parameters) = template_parameters {
         normalize_template_declarations(parameters);

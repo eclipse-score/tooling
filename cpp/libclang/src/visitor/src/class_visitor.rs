@@ -257,7 +257,7 @@ fn parse_type_alias(entity: &Entity) -> Option<TypeAlias> {
 
     Some(TypeAlias {
         alias,
-        original_type,
+        original_type: original_type.into(),
         source_location: parse_source_location(entity),
     })
 }
@@ -269,7 +269,7 @@ fn parse_variable(
     Some(MemberVariable {
         name: parsed_variable_type.name.clone(),
         data_type: entity.get_type().map(|field_type| {
-            render_type_for_display(&field_type, &parsed_variable_type.resolved_type)
+            render_type_for_display(&field_type, &parsed_variable_type.resolved_type).into()
         }),
         visibility: parse_visibility(entity),
         is_static: entity.get_kind() == EntityKind::VarDecl,

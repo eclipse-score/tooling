@@ -18,21 +18,21 @@
               {
                 "visibility": "Public",
                 "name": "data",
-                "type": "T[1]",
+                "type": { "raw_text": "T[1]" },
                 "modifiers": [],
                 "source_location": { "file": "", "line": 16 }
               },
               {
                 "visibility": "Public",
                 "name": "bounded",
-                "type": "T[N]",
+                "type": { "raw_text": "T[N]" },
                 "modifiers": [],
                 "source_location": { "file": "", "line": 17 }
               },
               {
                 "visibility": "Public",
                 "name": "empty",
-                "type": "T[]",
+                "type": { "raw_text": "T[]" },
                 "modifiers": [],
                 "source_location": { "file": "", "line": 18 }
               }
@@ -44,10 +44,10 @@
                 "name": "Optional",
                 "template_parameters": null,
                 "params": [
-                  { "name": "x", "param_type": "Shared<T>", "direction": "in", "multiplicity": "0..1" },
-                  { "name": "count", "param_type": "int" }
+                  { "name": "x", "param_type": { "raw_text": "Shared<T>" }, "direction": "in", "multiplicity": "0..1" },
+                  { "name": "count", "param_type": { "raw_text": "int" } }
                 ],
-                "type": "void",
+                "type": { "raw_text": "void" },
                 "modifiers": [],
                 "source_location": { "file": "", "line": 19 }
               },
@@ -56,10 +56,10 @@
                 "name": "ZeroOrMore",
                 "template_parameters": null,
                 "params": [
-                  { "name": "x", "param_type": "Shared<T>", "direction": "in", "multiplicity": "0..*" },
-                  { "name": "count", "param_type": "int" }
+                  { "name": "x", "param_type": { "raw_text": "Shared<T>" }, "direction": "in", "multiplicity": "0..*" },
+                  { "name": "count", "param_type": { "raw_text": "int" } }
                 ],
-                "type": "void",
+                "type": { "raw_text": "void" },
                 "modifiers": [],
                 "source_location": { "file": "", "line": 20 }
               },
@@ -68,10 +68,10 @@
                 "name": "OneOrMore",
                 "template_parameters": null,
                 "params": [
-                  { "name": "x", "param_type": "Shared<T>", "direction": "in", "multiplicity": "1..*" },
-                  { "name": "count", "param_type": "int" }
+                  { "name": "x", "param_type": { "raw_text": "Shared<T>" }, "direction": "in", "multiplicity": "1..*" },
+                  { "name": "count", "param_type": { "raw_text": "int" } }
                 ],
-                "type": "void",
+                "type": { "raw_text": "void" },
                 "modifiers": [],
                 "source_location": { "file": "", "line": 21 }
               },
@@ -80,10 +80,10 @@
                 "name": "Star",
                 "template_parameters": null,
                 "params": [
-                  { "name": "x", "param_type": "Shared<T>", "direction": "in", "multiplicity": "*" },
-                  { "name": "count", "param_type": "int" }
+                  { "name": "x", "param_type": { "raw_text": "Shared<T>" }, "direction": "in", "multiplicity": "*" },
+                  { "name": "count", "param_type": { "raw_text": "int" } }
                 ],
-                "type": "void",
+                "type": { "raw_text": "void" },
                 "modifiers": [],
                 "source_location": { "file": "", "line": 22 }
               },
@@ -92,10 +92,10 @@
                 "name": "Range",
                 "template_parameters": null,
                 "params": [
-                  { "name": "x", "param_type": "Shared<T>", "direction": "in", "multiplicity": "2..5" },
-                  { "name": "count", "param_type": "int" }
+                  { "name": "x", "param_type": { "raw_text": "Shared<T>" }, "direction": "in", "multiplicity": "2..5" },
+                  { "name": "count", "param_type": { "raw_text": "int" } }
                 ],
-                "type": "void",
+                "type": { "raw_text": "void" },
                 "modifiers": [],
                 "source_location": { "file": "", "line": 23 }
               },
@@ -104,10 +104,10 @@
                 "name": "EqualBounds",
                 "template_parameters": null,
                 "params": [
-                  { "name": "x", "param_type": "Shared<T>", "direction": "in", "multiplicity": "0..0" },
-                  { "name": "count", "param_type": "int" }
+                  { "name": "x", "param_type": { "raw_text": "Shared<T>" }, "direction": "in", "multiplicity": "0..0" },
+                  { "name": "count", "param_type": { "raw_text": "int" } }
                 ],
-                "type": "void",
+                "type": { "raw_text": "void" },
                 "modifiers": [],
                 "source_location": { "file": "", "line": 24 }
               },
@@ -116,10 +116,10 @@
                 "name": "LeadingZeros",
                 "template_parameters": null,
                 "params": [
-                  { "name": "x", "param_type": "Shared<T>", "direction": "in", "multiplicity": "01..02" },
-                  { "name": "count", "param_type": "int" }
+                  { "name": "x", "param_type": { "raw_text": "Shared<T>" }, "direction": "in", "multiplicity": "01..02" },
+                  { "name": "count", "param_type": { "raw_text": "int" } }
                 ],
-                "type": "void",
+                "type": { "raw_text": "void" },
                 "modifiers": [],
                 "source_location": { "file": "", "line": 25 }
               },
@@ -128,10 +128,10 @@
                 "name": "Whitespace",
                 "template_parameters": null,
                 "params": [
-                  { "name": "x", "param_type": "Shared<T>", "direction": "in", "multiplicity": " 0 .. * " },
-                  { "name": "count", "param_type": "int" }
+                  { "name": "x", "param_type": { "raw_text": "Shared<T>" }, "direction": "in", "multiplicity": " 0 .. * " },
+                  { "name": "count", "param_type": { "raw_text": "int" } }
                 ],
-                "type": "void",
+                "type": { "raw_text": "void" },
                 "modifiers": [],
                 "source_location": { "file": "", "line": 26 }
               },
@@ -140,10 +140,10 @@
                 "name": "MaxLowerBound",
                 "template_parameters": null,
                 "params": [
-                  { "name": "x", "param_type": "Shared<T>", "direction": "in", "multiplicity": "18446744073709551615..*" },
-                  { "name": "count", "param_type": "int" }
+                  { "name": "x", "param_type": { "raw_text": "Shared<T>" }, "direction": "in", "multiplicity": "18446744073709551615..*" },
+                  { "name": "count", "param_type": { "raw_text": "int" } }
                 ],
-                "type": "void",
+                "type": { "raw_text": "void" },
                 "modifiers": [],
                 "source_location": { "file": "", "line": 27 }
               },
@@ -152,12 +152,12 @@
                 "name": "DirectionsAndDefaults",
                 "template_parameters": null,
                 "params": [
-                  { "name": "output", "param_type": "Shared<T>", "direction": "out", "multiplicity": "0..1" },
-                  { "name": "state", "param_type": "Shared<T>", "direction": "inout", "multiplicity": "1..*" },
-                  { "name": "plain", "param_type": "Shared<T>", "multiplicity": "*" },
-                  { "name": "maximum", "param_type": "Shared<T>", "multiplicity": "0..18446744073709551615" }
+                  { "name": "output", "param_type": { "raw_text": "Shared<T>" }, "direction": "out", "multiplicity": "0..1" },
+                  { "name": "state", "param_type": { "raw_text": "Shared<T>" }, "direction": "inout", "multiplicity": "1..*" },
+                  { "name": "plain", "param_type": { "raw_text": "Shared<T>" }, "multiplicity": "*" },
+                  { "name": "maximum", "param_type": { "raw_text": "Shared<T>" }, "multiplicity": "0..18446744073709551615" }
                 ],
-                "type": "void",
+                "type": { "raw_text": "void" },
                 "modifiers": [],
                 "source_location": { "file": "", "line": 28 }
               },
@@ -166,13 +166,13 @@
                 "name": "Arrays",
                 "template_parameters": null,
                 "params": [
-                  { "name": "x", "param_type": "T[1]" },
-                  { "name": "y", "param_type": "T[1]" },
-                  { "name": null, "param_type": "T[1]" },
-                  { "name": "z", "param_type": "T[N]" },
-                  { "name": "empty", "param_type": "T[]" }
+                  { "name": "x", "param_type": { "raw_text": "T[1]" } },
+                  { "name": "y", "param_type": { "raw_text": "T[1]" } },
+                  { "name": null, "param_type": { "raw_text": "T[1]" } },
+                  { "name": "z", "param_type": { "raw_text": "T[N]" } },
+                  { "name": "empty", "param_type": { "raw_text": "T[]" } }
                 ],
-                "type": "T[1]",
+                "type": { "raw_text": "T[1]" },
                 "modifiers": [],
                 "source_location": { "file": "", "line": 29 }
               },
@@ -181,7 +181,7 @@
                 "name": "BoundedArray",
                 "template_parameters": null,
                 "params": [],
-                "type": "T[N]",
+                "type": { "raw_text": "T[N]" },
                 "modifiers": [],
                 "source_location": { "file": "", "line": 30 }
               },
@@ -190,7 +190,7 @@
                 "name": "EmptyArray",
                 "template_parameters": null,
                 "params": [],
-                "type": "T[]",
+                "type": { "raw_text": "T[]" },
                 "modifiers": [],
                 "source_location": { "file": "", "line": 31 }
               }

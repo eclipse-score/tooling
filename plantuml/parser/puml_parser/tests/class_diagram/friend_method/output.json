@@ -24,14 +24,14 @@
                 "params": [
                   {
                     "name": "l_value",
-                    "param_type": "const SlotHandle&"
+                    "param_type": { "raw_text": "const SlotHandle&" }
                   },
                   {
                     "name": "r_value",
-                    "param_type": "const SlotHandle&"
+                    "param_type": { "raw_text": "const SlotHandle&" }
                   }
                 ],
-                "type": "bool",
+                "type": { "raw_text": "bool" },
                 "template_parameters": null,
                 "modifiers": [],
                 "is_friend": true,

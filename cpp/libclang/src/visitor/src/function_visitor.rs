@@ -175,7 +175,7 @@ impl FunctionVisitor {
         let method = Method {
             name: id.name.clone(),
             conversion_target: if Self::is_conversion(entity) {
-                parse_callable_return_type(entity)
+                parse_callable_return_type(entity).map(|ty| ty.raw_text)
             } else {
                 None
             },
@@ -320,7 +320,7 @@ impl FunctionVisitor {
             name: if Self::is_conversion(entity) {
                 // The semantic result spelling retains aliases and dependent parameter
                 // names, unlike get_name() on member-template conversion cursors.
-                format!("operator {}", parse_callable_return_type(entity)?)
+                format!("operator {}", parse_callable_return_type(entity)?.raw_text)
             } else {
                 entity.get_name()?
             },

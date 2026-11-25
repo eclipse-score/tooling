@@ -14,6 +14,9 @@
 use serde::{Deserialize, Serialize};
 pub use source_location::SourceLocation;
 
+mod type_expr;
+pub use type_expr::{QualifiedTypeName, TypeArgument, TypeDescription, TypeExpr};
+
 /// Represents a complete class diagram model containing all resolved entities
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
 pub struct ClassDiagram {
@@ -162,7 +165,7 @@ pub struct TypeAlias {
     /// alias = "Number"
     /// original_type = "double"
     pub alias: String,
-    pub original_type: String,
+    pub original_type: TypeDescription,
     /// Source location in input
     pub source_location: SourceLocation,
 }
@@ -174,7 +177,7 @@ pub struct MemberVariable {
     /// Attribute name
     pub name: String,
     /// Data type (e.g., "int", "string", "std::vector<int>")
-    pub data_type: Option<String>,
+    pub data_type: Option<TypeDescription>,
     /// Visibility modifier
     pub visibility: Visibility,
     /// Whether this is a static member
@@ -208,7 +211,7 @@ pub struct FunctionArgument {
     /// Parameter name
     pub name: String,
     /// Parameter type
-    pub param_type: Option<String>,
+    pub param_type: Option<TypeDescription>,
     /// Explicit UML direction; absent for legacy parameters and C++ declarations.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub direction: Option<ParameterDirection>,
@@ -257,7 +260,7 @@ pub struct Method {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub conversion_target: Option<String>,
     /// Return type
-    pub return_type: Option<String>,
+    pub return_type: Option<TypeDescription>,
     /// UML return multiplicity bracket interior; independent of the return type.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub return_multiplicity: Option<String>,
@@ -330,7 +333,7 @@ pub struct FreeFunctionDecl {
     /// Namespace containing the function, if any.
     pub enclosing_namespace_id: Option<String>,
     /// Return type.
-    pub return_type: Option<String>,
+    pub return_type: Option<TypeDescription>,
     /// UML return multiplicity bracket interior; independent of the return type.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub return_multiplicity: Option<String>,
@@ -421,7 +424,13 @@ mod tests {
             template_kind: ClassTemplateKind::NonTemplate,
             variables: vec![MemberVariable {
                 name: "name".to_string(),
-                data_type: Some("string".to_string()),
+                data_type: Some(TypeDescription {
+                    raw_text: "string".to_string(),
+                    expression: Some(TypeExpr::NamedType(QualifiedTypeName {
+                        segments: vec!["string".to_string()],
+                        is_global: false,
+                    })),
+                }),
                 visibility: Visibility::Public,
                 is_static: false,
                 source_location: SourceLocation::new("test.puml", 1),
@@ -429,7 +438,7 @@ mod tests {
             methods: vec![Method {
                 name: "getName".to_string(),
                 conversion_target: None,
-                return_type: Some("string".to_string()),
+                return_type: Some(TypeDescription::from("string")),
                 return_multiplicity: None,
                 visibility: Visibility::Public,
                 parameters: vec![],
@@ -447,6 +456,12 @@ mod tests {
         let json = serde_json::to_string_pretty(&entity).unwrap();
         let deserialized: SimpleEntity = serde_json::from_str(&json).unwrap();
         assert_eq!(entity, deserialized);
+        let mut legacy_json = serde_json::to_value(&entity).unwrap();
+        assert!(legacy_json["methods"][0]["return_type"]
+            .get("expression")
+            .is_none());
+        legacy_json["variables"][0]["data_type"] = serde_json::json!("string");
+        assert!(serde_json::from_value::<SimpleEntity>(legacy_json).is_err());
     }
 
     #[test]

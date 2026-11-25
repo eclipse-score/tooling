@@ -6,7 +6,9 @@
         "id": "core.Point",
         "name": "Point",
         "enclosing_namespace_id": "core",
-        "stereotypes": ["value_object"],
+        "stereotypes": [
+          "value_object"
+        ],
         "entity_type": "Struct",
         "type_aliases": [],
         "methods": [],
@@ -15,7 +17,7 @@
         "variables": [
           {
             "name": "x",
-            "data_type": "f32",
+            "data_type": { "raw_text": "f32" },
             "visibility": "public",
             "is_static": false,
             "source_location": {
@@ -25,7 +27,7 @@
           },
           {
             "name": "y",
-            "data_type": "f32",
+            "data_type": { "raw_text": "f32" },
             "visibility": "public",
             "is_static": false,
             "source_location": {
@@ -44,7 +46,9 @@
         "id": "core.Size",
         "name": "Size",
         "enclosing_namespace_id": "core",
-        "stereotypes": ["value_object"],
+        "stereotypes": [
+          "value_object"
+        ],
         "entity_type": "Struct",
         "type_aliases": [],
         "methods": [],
@@ -53,7 +57,7 @@
         "variables": [
           {
             "name": "width",
-            "data_type": "f32",
+            "data_type": { "raw_text": "f32" },
             "visibility": "public",
             "is_static": false,
             "source_location": {
@@ -63,7 +67,7 @@
           },
           {
             "name": "height",
-            "data_type": "f32",
+            "data_type": { "raw_text": "f32" },
             "visibility": "public",
             "is_static": false,
             "source_location": {
@@ -82,7 +86,9 @@
         "id": "core.Color",
         "name": "Color",
         "enclosing_namespace_id": "core",
-        "stereotypes": ["primitive_enum"],
+        "stereotypes": [
+          "primitive_enum"
+        ],
         "entity_type": "Enum",
         "type_aliases": [],
         "methods": [],
@@ -124,7 +130,9 @@
         "id": "core.Shape",
         "name": "Shape",
         "enclosing_namespace_id": "core",
-        "stereotypes": ["abstract_entity"],
+        "stereotypes": [
+          "abstract_entity"
+        ],
         "entity_type": "Class",
         "type_aliases": [],
         "methods": [
@@ -142,7 +150,7 @@
           },
           {
             "name": "area",
-            "return_type": "f32",
+            "return_type": { "raw_text": "f32" },
             "visibility": "public",
             "parameters": [],
             "template_parameters": null,
@@ -178,7 +186,9 @@
         "id": "core.Drawable",
         "name": "Drawable",
         "enclosing_namespace_id": "core",
-        "stereotypes": ["spi"],
+        "stereotypes": [
+          "spi"
+        ],
         "entity_type": "Interface",
         "type_aliases": [],
         "methods": [
@@ -208,7 +218,9 @@
         "id": "core.Canvas",
         "name": "Canvas",
         "enclosing_namespace_id": "core",
-        "stereotypes": ["aggregate_root"],
+        "stereotypes": [
+          "aggregate_root"
+        ],
         "entity_type": "Class",
         "type_aliases": [],
         "methods": [
@@ -219,7 +231,7 @@
             "parameters": [
               {
                 "name": "s",
-                "param_type": "Shape",
+                "param_type": { "raw_text": "Shape" },
                 "is_variadic": false
               }
             ],
@@ -248,7 +260,7 @@
         "variables": [
           {
             "name": "shapes",
-            "data_type": "Shape",
+            "data_type": { "raw_text": "Shape" },
             "visibility": "private",
             "is_static": false,
             "source_location": {
@@ -290,13 +302,15 @@
         "id": "core.geometry.Circle",
         "name": "Circle",
         "enclosing_namespace_id": "core.geometry",
-        "stereotypes": ["entity"],
+        "stereotypes": [
+          "entity"
+        ],
         "entity_type": "Class",
         "type_aliases": [],
         "methods": [
           {
             "name": "area",
-            "return_type": "f32",
+            "return_type": { "raw_text": "f32" },
             "visibility": "public",
             "parameters": [],
             "template_parameters": null,
@@ -312,7 +326,7 @@
         "variables": [
           {
             "name": "center",
-            "data_type": "Point",
+            "data_type": { "raw_text": "Point" },
             "visibility": "private",
             "is_static": false,
             "source_location": {
@@ -322,7 +336,7 @@
           },
           {
             "name": "radius",
-            "data_type": "f32",
+            "data_type": { "raw_text": "f32" },
             "visibility": "private",
             "is_static": false,
             "source_location": {
@@ -375,13 +389,15 @@
         "id": "core.geometry.Rectangle",
         "name": "Rectangle",
         "enclosing_namespace_id": "core.geometry",
-        "stereotypes": ["entity"],
+        "stereotypes": [
+          "entity"
+        ],
         "entity_type": "Class",
         "type_aliases": [],
         "methods": [
           {
             "name": "area",
-            "return_type": "f32",
+            "return_type": { "raw_text": "f32" },
             "visibility": "public",
             "parameters": [],
             "template_parameters": null,
@@ -397,7 +413,7 @@
         "variables": [
           {
             "name": "origin",
-            "data_type": "Point",
+            "data_type": { "raw_text": "Point" },
             "visibility": "private",
             "is_static": false,
             "source_location": {
@@ -407,7 +423,7 @@
           },
           {
             "name": "size",
-            "data_type": "Size",
+            "data_type": { "raw_text": "Size" },
             "visibility": "private",
             "is_static": false,
             "source_location": {
@@ -457,7 +473,7 @@
         "variables": [
           {
             "name": "corner_radius",
-            "data_type": "f32",
+            "data_type": { "raw_text": "f32" },
             "visibility": "private",
             "is_static": false,
             "source_location": {
@@ -547,12 +563,12 @@
             "parameters": [
               {
                 "name": "level",
-                "param_type": "LogLevel",
+                "param_type": { "raw_text": "LogLevel" },
                 "is_variadic": false
               },
               {
                 "name": "msg",
-                "param_type": "String",
+                "param_type": { "raw_text": "String" },
                 "is_variadic": false
               }
             ],
@@ -577,7 +593,9 @@
         "id": "api.RestApi",
         "name": "RestApi",
         "enclosing_namespace_id": "api",
-        "stereotypes": ["adapter"],
+        "stereotypes": [
+          "adapter"
+        ],
         "entity_type": "Class",
         "type_aliases": [],
         "methods": [

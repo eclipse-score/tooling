@@ -20,7 +20,7 @@
               {
                 "visibility": "Public",
                 "name": "kMaxRecorders",
-                "type": "std::size_t",
+                "type": { "raw_text": "std::size_t" },
                 "modifiers": [
                   "static",
                   "constexpr"

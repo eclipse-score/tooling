@@ -43,12 +43,12 @@
         "methods": [
           {
             "name": "Execute",
-            "return_type": "ResultBlank",
+            "return_type": { "raw_text": "ResultBlank" },
             "visibility": "public",
             "parameters": [
               {
                 "name": "",
-                "param_type": "amp::stop_token",
+                "param_type": { "raw_text": "amp::stop_token" },
                 "is_variadic": false
               }
             ],
@@ -181,7 +181,7 @@
         "methods": [
           {
             "name": "GetCPDFlag",
-            "return_type": "CheckProgrammingDependenciesFlagState",
+            "return_type": { "raw_text": "CheckProgrammingDependenciesFlagState" },
             "visibility": "public",
             "parameters": [],
             "template_parameters": null,
@@ -341,12 +341,12 @@
             "parameters": [
               {
                 "name": "",
-                "param_type": "::ara::core::InstanceSpecifier",
+                "param_type": { "raw_text": "::ara::core::InstanceSpecifier" },
                 "is_variadic": false
               },
               {
                 "name": "",
-                "param_type": "DiagnosticJobConstructorArgumentTypes",
+                "param_type": { "raw_text": "DiagnosticJobConstructorArgumentTypes" },
                 "is_variadic": false,
                 "is_pack_expansion": true
               }
@@ -395,27 +395,27 @@
             "parameters": [
               {
                 "name": "year",
-                "param_type": "uint8",
+                "param_type": { "raw_text": "uint8" },
                 "is_variadic": false
               },
               {
                 "name": "month",
-                "param_type": "uint8",
+                "param_type": { "raw_text": "uint8" },
                 "is_variadic": false
               },
               {
                 "name": "day",
-                "param_type": "uint8",
+                "param_type": { "raw_text": "uint8" },
                 "is_variadic": false
               },
               {
                 "name": "len_and_tester_id",
-                "param_type": "uint8",
+                "param_type": { "raw_text": "uint8" },
                 "is_variadic": false
               },
               {
                 "name": "reserved",
-                "param_type": "array<uint8, 9>",
+                "param_type": { "raw_text": "array<uint8, 9>" },
                 "is_variadic": false
               }
             ],
@@ -445,7 +445,7 @@
         "methods": [
           {
             "name": "Run",
-            "return_type": "ResultBlank",
+            "return_type": { "raw_text": "ResultBlank" },
             "visibility": "public",
             "parameters": [],
             "template_parameters": null,
@@ -474,7 +474,7 @@
           },
           {
             "name": "Submit",
-            "return_type": "auto",
+            "return_type": { "raw_text": "auto" },
             "visibility": "public",
             "parameters": [
               {
@@ -484,7 +484,9 @@
               }
             ],
             "template_parameters": null,
-            "modifiers": ["Const"],
+            "modifiers": [
+              "Const"
+            ],
             "source_location": {
               "file": "",
               "line": 83
@@ -518,12 +520,12 @@
           },
           {
             "name": "operator()",
-            "return_type": "ResultBlank",
+            "return_type": { "raw_text": "ResultBlank" },
             "visibility": "public",
             "parameters": [
               {
                 "name": "",
-                "param_type": "amp::stop_token",
+                "param_type": { "raw_text": "amp::stop_token" },
                 "is_variadic": false
               }
             ],
@@ -572,17 +574,17 @@
           },
           {
             "name": "Submit",
-            "return_type": "auto",
+            "return_type": { "raw_text": "auto" },
             "visibility": "public",
             "parameters": [
               {
                 "name": "",
-                "param_type": "CallableType&&",
+                "param_type": { "raw_text": "CallableType&&" },
                 "is_variadic": false
               },
               {
                 "name": "",
-                "param_type": "ArgumentTypes&&",
+                "param_type": { "raw_text": "ArgumentTypes&&" },
                 "is_variadic": false
               }
             ],
@@ -602,7 +604,7 @@
           },
           {
             "name": "GetActiveSWEs",
-            "return_type": "SoftwareEntityTable&",
+            "return_type": { "raw_text": "SoftwareEntityTable&" },
             "visibility": "public",
             "parameters": [],
             "template_parameters": null,
@@ -614,7 +616,7 @@
           },
           {
             "name": "TakeOwnership",
-            "return_type": "Artifact&&",
+            "return_type": { "raw_text": "Artifact&&" },
             "visibility": "public",
             "parameters": [],
             "template_parameters": null,
@@ -626,7 +628,7 @@
           },
           {
             "name": "operator->",
-            "return_type": "Result<Artifact>*",
+            "return_type": { "raw_text": "Result<Artifact>*" },
             "visibility": "public",
             "parameters": [],
             "template_parameters": null,
@@ -638,12 +640,12 @@
           },
           {
             "name": "run_application",
-            "return_type": "std::int32_t",
+            "return_type": { "raw_text": "std::int32_t" },
             "visibility": "public",
             "parameters": [
               {
                 "name": "argv",
-                "param_type": "[]test::StringLiteral",
+                "param_type": { "raw_text": "[]test::StringLiteral" },
                 "is_variadic": false
               }
             ],
@@ -661,7 +663,7 @@
             "parameters": [
               {
                 "name": "visitor",
-                "param_type": "amp::callback<void(Flashing&)>",
+                "param_type": { "raw_text": "amp::callback<void(Flashing&)>" },
                 "is_variadic": false
               }
             ],
@@ -679,7 +681,7 @@
             "parameters": [
               {
                 "name": "",
-                "param_type": "amp::callback<void(FlashingMinion&)>",
+                "param_type": { "raw_text": "amp::callback<void(FlashingMinion&)>" },
                 "is_variadic": false
               }
             ],
@@ -697,17 +699,17 @@
             "parameters": [
               {
                 "name": "",
-                "param_type": "const amp::stop_token&",
+                "param_type": { "raw_text": "const amp::stop_token&" },
                 "is_variadic": false
               },
               {
                 "name": "",
-                "param_type": "InfrastructureContext",
+                "param_type": { "raw_text": "InfrastructureContext" },
                 "is_variadic": false
               },
               {
                 "name": "",
-                "param_type": "Context",
+                "param_type": { "raw_text": "Context" },
                 "is_variadic": false
               }
             ],
@@ -725,12 +727,12 @@
             "parameters": [
               {
                 "name": "",
-                "param_type": "amp::pmr::unique_ptr<ExecutorFactory>",
+                "param_type": { "raw_text": "amp::pmr::unique_ptr<ExecutorFactory>" },
                 "is_variadic": false
               },
               {
                 "name": "",
-                "param_type": "std::shared_ptr<mw::diag::IConversations>",
+                "param_type": { "raw_text": "std::shared_ptr<mw::diag::IConversations>" },
                 "is_variadic": false
               }
             ],
@@ -747,7 +749,7 @@
         "variables": [
           {
             "name": "config_",
-            "data_type": "Config",
+            "data_type": { "raw_text": "Config" },
             "visibility": "private",
             "is_static": false,
             "source_location": {
@@ -757,7 +759,7 @@
           },
           {
             "name": "non_fatal_errors",
-            "data_type": "{test::result::Error}",
+            "data_type": { "raw_text": "{test::result::Error}" },
             "visibility": "public",
             "is_static": false,
             "source_location": {
@@ -901,7 +903,7 @@
         "variables": [
           {
             "name": "",
-            "data_type": "std::mutex",
+            "data_type": { "raw_text": "std::mutex" },
             "visibility": "private",
             "is_static": false,
             "source_location": {
@@ -924,7 +926,7 @@
         "type_aliases": [
           {
             "alias": "AllowOpModeChangeOutput",
-            "original_type": "std::uint8_t",
+            "original_type": { "raw_text": "std::uint8_t" },
             "source_location": {
               "file": "",
               "line": 129
@@ -934,17 +936,17 @@
         "methods": [
           {
             "name": "Func",
-            "return_type": "std::Result<Uptr>",
+            "return_type": { "raw_text": "std::Result<Uptr>" },
             "visibility": "public",
             "parameters": [
               {
                 "name": "input_1",
-                "param_type": "const AllowOpModeChangeOutput",
+                "param_type": { "raw_text": "const AllowOpModeChangeOutput" },
                 "is_variadic": false
               },
               {
                 "name": "json_parser",
-                "param_type": "std::shared_ptr<std::uint32_t>",
+                "param_type": { "raw_text": "std::shared_ptr<std::uint32_t>" },
                 "is_variadic": false
               }
             ],

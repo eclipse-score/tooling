@@ -12,13 +12,95 @@
 // *******************************************************************************
 use std::collections::{HashMap, HashSet};
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::rc::Rc;
 
 use class_parser::{ClassError, ClassUmlFile, PumlClassParser};
 use parser_core::{BaseParseError, DiagramParser};
 use puml_utils::LogLevel;
-use test_framework::{run_case, DefaultExpectationChecker, DiagramProcessor};
+use serde_json::Value as JsonValue;
+use serde_yaml::Value as YamlValue;
+use test_framework::{
+    run_case, DefaultExpectationChecker, DiagramProcessor, ExpectationChecker, Expected,
+};
+
+struct ClassExpectationChecker;
+
+fn omit_unchecked_expressions(actual: &mut JsonValue, expected: &JsonValue) {
+    match (actual, expected) {
+        (JsonValue::Object(actual), JsonValue::Object(expected)) => {
+            if expected.contains_key("raw_text") && !expected.contains_key("expression") {
+                actual.remove("expression");
+            }
+            for (key, value) in actual.iter_mut() {
+                if let Some(expected) = expected.get(key) {
+                    omit_unchecked_expressions(value, expected);
+                }
+            }
+        }
+        (JsonValue::Array(actual), JsonValue::Array(expected)) => {
+            for (actual, expected) in actual.iter_mut().zip(expected) {
+                omit_unchecked_expressions(actual, expected);
+            }
+        }
+        _ => {}
+    }
+}
+
+impl ExpectationChecker<ClassError, ClassUmlFile> for ClassExpectationChecker {
+    fn check_ok(&self, actual: &ClassUmlFile, expected: &Expected<ClassUmlFile>) {
+        if let Expected::Ast(expected) = expected {
+            let mut actual = serde_json::to_value(actual).unwrap();
+            let expected = serde_json::to_value(expected).unwrap();
+            omit_unchecked_expressions(&mut actual, &expected);
+            <DefaultExpectationChecker as ExpectationChecker<ClassError, JsonValue>>::check_ok(
+                &DefaultExpectationChecker,
+                &actual,
+                &Expected::Ast(expected),
+            );
+        } else {
+            <DefaultExpectationChecker as ExpectationChecker<ClassError, ClassUmlFile>>::check_ok(
+                &DefaultExpectationChecker,
+                actual,
+                expected,
+            );
+        }
+    }
+
+    fn check_err(&self, error: &ClassError, expected: &YamlValue, base_dir: &Path) {
+        <DefaultExpectationChecker as ExpectationChecker<ClassError, ClassUmlFile>>::check_err(
+            &DefaultExpectationChecker,
+            error,
+            expected,
+            base_dir,
+        );
+    }
+}
+
+#[test]
+fn test_only_omitted_type_expressions_are_ignored() {
+    let actual = serde_json::json!({
+        "type": {"raw_text": "int", "expression": {"Builtin": "int"}},
+        "name": "entry",
+    });
+    let expected = serde_json::json!({"type": {"raw_text": "int"}, "name": "entry"});
+    let mut unchecked = actual.clone();
+    omit_unchecked_expressions(&mut unchecked, &expected);
+    assert_eq!(unchecked, expected);
+
+    for expected in [
+        serde_json::json!({
+            "type": {"raw_text": "int", "expression": {"Builtin": "void"}},
+            "name": "entry",
+        }),
+        serde_json::json!({"type": {"raw_text": "void"}, "name": "entry"}),
+        serde_json::json!({"type": {"raw_text": "int"}, "name": "other"}),
+    ] {
+        let mut checked = actual.clone();
+        omit_unchecked_expressions(&mut checked, &expected);
+        assert_ne!(checked, expected);
+    }
+}
 
 struct ClassRunner;
 impl DiagramProcessor for ClassRunner {
@@ -55,7 +137,7 @@ fn run_class_diagram_parser_case(case_name: &str) {
         "puml_parser/tests/class_diagram",
         case_name,
         ClassRunner,
-        DefaultExpectationChecker,
+        ClassExpectationChecker,
     );
 }
 
@@ -118,6 +200,11 @@ fn test_pointer_trailing_const() {
 #[test]
 fn test_named_const_void_pointer_const() {
     run_class_diagram_parser_case("named_const_void_pointer_const");
+}
+
+#[test]
+fn test_function_pointer() {
+    run_class_diagram_parser_case("function_pointer");
 }
 
 #[test]

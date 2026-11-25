@@ -144,7 +144,7 @@
         "methods": [
           {
             "name": "Get",
-            "return_type": "WorkerStatus",
+            "return_type": { "raw_text": "WorkerStatus" },
             "visibility": "public",
             "parameters": [],
             "template_parameters": null,

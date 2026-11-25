@@ -75,7 +75,7 @@ impl ApiCollector {
             let record = record_name(Some(&entity.id), &member, &origin)?;
             let signature = render_signature(&SignatureParts {
                 qualified_name: &format!("{qualified_scope}::{}", method.name),
-                return_type: method.return_type.as_deref(),
+                return_type: method.return_type.as_ref().map(|ty| ty.raw_text.as_str()),
                 return_multiplicity: method.return_multiplicity.as_deref(),
                 conversion_target: method.conversion_target.as_deref(),
                 parameters: &method.parameters,
@@ -109,7 +109,7 @@ impl ApiCollector {
         let record = record_name(namespace, &function.name, &qualified)?;
         let signature = render_signature(&SignatureParts {
             qualified_name: &qualified,
-            return_type: function.return_type.as_deref(),
+            return_type: function.return_type.as_ref().map(|ty| ty.raw_text.as_str()),
             return_multiplicity: function.return_multiplicity.as_deref(),
             conversion_target: None,
             parameters: &function.parameters,
@@ -187,7 +187,7 @@ mod tests {
 
     fn param(ty: &str) -> FunctionArgument {
         FunctionArgument {
-            param_type: Some(ty.to_string()),
+            param_type: Some(ty.into()),
             ..Default::default()
         }
     }
@@ -224,10 +224,10 @@ mod tests {
     #[test]
     fn overloads_collapse_into_one_record_with_one_signature_each() {
         let mut overload = method("OfferService", 15);
-        overload.return_type = Some("Result".to_string());
+        overload.return_type = Some("Result".into());
         overload.parameters = vec![param("int")];
         let mut first = method("OfferService", 14);
-        first.return_type = Some("Result".to_string());
+        first.return_type = Some("Result".into());
         let model = diagram(
             vec![entity("score.mw.Skeleton", vec![first, overload])],
             vec![],
@@ -265,7 +265,7 @@ mod tests {
     #[test]
     fn const_and_non_const_overloads_retain_distinct_signatures_in_one_record() {
         let mut first = method("Check", 3);
-        first.return_type = Some("bool".to_string());
+        first.return_type = Some("bool".into());
         first.parameters = vec![param("int")];
         let mut overload = first.clone();
         overload.source_location = SourceLocation::new("d.puml", 4);
@@ -291,11 +291,11 @@ mod tests {
     #[test]
     fn const_overload_with_different_return_type_retains_trailing_const() {
         let mut first = method("find", 3);
-        first.return_type = Some("iterator".to_string());
+        first.return_type = Some("iterator".into());
         first.parameters = vec![param("const Key&")];
         let mut overload = first.clone();
         overload.source_location = SourceLocation::new("d.puml", 4);
-        overload.return_type = Some("const_iterator".to_string());
+        overload.return_type = Some("const_iterator".into());
         overload.modifiers = vec![MethodModifier::Const];
         let model = diagram(vec![entity("A", vec![first, overload])], vec![]);
 
@@ -410,7 +410,7 @@ mod tests {
     #[test]
     fn static_noexcept_and_template_are_part_of_the_signature() {
         let mut m = method("Create", 3);
-        m.return_type = Some("A".to_string());
+        m.return_type = Some("A".into());
         m.modifiers = vec![MethodModifier::Static, MethodModifier::Noexcept];
         m.template_parameters = Some(vec![
             TemplateParameter::Type {
@@ -424,7 +424,7 @@ mod tests {
         ]);
         m.parameters = vec![FunctionArgument {
             name: "args".to_string(),
-            param_type: Some("Ts&&".to_string()),
+            param_type: Some("Ts&&".into()),
             is_pack_expansion: true,
             ..Default::default()
         }];
@@ -487,7 +487,7 @@ mod tests {
                 FreeFunctionDecl {
                     name: "clamp".to_string(),
                     enclosing_namespace_id: Some("amp.algorithm".to_string()),
-                    return_type: Some("int".to_string()),
+                    return_type: Some("int".into()),
                     parameters: vec![param("int")],
                     source_location: SourceLocation::new("d.puml", 7),
                     ..Default::default()

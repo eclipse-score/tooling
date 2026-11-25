@@ -25,12 +25,12 @@
           },
           {
             "name": "operator()",
-            "return_type": "ResultBlank",
+            "return_type": { "raw_text": "ResultBlank" },
             "visibility": "public",
             "parameters": [
               {
                 "name": "",
-                "param_type": "amp::stop_token",
+                "param_type": { "raw_text": "amp::stop_token" },
                 "is_variadic": false
               }
             ],
@@ -79,17 +79,17 @@
           },
           {
             "name": "Submit",
-            "return_type": "auto",
+            "return_type": { "raw_text": "auto" },
             "visibility": "public",
             "parameters": [
               {
                 "name": "",
-                "param_type": "CallableType&&",
+                "param_type": { "raw_text": "CallableType&&" },
                 "is_variadic": false
               },
               {
                 "name": "",
-                "param_type": "ArgumentTypes&&",
+                "param_type": { "raw_text": "ArgumentTypes&&" },
                 "is_variadic": false
               }
             ],
@@ -109,7 +109,7 @@
           },
           {
             "name": "operator->",
-            "return_type": "Result<Artifact>*",
+            "return_type": { "raw_text": "Result<Artifact>*" },
             "visibility": "public",
             "parameters": [],
             "template_parameters": null,
@@ -126,7 +126,7 @@
             "parameters": [
               {
                 "name": "visitor",
-                "param_type": "amp::callback<void(Flashing&)>",
+                "param_type": { "raw_text": "amp::callback<void(Flashing&)>" },
                 "is_variadic": false
               }
             ],
@@ -144,7 +144,7 @@
             "parameters": [
               {
                 "name": "",
-                "param_type": "amp::callback<void(FlashingMinion&)>",
+                "param_type": { "raw_text": "amp::callback<void(FlashingMinion&)>" },
                 "is_variadic": false
               }
             ],

@@ -12,7 +12,7 @@
 // *******************************************************************************
 
 use clang::{Entity, EntityKind};
-use class_diagram::{FunctionArgument, TemplateParameter};
+use class_diagram::{FunctionArgument, TemplateParameter, TypeDescription};
 use cpp_semantics::ResolvedType;
 
 use crate::context::CallableArgumentKey;
@@ -72,7 +72,7 @@ pub(crate) fn parse_callable_parameters(entity: &Entity) -> ParsedCallableParame
 
         parameters.push(FunctionArgument {
             name: argument.get_name().unwrap_or_default(),
-            param_type: Some(normalize_pack_expansion_type(&raw_param_type)),
+            param_type: Some(normalize_pack_expansion_type(&raw_param_type).into()),
             is_variadic: false,
             is_pack_expansion,
             direction: None,
@@ -115,10 +115,10 @@ pub(crate) fn parse_callable_parameters(entity: &Entity) -> ParsedCallableParame
     }
 }
 
-pub(crate) fn parse_callable_return_type(entity: &Entity) -> Option<String> {
+pub(crate) fn parse_callable_return_type(entity: &Entity) -> Option<TypeDescription> {
     entity.get_result_type().map(|return_type| {
         let resolved_type = resolve_declared_type(entity, &return_type);
-        render_type_for_display(&return_type, &resolved_type)
+        render_type_for_display(&return_type, &resolved_type).into()
     })
 }
 

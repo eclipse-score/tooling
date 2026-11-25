@@ -24,10 +24,10 @@
                 "params": [
                   {
                     "name": null,
-                    "param_type": "Recorder*"
+                    "param_type": { "raw_text": "Recorder*" }
                   }
                 ],
-                "type": "Runtime&",
+                "type": { "raw_text": "Runtime&" },
                 "template_parameters": null,
                 "modifiers": [
                   "{static}"
@@ -55,7 +55,7 @@
                 "visibility": "Public",
                 "name": "Reset",
                 "params": [],
-                "type": "void",
+                "type": { "raw_text": "void" },
                 "template_parameters": null,
                 "modifiers": [
                   "{static}"
@@ -139,7 +139,7 @@
                 "visibility": "Public",
                 "name": "Count",
                 "params": [],
-                "type": "int",
+                "type": { "raw_text": "int" },
                 "template_parameters": null,
                 "modifiers": [
                   "<<static>>"

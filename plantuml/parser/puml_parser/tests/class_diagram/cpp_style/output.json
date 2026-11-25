@@ -50,7 +50,7 @@
                 "params": [
                   {
                     "name": null,
-                    "param_type": "Event",
+                    "param_type": { "raw_text": "Event" },
                     "is_pack_expansion": true
                   }
                 ],

@@ -30,7 +30,7 @@
                   {
                     "visibility": "Public",
                     "name": "id",
-                    "type": "int",
+                    "type": { "raw_text": "int" },
                     "modifiers": [],
                     "source_location": {
                       "file": "",
@@ -40,7 +40,7 @@
                   {
                     "visibility": "Private",
                     "name": "name",
-                    "type": "String",
+                    "type": { "raw_text": "String" },
                     "modifiers": [],
                     "source_location": {
                       "file": "",
@@ -50,7 +50,7 @@
                   {
                     "visibility": "Protected",
                     "name": "flag",
-                    "type": "bool",
+                    "type": { "raw_text": "bool" },
                     "modifiers": [],
                     "source_location": {
                       "file": "",
@@ -60,7 +60,7 @@
                   {
                     "visibility": "Package",
                     "name": "pkgField",
-                    "type": "float",
+                    "type": { "raw_text": "float" },
                     "modifiers": [],
                     "source_location": {
                       "file": "",
@@ -73,21 +73,31 @@
                     "visibility": "Public",
                     "name": "foo",
                     "template_parameters": [
-                      {"Type": {"name": "T", "is_pack": false}},
-                      {"Type": {"name": "U", "is_pack": false}}
+                      {
+                        "Type": {
+                          "name": "T",
+                          "is_pack": false
+                        }
+                      },
+                      {
+                        "Type": {
+                          "name": "U",
+                          "is_pack": false
+                        }
+                      }
                     ],
                     "params": [
                       {
                         "name": "a",
-                        "param_type": "int"
+                        "param_type": { "raw_text": "int" }
                       },
                       {
                         "name": "b",
-                        "param_type": "String",
+                        "param_type": { "raw_text": "String" },
                         "is_pack_expansion": true
                       }
                     ],
-                    "type": "bool",
+                    "type": { "raw_text": "bool" },
                     "modifiers": [],
                     "source_location": {
                       "file": "",
@@ -121,7 +131,7 @@
                   {
                     "visibility": "Public",
                     "name": "value",
-                    "type": "int",
+                    "type": { "raw_text": "int" },
                     "modifiers": [],
                     "source_location": {
                       "file": "",
@@ -152,7 +162,7 @@
                     "visibility": "Public",
                     "name": "bar",
                     "params": [],
-                    "type": "void",
+                    "type": { "raw_text": "void" },
                     "template_parameters": null,
                     "modifiers": [],
                     "source_location": {
