@@ -96,7 +96,10 @@ fn is_same_overload(a: &Method, b: &Method) -> bool {
 fn comparable_variable(variable: &MemberVariable) -> MemberVariable {
     let mut variable = variable.clone();
     variable.source_location = SourceLocation::default();
-    variable.data_type = variable.data_type.as_deref().map(render_type_name);
+    variable.data_type = variable
+        .data_type
+        .as_ref()
+        .map(|ty| render_type_name(&ty.raw_text).into());
     variable
 }
 
@@ -152,8 +155,8 @@ fn merge_members(merged: &mut SimpleEntity, other: SimpleEntity) -> Result<(), M
         match merged.type_aliases.iter().find(|t| t.alias == alias.alias) {
             None => merged.type_aliases.push(alias),
             Some(existing)
-                if render_type_name(&existing.original_type)
-                    == render_type_name(&alias.original_type) => {}
+                if render_type_name(&existing.original_type.raw_text)
+                    == render_type_name(&alias.original_type.raw_text) => {}
             Some(existing) => {
                 return Err(MergeConflict {
                     field: format!("definition of type alias \"{}\"", alias.alias),
@@ -694,7 +697,7 @@ mod tests {
     #[test]
     fn class_entity_index_reports_conflicting_member_definitions() {
         let mut conflicting = with_method(entity("Unit.Sample", "design_b.puml", 34), "Run");
-        conflicting.methods[0].return_type = Some("int".to_string());
+        conflicting.methods[0].return_type = Some("int".into());
         let diagrams = vec![ClassDiagram {
             name: "classes".to_string(),
             entities: vec![
@@ -846,15 +849,15 @@ mod tests {
     #[test]
     fn class_entity_index_merges_differently_spelled_types() {
         let mut a = with_method(entity("Unit.Sample", "design_a.puml", 1), "data");
-        a.methods[0].return_type = Some("std::uint8_t*".to_string());
+        a.methods[0].return_type = Some("std::uint8_t*".into());
         a.methods[0].parameters = vec![class_diagram::FunctionArgument {
-            param_type: Some("vehicle.Payload".to_string()),
+            param_type: Some("vehicle.Payload".into()),
             ..Default::default()
         }];
         let mut b = with_method(entity("Unit.Sample", "design_b.puml", 1), "data");
-        b.methods[0].return_type = Some("uint8_t *".to_string());
+        b.methods[0].return_type = Some("uint8_t *".into());
         b.methods[0].parameters = vec![class_diagram::FunctionArgument {
-            param_type: Some("vehicle::Payload".to_string()),
+            param_type: Some("vehicle::Payload".into()),
             ..Default::default()
         }];
 
@@ -871,7 +874,7 @@ mod tests {
     #[test]
     fn class_entity_index_reports_conflict_between_later_declarations() {
         let mut run_int = with_method(entity("Unit.Sample", "design_c.puml", 1), "Stop");
-        run_int.methods[0].return_type = Some("int".to_string());
+        run_int.methods[0].return_type = Some("int".into());
         run_int.methods[0] = at(run_int.methods[0].clone(), "design_c.puml", 7);
         let (_, result) = build(vec![
             with_method(entity("Unit.Sample", "design_a.puml", 1), "Run"),
@@ -896,7 +899,7 @@ mod tests {
     fn class_entity_index_reports_conflicting_attributes_and_type_aliases() {
         let variable = |data_type: &str, file: &str| class_diagram::MemberVariable {
             name: "count".to_string(),
-            data_type: Some(data_type.to_string()),
+            data_type: Some(data_type.into()),
             source_location: SourceLocation::new(file, 2),
             ..Default::default()
         };
@@ -910,7 +913,7 @@ mod tests {
 
         let alias = |original: &str, file: &str| class_diagram::TypeAlias {
             alias: "Id".to_string(),
-            original_type: original.to_string(),
+            original_type: original.into(),
             source_location: SourceLocation::new(file, 2),
         };
         let mut a = entity("Unit.Sample", "design_a.puml", 1);

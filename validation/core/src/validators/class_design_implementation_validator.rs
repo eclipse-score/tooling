@@ -28,7 +28,7 @@ use crate::results::{ErrorBuilder, ErrorCategory, ErrorSection};
 use crate::ValidationResult;
 use class_diagram::{
     ClassTemplateKind, EnumLiteral, FreeFunctionDecl, MemberVariable, Method, MethodModifier,
-    Relationship, SimpleEntity, TemplateParameter, TypeAlias,
+    Relationship, SimpleEntity, TemplateParameter, TypeAlias, TypeDescription,
 };
 use source_location::SourceLocation;
 use std::collections::BTreeMap;
@@ -347,8 +347,8 @@ impl ClassDesignImplementationValidator {
                         design_alias.alias.as_str()
                     ),
                     FieldReferenceStyle::Verbatim,
-                    &design_alias.original_type,
-                    &implementation_alias.original_type,
+                    &design_alias.original_type.raw_text,
+                    &implementation_alias.original_type.raw_text,
                 )),
                 None => self.result.add_failure(Self::format_missing_member(
                     design_entity,
@@ -1163,7 +1163,10 @@ fn format_function_declaration(
             return "...".to_string();
         }
 
-        let mut rendered = match (parameter.name.is_empty(), parameter.param_type.as_deref()) {
+        let mut rendered = match (
+            parameter.name.is_empty(),
+            parameter.param_type.as_ref().map(|ty| ty.raw_text.as_str()),
+        ) {
             (true, data_type) => data_type.unwrap_or("<unknown>").to_string(),
             (false, data_type) => {
                 format!("{}: {}", parameter.name, data_type.unwrap_or("<unknown>"))
@@ -1286,8 +1289,8 @@ fn type_alias_map(entity: &SimpleEntity) -> BTreeMap<&str, &TypeAlias> {
 fn type_aliases_match(design_alias: &TypeAlias, implementation_alias: &TypeAlias) -> bool {
     design_alias.alias == implementation_alias.alias
         && comparison_types_match(
-            &design_alias.original_type,
-            &implementation_alias.original_type,
+            &design_alias.original_type.raw_text,
+            &implementation_alias.original_type.raw_text,
         )
 }
 
@@ -1393,12 +1396,12 @@ fn method_return_types_match(
 
     let design_return = design_method
         .return_type
-        .as_deref()
-        .map(|ty| normalize_conversion_type_name(design_entity, ty));
+        .as_ref()
+        .map(|ty| normalize_conversion_type_name(design_entity, &ty.raw_text));
     let implementation_return = implementation_method
         .return_type
-        .as_deref()
-        .map(|ty| normalize_conversion_type_name(implementation_entity, ty));
+        .as_ref()
+        .map(|ty| normalize_conversion_type_name(implementation_entity, &ty.raw_text));
     if design_return != implementation_return {
         return false;
     }
@@ -1748,12 +1751,20 @@ fn render_joined(items: impl Iterator<Item = String>) -> String {
     items.collect::<Vec<_>>().join(", ")
 }
 
-fn render_optional_type(type_name: &Option<String>) -> String {
-    render_optional_value(type_name.as_deref(), "None", render_type_name)
+fn render_optional_type(type_name: &Option<TypeDescription>) -> String {
+    render_optional_value(
+        type_name.as_ref().map(|ty| ty.raw_text.as_str()),
+        "None",
+        render_type_name,
+    )
 }
 
-fn render_parameter_type(type_name: &Option<String>) -> String {
-    render_optional_value(type_name.as_deref(), "<unknown>", render_type_name)
+fn render_parameter_type(type_name: &Option<TypeDescription>) -> String {
+    render_optional_value(
+        type_name.as_ref().map(|ty| ty.raw_text.as_str()),
+        "<unknown>",
+        render_type_name,
+    )
 }
 
 fn format_parameter(parameter: &class_diagram::FunctionArgument) -> String {
@@ -1871,8 +1882,14 @@ fn template_pack_marker(is_pack: bool) -> &'static str {
     }
 }
 
-fn optional_types_match(design: &Option<String>, implementation: &Option<String>) -> bool {
-    match (design.as_deref(), implementation.as_deref()) {
+fn optional_types_match(
+    design: &Option<TypeDescription>,
+    implementation: &Option<TypeDescription>,
+) -> bool {
+    match (
+        design.as_ref().map(|ty| ty.raw_text.as_str()),
+        implementation.as_ref().map(|ty| ty.raw_text.as_str()),
+    ) {
         (None, None) => true,
         (Some(design), Some(implementation)) => comparison_types_match(design, implementation),
         _ => false,
@@ -1890,10 +1907,13 @@ fn comparison_types_match(design: &str, implementation: &str) -> bool {
 }
 
 fn optional_parameter_types_match(
-    design: &Option<String>,
-    implementation: &Option<String>,
+    design: &Option<TypeDescription>,
+    implementation: &Option<TypeDescription>,
 ) -> bool {
-    match (design.as_deref(), implementation.as_deref()) {
+    match (
+        design.as_ref().map(|ty| ty.raw_text.as_str()),
+        implementation.as_ref().map(|ty| ty.raw_text.as_str()),
+    ) {
         (None, None) => true,
         (Some(design), Some(implementation)) => {
             if contains_literal(design) || contains_literal(implementation) {

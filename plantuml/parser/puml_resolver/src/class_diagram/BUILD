@@ -59,6 +59,7 @@ rust_test(
         "//tools/metamodel/class:class_diagram",
         "@crates_score_tooling//:serde",
         "@crates_score_tooling//:serde_json",
+        "@crates_score_tooling//:serde_yaml",
         "@crates_score_tooling//:thiserror",
     ],
 )

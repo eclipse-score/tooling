@@ -58,7 +58,7 @@ fn method(name: &str) -> Method {
 
 fn method_with_return_type(name: &str, return_type: &str) -> Method {
     Method {
-        return_type: Some(return_type.to_string()),
+        return_type: Some(return_type.into()),
         ..method(name)
     }
 }
@@ -69,7 +69,7 @@ fn method_with_parameter_types(name: &str, parameter_types: &[&str]) -> Method {
             .iter()
             .map(|parameter_type| FunctionArgument {
                 name: String::new(),
-                param_type: Some((*parameter_type).to_string()),
+                param_type: Some((*parameter_type).into()),
                 direction: None,
                 multiplicity: None,
                 is_variadic: false,
@@ -83,7 +83,7 @@ fn method_with_parameter_types(name: &str, parameter_types: &[&str]) -> Method {
 fn parameter(name: &str, param_type: &str, is_pack_expansion: bool) -> FunctionArgument {
     FunctionArgument {
         name: name.to_string(),
-        param_type: Some(param_type.to_string()),
+        param_type: Some(param_type.into()),
         direction: None,
         multiplicity: None,
         is_variadic: false,
@@ -98,7 +98,7 @@ fn entity(id: &str, methods: Vec<&str>) -> SimpleEntity {
 fn variable(name: &str, data_type: &str) -> MemberVariable {
     MemberVariable {
         name: name.to_string(),
-        data_type: Some(data_type.to_string()),
+        data_type: Some(data_type.into()),
         visibility: Visibility::Private,
         is_static: false,
         source_location: SourceLocation::new("test.puml", 1),
@@ -160,7 +160,7 @@ fn free_function(name: &str, parameter_types: &[&str]) -> FreeFunctionDecl {
     FreeFunctionDecl {
         name: name.to_string(),
         enclosing_namespace_id: None,
-        return_type: Some("void".to_string()),
+        return_type: Some("void".into()),
         return_multiplicity: None,
         parameters: parameter_types
             .iter()
@@ -300,7 +300,7 @@ fn free_function_key_normalizes_qualified_name_and_parameters() {
     let function = FreeFunctionDecl {
         name: "Dispatch".to_string(),
         enclosing_namespace_id: Some("vehicle.core".to_string()),
-        return_type: Some("void".to_string()),
+        return_type: Some("void".into()),
         return_multiplicity: None,
         parameters: vec![
             parameter("mode", "std::uint8_t", false),
@@ -341,7 +341,7 @@ fn uml_parameter_multiplicities_do_not_affect_cpp_matching_or_overload_identity(
             free_function_key(&implementation_function)
         );
         // Metadata must not relax the actual type comparison.
-        design.parameters[0].param_type = Some("T*".to_string());
+        design.parameters[0].param_type = Some("T*".into());
         assert!(!parameters_match(
             &design.parameters,
             &implementation.parameters
@@ -1027,7 +1027,7 @@ fn class_implementation_validation_normalizes_nested_namespace_in_free_function_
     design_function.enclosing_namespace_id = Some("vehicle.core".to_string());
     let mut implementation_function = free_function("Dispatch", &["int"]);
     implementation_function.enclosing_namespace_id = Some("vehicle::core".to_string());
-    implementation_function.return_type = Some("bool".to_string());
+    implementation_function.return_type = Some("bool".into());
 
     let design = index_with_free_functions(vec![design_function]);
     let implementation = index_with_free_functions(vec![implementation_function]);
@@ -1216,11 +1216,11 @@ fn method_candidates_distinguish_const_overloads_in_either_order() {
     for parameter_types in [vec![], vec!["int"]] {
         for same_return_type in [true, false] {
             let mut nonconst = method_with_parameter_types("Check", &parameter_types);
-            nonconst.return_type = Some("int&".to_string());
+            nonconst.return_type = Some("int&".into());
             let mut const_method = nonconst.clone();
             const_method.modifiers = vec![MethodModifier::Const];
             if !same_return_type {
-                const_method.return_type = Some("const int&".to_string());
+                const_method.return_type = Some("const int&".into());
             }
             for mut implementations in [
                 vec![nonconst.clone(), const_method.clone()],
@@ -1531,14 +1531,14 @@ fn documented_template_callable_cases_apply_to_methods_and_free_functions() {
 fn callable_fields_are_checked_and_can_refine_ambiguous_candidates() {
     let mut design = method_with_parameter_types("run", &["int"]);
     design.parameters[0].name = "expected".to_string();
-    design.return_type = Some("Box<int>".to_string());
+    design.return_type = Some("Box<int>".into());
     design.template_parameters = Some(vec![TemplateParameter::Type {
         name: "T".to_string(),
         is_pack: false,
     }]);
     let mut implementation = method_with_parameter_types("run", &["int", "bool"]);
     implementation.parameters[0].name = "actual".to_string();
-    implementation.return_type = Some("bool".to_string());
+    implementation.return_type = Some("bool".into());
     implementation.visibility = Visibility::Private;
     implementation.modifiers = vec![MethodModifier::Static];
     for (kind, result) in validate_callable_pair(vec![design.clone()], vec![implementation.clone()])
@@ -1609,10 +1609,10 @@ fn ambiguous_groups_require_a_globally_field_consistent_assignment() {
     let longest = method_with_parameter_types("run", &["int", "bool", "float"]);
     for valid in [false, true] {
         let mut other_short = short.clone();
-        other_short.return_type = Some("bool".to_string());
+        other_short.return_type = Some("bool".into());
         let mut other_long = longest.clone();
         if !valid {
-            other_long.return_type = Some("bool".to_string());
+            other_long.return_type = Some("bool".into());
         }
         // Both designs can use `long`. With invalid other candidates, each row
         // has a fully valid edge, but the two rows cannot share that one column.
@@ -1661,7 +1661,7 @@ fn complete_types_are_required_in_all_seven_type_mismatch_scenarios() {
         let field = if is_alias {
             let alias = |data_type: &str| TypeAlias {
                 alias: "Storage".to_string(),
-                original_type: data_type.to_string(),
+                original_type: data_type.into(),
                 source_location: SourceLocation::new("design.puml", 7),
             };
             design.type_aliases = vec![alias(design_type)];
@@ -1684,12 +1684,12 @@ fn complete_types_are_required_in_all_seven_type_mismatch_scenarios() {
         let mut design = method_with_parameter_types("run", &["int"]);
         let mut implementation = method_with_parameter_types("run", &["int", "bool"]);
         if field == "return type" {
-            design.return_type = Some("const complete::Map<int, float>&".to_string());
-            implementation.return_type = Some(format!("const {complete_type}&"));
+            design.return_type = Some("const complete::Map<int, float>&".into());
+            implementation.return_type = Some(format!("const {complete_type}&").into());
         } else {
-            design.parameters[0].param_type =
-                Some("const complete::Map<int, float, char>&".to_string());
-            implementation.parameters[0].param_type = Some(format!("const {complete_type}&"));
+            design.parameters[0].param_type = Some("const complete::Map<int, float, char>&".into());
+            implementation.parameters[0].param_type =
+                Some(format!("const {complete_type}&").into());
         }
         for result in validate_callable_pair(vec![design], vec![implementation]) {
             assert_single_type_mismatch(&result, field);
@@ -1700,8 +1700,8 @@ fn complete_types_are_required_in_all_seven_type_mismatch_scenarios() {
 #[test]
 fn optional_types_require_matching_presence() {
     assert!(optional_types_match(&None, &None));
-    assert!(!optional_types_match(&None, &Some("int".to_string())));
-    assert!(!optional_types_match(&Some("int".to_string()), &None));
+    assert!(!optional_types_match(&None, &Some("int".into())));
+    assert!(!optional_types_match(&Some("int".into()), &None));
 }
 
 #[test]
@@ -1723,8 +1723,8 @@ fn literal_bearing_types_are_compared_raw_without_namespace_rewriting() {
             normalize_non_type_template_parameter_type(design),
             normalize_non_type_template_parameter_type(implementation)
         );
-        assert_eq!(render_optional_type(&Some(design.to_string())), design);
-        assert_eq!(render_parameter_type(&Some(design.to_string())), design);
+        assert_eq!(render_optional_type(&Some(design.into())), design);
+        assert_eq!(render_parameter_type(&Some(design.into())), design);
     }
 }
 
@@ -1781,13 +1781,13 @@ fn literal_types_are_preserved_in_signatures_and_validation_diagnostics() {
     let mut design_entity = entity("Sample", vec![]);
     design_entity.type_aliases = vec![TypeAlias {
         alias: "Value".to_string(),
-        original_type: design.to_string(),
+        original_type: design.into(),
         source_location: SourceLocation::new("design.puml", 7),
     }];
     design_entity.variables = vec![variable("value", design)];
     let mut implementation_entity = design_entity.clone();
-    implementation_entity.type_aliases[0].original_type = implementation.to_string();
-    implementation_entity.variables[0].data_type = Some(implementation.to_string());
+    implementation_entity.type_aliases[0].original_type = implementation.into();
+    implementation_entity.variables[0].data_type = Some(implementation.into());
     let result = validate_class_design_implementation(
         &index(vec![design_entity]),
         &index(vec![implementation_entity]),
@@ -1847,7 +1847,7 @@ fn group_failures_list_all_declarations_and_locations() {
     let mut design = method_with_parameter_types("run", &["int"]);
     design.source_location = SourceLocation::new("design.puml", 7);
     let mut exact = design.clone();
-    exact.return_type = Some("bool".to_string());
+    exact.return_type = Some("bool".into());
     exact.source_location = SourceLocation::new("implementation.hpp", 11);
     let mut longer = exact.clone();
     longer.parameters.push(parameter("extra", "bool", false));
@@ -1892,12 +1892,12 @@ fn group_failures_list_all_declarations_and_locations() {
 fn generic_group_field_conflicts_and_contention_have_distinct_guidance() {
     let first = method_with_parameter_types("run", &["int"]);
     let mut second = first.clone();
-    second.return_type = Some("bool".to_string());
+    second.return_type = Some("bool".into());
     second.source_location = SourceLocation::new("second.puml", 8);
     let mut third = first.clone();
     third.parameters.push(parameter("force", "bool", false));
     let mut conflicting = second.clone();
-    conflicting.return_type = Some("double".to_string());
+    conflicting.return_type = Some("double".into());
     for result in validate_callable_pair(
         vec![first.clone(), second.clone()],
         vec![first.clone(), conflicting, third],
@@ -1943,7 +1943,7 @@ fn simple_callable_fields_preserve_raw_parameters_and_sort_without_deduplication
         parameter("payload", raw_type, false),
         FunctionArgument {
             name: "args".to_string(),
-            param_type: Some("Args".to_string()),
+            param_type: Some("Args".into()),
             is_pack_expansion: true,
             ..Default::default()
         },
@@ -2025,7 +2025,7 @@ fn conflicting_callable_attributes_remain_distinct_on_both_sides() {
     for field in ["return", "name", "template", "visibility", "static"] {
         let mut conflict = exact.clone();
         match field {
-            "return" => conflict.return_type = Some("bool".to_string()),
+            "return" => conflict.return_type = Some("bool".into()),
             "name" => conflict.parameters[0].name = "different".to_string(),
             "template" => {
                 conflict.template_parameters = Some(vec![TemplateParameter::Type {

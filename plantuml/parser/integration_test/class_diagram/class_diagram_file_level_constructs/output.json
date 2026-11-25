@@ -43,12 +43,12 @@
         "methods": [
           {
             "name": "Execute",
-            "return_type": "ResultBlank",
+            "return_type": { "raw_text": "ResultBlank" },
             "visibility": "public",
             "parameters": [
               {
                 "name": "",
-                "param_type": "amp::stop_token",
+                "param_type": { "raw_text": "amp::stop_token" },
                 "is_variadic": false
               }
             ],
@@ -73,7 +73,9 @@
         "id": "sample.file_level.TestTemplate",
         "name": "TestTemplate",
         "enclosing_namespace_id": "sample.file_level",
-        "stereotypes": ["service"],
+        "stereotypes": [
+          "service"
+        ],
         "entity_type": "Class",
         "type_aliases": [],
         "methods": [
@@ -120,17 +122,17 @@
             "parameters": [
               {
                 "name": "",
-                "param_type": "const amp::stop_token&",
+                "param_type": { "raw_text": "const amp::stop_token&" },
                 "is_variadic": false
               },
               {
                 "name": "",
-                "param_type": "InfrastructureContext",
+                "param_type": { "raw_text": "InfrastructureContext" },
                 "is_variadic": false
               },
               {
                 "name": "",
-                "param_type": "Context",
+                "param_type": { "raw_text": "Context" },
                 "is_variadic": false
               }
             ],
@@ -148,12 +150,12 @@
             "parameters": [
               {
                 "name": "",
-                "param_type": "amp::pmr::unique_ptr<ExecutorFactory>",
+                "param_type": { "raw_text": "amp::pmr::unique_ptr<ExecutorFactory>" },
                 "is_variadic": false
               },
               {
                 "name": "",
-                "param_type": "std::shared_ptr<mw::diag::IConversations>",
+                "param_type": { "raw_text": "std::shared_ptr<mw::diag::IConversations>" },
                 "is_variadic": false
               }
             ],

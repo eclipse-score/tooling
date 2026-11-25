@@ -13,7 +13,7 @@
 @startuml param
 
 class Calculator {
-    + Add(a:int, b:int) : int
+    + Add(a:int, b: long int) : std::int64_t
 }
 
 @enduml

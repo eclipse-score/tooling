@@ -28,7 +28,7 @@
                     "is_c_variadic": true
                   }
                 ],
-                "type": "void",
+                "type": { "raw_text": "void" },
                 "template_parameters": null,
                 "modifiers": [],
                 "source_location": {

@@ -14,6 +14,23 @@
 
 class Factory {
     + Create<T>(id:int)
+    + Run<class T, std::size_t N>(data : Payload[N], fixed : const Payload[8]) : void
+    + Set(value : std::array<Payload, 0x10>, offset : std::integral_constant<int, -1>) : void
+    + Flag(disabled : std::integral_constant<bool, false>, tag : std::type_identity<true_type>) : std::integral_constant<bool, true>
+
+    + values : std::array<Payload, 0b100>
+    + raw_values : Payload[8]
+    + grid : Payload[3][8]
+    + unbounded : Payload[]
+    + pointers : Payload*[8]
+
+    + using Buffer = std::array<Payload, 8U>
+    + nested : std::array<Payload[8], +8>
+
+    + invalid : Value<0xGG>
+
+    + using Signature = const Payload*(const Payload&)
+    + callback : std::function<void(int)>
 }
 
 @enduml

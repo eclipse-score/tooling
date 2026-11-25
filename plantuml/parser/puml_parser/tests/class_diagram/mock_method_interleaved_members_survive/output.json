@@ -22,7 +22,7 @@
                 "visibility": "Public",
                 "name": "RealOne",
                 "params": [],
-                "type": "int",
+                "type": { "raw_text": "int" },
                 "template_parameters": null,
                 "modifiers": [],
                 "source_location": {

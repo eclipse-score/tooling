@@ -99,7 +99,7 @@ mod tests {
                 entity_type: EntityType::Class,
                 methods: vec![Method {
                     name: "compute".to_string(),
-                    return_type: Some("int".to_string()),
+                    return_type: Some("int".into()),
                     visibility: Visibility::Public,
                     source_location: SourceLocation::new("first.h", 10),
                     ..Default::default()
@@ -158,7 +158,7 @@ mod tests {
                 entity_type: EntityType::Class,
                 methods: vec![Method {
                     name: "compute".to_string(),
-                    return_type: Some("int".to_string()),
+                    return_type: Some("int".into()),
                     visibility: Visibility::Public,
                     source_location: SourceLocation::new("second.h", 10),
                     ..Default::default()

@@ -76,7 +76,7 @@ pub struct CallableArgumentKey {
 impl From<&FunctionArgument> for CallableArgumentKey {
     fn from(argument: &FunctionArgument) -> Self {
         Self {
-            param_type: argument.param_type.clone(),
+            param_type: argument.param_type.as_ref().map(|ty| ty.raw_text.clone()),
             is_variadic: argument.is_variadic,
             is_pack_expansion: argument.is_pack_expansion,
         }

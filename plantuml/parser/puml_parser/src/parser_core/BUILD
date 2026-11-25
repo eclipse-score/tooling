@@ -29,7 +29,10 @@ rust_library(
     proc_macro_deps = [
         "@crates_score_tooling//:pest_derive",
     ],
-    visibility = ["//plantuml/parser:__subpackages__"],
+    visibility = [
+        "//plantuml/parser:__subpackages__",
+        "//validation/core:__pkg__",
+    ],
     deps = [
         "//plantuml/parser/puml_utils",
         "//tools/metamodel/common:source_location",

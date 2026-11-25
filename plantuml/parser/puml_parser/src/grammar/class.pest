@@ -19,46 +19,134 @@ color      = _{ BASIC_COLOR }
 raw_label = @{ (!("\n" | "\r") ~ ANY)+ }
 label = { STRING | raw_label }
 
-class_visibility = { "+" | "-" | "#" | "~" }
+varargs = { "..." }
 
 ///////////////////////////////////////////////////////////////
-// Name & Alias
+// Type Expressions
 ///////////////////////////////////////////////////////////////
 type_name = { type_expr }
 
-type_expr = { brace_enclosed_type | const_qualifier* ~ prefix_array_prefix* ~ qualified_type ~ generic_type_args? ~ function_type_suffix? ~ type_suffix* }
+type_expr = {
+    brace_enclosed_type
+    | cv_qualifier*
+      ~ prefix_array_prefix*
+      ~ (builtin_type | qualified_type)
+      ~ generic_type_args?
+      ~ cv_qualifier*
+      ~ type_suffix*
+      ~ (
+          function_pointer_suffix
+          | (function_type_suffix ~ function_type_noexcept?)
+      )?
+}
+brace_enclosed_type = { "{" ~ type_expr ~ "}" }
 
-qualified_type = @{ ("::")? ~ identifier ~ (("::" | (!".." ~ ".")) ~ identifier)* }
+///////////////////////////////////////////////////////////////
+// Builtin Types
+///////////////////////////////////////////////////////////////
+builtin_type = {
+    (floating_builtin_type | void_keyword | integral_builtin_type)
+    ~ !("::" | ".")
+}
+floating_builtin_type = {
+    (long_keyword ~ double_keyword) | floating_type_keyword
+}
+integral_builtin_type = {
+    integral_scalar_keyword
+    | signedness_keyword?
+      ~ (
+          char_keyword
+          | (short_keyword ~ int_keyword?)
+          | (long_keyword ~ long_keyword? ~ int_keyword?)
+          | int_keyword
+      )
+    | signedness_keyword
+}
+integral_scalar_keyword = @{
+    ("bool" | "wchar_t" | "char8_t" | "char16_t" | "char32_t")
+    ~ keyword_boundary
+}
+signedness_keyword = @{ ("unsigned" | "signed") ~ keyword_boundary }
+floating_type_keyword = @{ ("float" | "double") ~ keyword_boundary }
+double_keyword = @{ "double" ~ keyword_boundary }
+int_keyword = @{ "int" ~ keyword_boundary }
+void_keyword = @{ "void" ~ keyword_boundary }
+char_keyword = @{ "char" ~ keyword_boundary }
+short_keyword = @{ "short" ~ keyword_boundary }
+long_keyword = @{ "long" ~ keyword_boundary }
 
+///////////////////////////////////////////////////////////////
+// Template Arguments and Literals
+///////////////////////////////////////////////////////////////
 generic_type_args = { "<" ~ !"<" ~ (type_arg ~ ("," ~ type_arg)*)? ~ ">" }
 
-type_arg = { type_expr | NUMBER }
-type_expr_list = { type_expr ~ ("," ~ type_expr)* }
+type_arg = { template_value | type_expr }
+template_value = { (boolean_literal | integer_literal) ~ &( "," | ">") }
+boolean_literal = @{ ("true" | "false") ~ keyword_boundary }
+integer_literal = @{
+    ("+" | "-")?
+    ~ (
+        (("0x" | "0X") ~ ASCII_HEX_DIGIT+)
+        | (("0b" | "0B") ~ ("0" | "1")+)
+        | ASCII_DIGIT+
+    )
+    ~ integer_suffix?
+    ~ keyword_boundary
+}
+integer_suffix = _{
+    ("u" | "U") ~ ("ll" | "LL" | "l" | "L")?
+    | ("ll" | "LL" | "l" | "L") ~ ("u" | "U")?
+}
 
+///////////////////////////////////////////////////////////////
+// Type Qualifiers and Suffixes
+///////////////////////////////////////////////////////////////
 // A `const` after `*` qualifies that pointer, e.g. `void* const`.
-type_suffix = { array_suffix | reference_suffix | pointer_suffix ~ const_qualifier? }
-brace_enclosed_type = { "{" ~ type_expr ~ "}" }
+type_suffix = {
+    array_suffix
+    | reference_suffix
+    | (pointer_suffix ~ cv_qualifier*)
+}
+cv_qualifier = _{ const_qualifier | volatile_qualifier }
 const_qualifier = @{ "const" ~ keyword_boundary }
-function_type_suffix = { "(" ~ type_expr_list? ~ ")" }
+volatile_qualifier = @{ "volatile" ~ keyword_boundary }
 prefix_array_prefix = { "[" ~ "]" }
-array_suffix = { "[" ~ (NUMBER | identifier)? ~ "]" }
+array_suffix = { "[" ~ (!("+" | "-") ~ integer_literal | identifier)? ~ "]" }
 reference_suffix = { "&&" | "&" }
 pointer_suffix = { "*" }
 
-class_qualified_name = @{ ("::")? ~ identifier ~ ("::" ~ identifier)* }
+type_expr_list = { type_expr ~ ("," ~ type_expr)* }
+function_type_suffix = {
+    "("
+    ~ (
+        (type_expr_list ~ ("," ~ varargs)?)
+        | varargs
+    )?
+    ~ ")"
+}
+function_pointer_suffix = {
+    "(" ~ function_pointer_declarator ~ ")"
+    ~ function_type_suffix
+    ~ function_type_noexcept?
+}
+function_pointer_declarator = { pointer_suffix ~ cv_qualifier* }
+function_type_noexcept = @{ "noexcept" ~ keyword_boundary }
 
+///////////////////////////////////////////////////////////////
+// Element Names and Aliases
+///////////////////////////////////////////////////////////////
 // `.` and `::` are interchangeable separators; a leading one roots the name.
 // Declarations and `extends`/`implements` targets use this spelling.
-class_name_path = @{ ("." | "::")? ~ identifier ~ (("." | "::") ~ identifier)* }
+qualified_type = @{ ("::" | ".")? ~ identifier ~ (("::" | (!".." ~ ".")) ~ identifier)* }
+class_qualified_name = @{ ("::")? ~ identifier ~ ("::" ~ identifier)* }
 
 // reference
 name_ref = @{ identifier }
 
 // definition
-internal_name = { STRING | generic_decl_name | class_name_path }
-generic_decl_name = { class_name_path ~ type_generic_param_list }
+internal_name = { STRING | generic_decl_name | qualified_type }
+generic_decl_name = { qualified_type ~ type_generic_param_list }
 
-// name_decl = { internal_name ~ ("as" ~ display_name)? }
 name_decl = { internal_name ~ alias_clause? }
 name_with_color = { name_decl ~ color? }
 
@@ -105,10 +193,9 @@ together_def = {
 }
 
 ///////////////////////////////////////////////////////////////
-// namespace / package
+// Namespaces and Packages
 ///////////////////////////////////////////////////////////////
 
-// namespace_def = { "namespace" ~ named ~ stereotype? ~ "{" ~ EOL* ~ top_level* ~ EOL* ~ "}" }
 namespace_def = {
     "namespace"
     ~ named
@@ -134,15 +221,13 @@ package_def = {
 }
 
 ///////////////////////////////////////////////////////////////
-// type definition
+// Template Parameters
 ///////////////////////////////////////////////////////////////
-type_def = { type_def_with_body | type_def_decl }
-unsupported_object_def = { object_def_with_body | object_def_decl }
+template_param_list = _{ "<" ~ template_param ~ ("," ~ template_param)* ~ ">" }
+type_generic_param_list = { template_param_list }
+type_generic_param_list_exact = { SOI ~ type_generic_param_list ~ EOI }
+generic_param_list = { template_param_list }
 
-type_def_decl = { type_kind ~ named ~ type_decl_suffix* }
-object_def_decl = { object_keyword ~ named ~ type_decl_suffix* }
-object_keyword = @{ "object" ~ keyword_boundary }
-type_decl_suffix = _{ extends_clause | implements_clause | link_annotation | stereotype | color }
 template_param = { explicit_type_template_param | template_template_param | non_type_template_param | function_signature_template_param | legacy_type_template_param }
 
 template_template_param = { template_keyword ~ "<" ~ template_template_param_list ~ ">" ~ explicit_type_template_param }
@@ -154,31 +239,22 @@ non_type_template_param = {
     non_type_template_param_type ~ varargs? ~ identifier? ~ template_param_boundary
 }
 non_type_template_param_type = {
-    (non_type_template_builtin_type | !uml_type_param_shorthand ~ const_qualifier* ~ qualified_type ~ generic_type_args?)
-    ~ pointer_suffix* ~ reference_suffix?
+    (
+        (cv_qualifier* ~ non_type_template_builtin_type)
+        | (!uml_type_param_shorthand ~ cv_qualifier* ~ qualified_type ~ generic_type_args?)
+    )
+    ~ cv_qualifier*
+    ~ (pointer_suffix ~ cv_qualifier*)* ~ reference_suffix?
 }
-non_type_template_builtin_type = {
-    non_type_template_scalar_keyword
-    | signedness_keyword? ~ (char_keyword | short_keyword ~ int_keyword? | long_keyword ~ long_keyword? ~ int_keyword? | int_keyword)
-    | signedness_keyword
-}
-non_type_template_scalar_keyword = @{ ("bool" | "wchar_t" | "char8_t" | "char16_t" | "char32_t") ~ keyword_boundary }
+non_type_template_builtin_type = { integral_builtin_type }
 // T / Ts... alone denote UML type parameters; Widget N / Widget* do not.
 uml_type_param_shorthand = _{ identifier ~ varargs? ~ template_param_boundary }
 template_param_boundary = _{ &("," | ">") }
 
 template_keyword = @{ "template" ~ keyword_boundary }
 template_type_keyword = @{ ("typename" | "class") ~ keyword_boundary }
-signedness_keyword = @{ ("unsigned" | "signed") ~ keyword_boundary }
-char_keyword = @{ "char" ~ keyword_boundary }
-short_keyword = @{ "short" ~ keyword_boundary }
-long_keyword = @{ "long" ~ keyword_boundary }
-int_keyword = @{ "int" ~ keyword_boundary }
 explicit_type_template_param = { template_type_keyword ~ varargs? ~ identifier? }
 legacy_type_template_param = { identifier ~ varargs? }
-template_param_list = _{ "<" ~ template_param ~ ("," ~ template_param)* ~ ">" }
-type_generic_param_list = { template_param_list }
-type_generic_param_list_exact = { SOI ~ type_generic_param_list ~ EOI }
 
 // Accept specialization arguments containing function signatures, but do not
 // infer template parameter metadata for a list containing such a signature.
@@ -186,10 +262,21 @@ function_signature_template_param = { identifier ~ "(" ~ function_signature_temp
 function_signature_template_arg_list = { function_signature_template_arg ~ ("," ~ function_signature_template_arg)* }
 function_signature_template_arg = { identifier ~ varargs? }
 
+///////////////////////////////////////////////////////////////
+// Type Definitions
+///////////////////////////////////////////////////////////////
+type_def = { type_def_with_body | type_def_decl }
+unsupported_object_def = { object_def_with_body | object_def_decl }
+
+type_def_decl = { type_kind ~ named ~ type_decl_suffix* }
+object_def_decl = { object_keyword ~ named ~ type_decl_suffix* }
+object_keyword = @{ "object" ~ keyword_boundary }
+type_decl_suffix = _{ extends_clause | implements_clause | link_annotation | stereotype | color }
+
 extends_clause = { "extends" ~ extends_target ~ ("," ~ extends_target)* }
-extends_target = { class_name_path }
+extends_target = { qualified_type }
 implements_clause = { "implements" ~ implements_target ~ ("," ~ implements_target)* }
-implements_target = { class_name_path }
+implements_target = { qualified_type }
 
 type_def_with_body = { type_def_decl ~ &(EOL* ~ "{") ~ EOL* ~ class_body ~ ";"? }
 object_def_with_body = { object_def_decl ~ &(EOL* ~ "{") ~ EOL* ~ class_body ~ ";"? }
@@ -204,8 +291,10 @@ type_kind = @{
     ~ keyword_boundary
 }
 
+///////////////////////////////////////////////////////////////
+// Class Body and Members
+///////////////////////////////////////////////////////////////
 class_body = { "{" ~ EOL* ~ (ignored_mock_method_stmt | class_body_separator | class_member)* ~ EOL* ~ "}" }
-
 class_member = { (method | attribute) ~ EOL+ }
 // Match the whole line without implicit whitespace skipping. A title must end
 // with the same delimiter; stop only at a closing delimiter followed by EOL.
@@ -218,7 +307,11 @@ class_body_separator = @{
     )
     ~ WHITESPACE* ~ EOL+
 }
+class_visibility = { "+" | "-" | "#" | "~" }
 
+///////////////////////////////////////////////////////////////
+// Mock Methods
+///////////////////////////////////////////////////////////////
 ignored_mock_method_stmt = _{
     method_modifier*
     ~ class_visibility?
@@ -359,6 +452,9 @@ mock_method_modifier = {
 mock_method_ref_qualifier = @{ "ref(" ~ ("&" | "&&") ~ ")" }
 mock_method_calltype_qualifier = @{ "Calltype(" ~ class_qualified_name ~ ")" }
 
+///////////////////////////////////////////////////////////////
+// Methods
+///////////////////////////////////////////////////////////////
 method = {
     method_modifier*
     ~ class_visibility?
@@ -379,10 +475,10 @@ method = {
     ~ pure_virtual_suffix?
     ~ ";"?
 }
-friend_specifier = { "friend" }
+friend_specifier = @{ "friend" ~ keyword_boundary }
 method_modifier = _{ static_modifier | abstract_modifier | virtual_modifier | override_modifier }
 static_modifier = { "{" ~ static_keyword ~ "}" | ("<<" ~ static_keyword ~ ">>") | static_keyword }
-static_keyword = { "static" }
+static_keyword = @{ "static" ~ keyword_boundary }
 abstract_modifier = { "{" ~ "abstract" ~ "}" | ("<<" ~ "abstract" ~ ">>") }
 virtual_modifier = { "{" ~ "virtual" ~ "}" | ("<<" ~ "virtual" ~ ">>") }
 override_modifier = { "{" ~ "override" ~ "}" | ("<<" ~ "override" ~ ">>") }
@@ -459,14 +555,20 @@ operator_overload_name = @{
 return_type = { ":" ~ static_modifier* ~ type_name ~ return_multiplicity? }
 return_multiplicity = { param_multiplicity }
 
+///////////////////////////////////////////////////////////////
+// Attributes and Type Aliases
+///////////////////////////////////////////////////////////////
 attribute = { static_modifier* ~ class_visibility? ~ static_modifier* ~ (using_attribute | named_attribute | unnamed_attribute) }
 attribute_end = _{ ";"? ~ &(WHITESPACE* ~ (EOL | "}")) }
 using_attribute = { "using" ~ identifier ~ "=" ~ type_name ~ attribute_end }
 named_attribute = { identifier ~ (":" ~ attribute_type_specifier* ~ type_name)? ~ attribute_end }
 unnamed_attribute = { type_name ~ attribute_end }
 attribute_type_specifier = _{ static_modifier | constexpr_modifier }
-constexpr_modifier = { "constexpr" }
+constexpr_modifier = @{ "constexpr" ~ keyword_boundary }
 
+///////////////////////////////////////////////////////////////
+// Method Parameters
+///////////////////////////////////////////////////////////////
 param = {
     param_named
   | param_cpp_named
@@ -492,7 +594,7 @@ param_direction = @{ ("inout" | "in" | "out") ~ &(WHITESPACE+ ~ identifier ~ WHI
 
 param_cpp_named = {
     type_name
-    ~ !const_qualifier
+    ~ !cv_qualifier
     ~ identifier
     ~ param_default_value?
 }
@@ -509,11 +611,8 @@ param_list = {
     ~ (EOL* ~ "," ~ EOL* ~ (typed_param_pack | c_variadic_param | param))*
 }
 
-generic_param_list = { template_param_list }
-varargs = { "..." }
-
 ///////////////////////////////////////////////////////////////
-// type definition
+// Enumerations
 ///////////////////////////////////////////////////////////////
 enum_def = { enum_keyword ~ named ~ stereotype? ~ enum_body? ~ ";"? }
 enum_keyword = @{ "enum" ~ keyword_boundary }

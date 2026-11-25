@@ -16,7 +16,7 @@
               {
                 "visibility": "Public",
                 "name": "attr_1",
-                "type": "int",
+                "type": { "raw_text": "int" },
                 "modifiers": [],
                 "source_location": {
                   "file": "",
@@ -54,7 +54,7 @@
               {
                 "visibility": "Private",
                 "name": "attr_2",
-                "type": "int",
+                "type": { "raw_text": "int" },
                 "modifiers": [],
                 "source_location": {
                   "file": "",

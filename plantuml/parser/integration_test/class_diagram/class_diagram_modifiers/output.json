@@ -43,7 +43,7 @@
         "methods": [
           {
             "name": "Run",
-            "return_type": "ResultBlank",
+            "return_type": { "raw_text": "ResultBlank" },
             "visibility": "public",
             "parameters": [],
             "template_parameters": null,
@@ -88,7 +88,7 @@
         "type_aliases": [
           {
             "alias": "AllowOpModeChangeOutput",
-            "original_type": "std::uint8_t",
+            "original_type": { "raw_text": "std::uint8_t" },
             "source_location": {
               "file": "",
               "line": 26
@@ -98,17 +98,17 @@
         "methods": [
           {
             "name": "Func",
-            "return_type": "std::Result<Uptr>",
+            "return_type": { "raw_text": "std::Result<Uptr>" },
             "visibility": "public",
             "parameters": [
               {
                 "name": "input_1",
-                "param_type": "const AllowOpModeChangeOutput",
+                "param_type": { "raw_text": "const AllowOpModeChangeOutput" },
                 "is_variadic": false
               },
               {
                 "name": "json_parser",
-                "param_type": "std::shared_ptr<std::uint32_t>",
+                "param_type": { "raw_text": "std::shared_ptr<std::uint32_t>" },
                 "is_variadic": false
               }
             ],
@@ -141,7 +141,7 @@
         "methods": [
           {
             "name": "Run",
-            "return_type": "void",
+            "return_type": { "raw_text": "void" },
             "visibility": "public",
             "parameters": [],
             "template_parameters": null,
@@ -155,7 +155,7 @@
           },
           {
             "name": "Stop",
-            "return_type": "void",
+            "return_type": { "raw_text": "void" },
             "visibility": "public",
             "parameters": [],
             "template_parameters": null,
@@ -185,7 +185,7 @@
           },
           {
             "name": "Count",
-            "return_type": "int",
+            "return_type": { "raw_text": "int" },
             "visibility": "public",
             "parameters": [],
             "template_parameters": null,
@@ -199,7 +199,7 @@
           },
           {
             "name": "Poll",
-            "return_type": "void",
+            "return_type": { "raw_text": "void" },
             "visibility": "public",
             "parameters": [],
             "template_parameters": null,
@@ -214,7 +214,7 @@
           },
           {
             "name": "Tick",
-            "return_type": "void",
+            "return_type": { "raw_text": "void" },
             "visibility": "public",
             "parameters": [],
             "template_parameters": null,

@@ -20,7 +20,12 @@
               {
                 "visibility": "Public",
                 "name": "LogError",
-                "type": "::score::mw::LogStream",
+                "type": {
+                  "raw_text": "::score::mw::LogStream",
+                  "expression": {
+                    "NamedType": { "segments": ["score", "mw", "LogStream"], "is_global": true }
+                  }
+                },
                 "modifiers": [],
                 "source_location": {
                   "file": "",
@@ -32,8 +37,56 @@
               {
                 "visibility": "Public",
                 "name": "score::mw::LogFatal",
-                "params": [],
-                "type": "LogStream",
+                "params": [
+                  {
+                    "name": "dotted",
+                    "param_type": {
+                      "raw_text": "score.mw.LogStream",
+                      "expression": {
+                        "NamedType": { "segments": ["score", "mw", "LogStream"] }
+                      }
+                    }
+                  },
+                  {
+                    "name": "scoped",
+                    "param_type": {
+                      "raw_text": "score::mw::LogStream",
+                      "expression": {
+                        "NamedType": { "segments": ["score", "mw", "LogStream"] }
+                      }
+                    }
+                  },
+                  {
+                    "name": "global",
+                    "param_type": {
+                      "raw_text": ".score.mw.LogStream",
+                      "expression": {
+                        "NamedType": { "segments": ["score", "mw", "LogStream"], "is_global": true }
+                      }
+                    }
+                  },
+                  {
+                    "name": "entries",
+                    "param_type": {
+                      "raw_text": "::std::array<LogStream, 8>",
+                      "expression": {
+                        "Template": {
+                          "name": { "segments": ["std", "array"], "is_global": true },
+                          "arguments": [
+                            { "NamedType": { "segments": ["LogStream"] } },
+                            "8"
+                          ]
+                        }
+                      }
+                    }
+                  }
+                ],
+                "type": {
+                  "raw_text": "LogStream",
+                  "expression": {
+                    "NamedType": { "segments": ["LogStream"] }
+                  }
+                },
                 "template_parameters": null,
                 "modifiers": [],
                 "source_location": {

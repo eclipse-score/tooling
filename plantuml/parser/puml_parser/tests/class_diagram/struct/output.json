@@ -54,7 +54,7 @@
               {
                 "visibility": "Public",
                 "name": "header",
-                "type": "int",
+                "type": { "raw_text": "int" },
                 "modifiers": [],
                 "source_location": {
                   "file": "",
@@ -64,7 +64,7 @@
               {
                 "visibility": "Public",
                 "name": "payload",
-                "type": "string",
+                "type": { "raw_text": "string" },
                 "modifiers": [],
                 "source_location": {
                   "file": "",

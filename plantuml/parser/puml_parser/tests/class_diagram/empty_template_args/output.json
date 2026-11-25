@@ -20,7 +20,15 @@
               {
                 "visibility": "Public",
                 "name": "scope",
-                "type": "safecpp::Scope<>",
+                "type": {
+                  "raw_text": "safecpp::Scope<>",
+                  "expression": {
+                    "Template": {
+                      "name": { "segments": ["safecpp", "Scope"] },
+                      "arguments": []
+                    }
+                  }
+                },
                 "modifiers": [],
                 "source_location": {
                   "file": "",
@@ -36,18 +44,62 @@
                 "params": [
                   {
                     "name": null,
-                    "param_type": "std::optional<span<std::byte>>"
+                    "param_type": {
+                      "raw_text": "std::optional<span<std::byte>>",
+                      "expression": {
+                        "Template": {
+                          "name": { "segments": ["std", "optional"] },
+                          "arguments": [
+                            {
+                              "Template": {
+                                "name": { "segments": ["span"] },
+                                "arguments": [
+                                  { "NamedType": { "segments": ["std", "byte"] } }
+                                ]
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    }
                   },
                   {
                     "name": null,
-                    "param_type": "const safecpp::Scope<>&"
+                    "param_type": {
+                      "raw_text": "const safecpp::Scope<>&",
+                      "expression": {
+                        "Reference": {
+                          "Const": {
+                            "Template": {
+                              "name": { "segments": ["safecpp", "Scope"] },
+                              "arguments": []
+                            }
+                          }
+                        }
+                      }
+                    }
                   },
                   {
                     "name": "uid",
-                    "param_type": "uid_t"
+                    "param_type": {
+                      "raw_text": "uid_t",
+                      "expression": {
+                        "NamedType": { "segments": ["uid_t"] }
+                      }
+                    }
                   }
                 ],
-                "type": "Result<void>",
+                "type": {
+                  "raw_text": "Result<void>",
+                  "expression": {
+                    "Template": {
+                      "name": { "segments": ["Result"] },
+                      "arguments": [
+                        { "Builtin": "void" }
+                      ]
+                    }
+                  }
+                },
                 "modifiers": [],
                 "source_location": {
                   "file": "",
@@ -61,7 +113,15 @@
                 "params": [
                   {
                     "name": "comparator",
-                    "param_type": "std::less<>"
+                    "param_type": {
+                      "raw_text": "std::less<>",
+                      "expression": {
+                        "Template": {
+                          "name": { "segments": ["std", "less"] },
+                          "arguments": []
+                        }
+                      }
+                    }
                   }
                 ],
                 "type": null,
@@ -76,7 +136,15 @@
                 "name": "GetScope",
                 "template_parameters": null,
                 "params": [],
-                "type": "safecpp::Scope<>",
+                "type": {
+                  "raw_text": "safecpp::Scope<>",
+                  "expression": {
+                    "Template": {
+                      "name": { "segments": ["safecpp", "Scope"] },
+                      "arguments": []
+                    }
+                  }
+                },
                 "modifiers": [],
                 "source_location": {
                   "file": "",
@@ -90,11 +158,44 @@
                 "params": [
                   {
                     "name": "items",
-                    "param_type": "std::vector<Foo<>>"
+                    "param_type": {
+                      "raw_text": "std::vector<Foo<>>",
+                      "expression": {
+                        "Template": {
+                          "name": { "segments": ["std", "vector"] },
+                          "arguments": [
+                            {
+                              "Template": {
+                                "name": { "segments": ["Foo"] },
+                                "arguments": []
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    }
                   },
                   {
                     "name": "ptr",
-                    "param_type": "Bar<Baz<>, int>*"
+                    "param_type": {
+                      "raw_text": "Bar<Baz<>, int>*",
+                      "expression": {
+                        "Pointer": {
+                          "Template": {
+                            "name": { "segments": ["Bar"] },
+                            "arguments": [
+                              {
+                                "Template": {
+                                  "name": { "segments": ["Baz"] },
+                                  "arguments": []
+                                }
+                              },
+                              { "Builtin": "int" }
+                            ]
+                          }
+                        }
+                      }
+                    }
                   }
                 ],
                 "type": null,

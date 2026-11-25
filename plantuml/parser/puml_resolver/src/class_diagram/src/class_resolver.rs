@@ -911,7 +911,8 @@ impl ClassResolver {
         for param in params.iter().filter(|param| param.is_pack_expansion) {
             let Some(pack_name) = param
                 .param_type
-                .as_deref()
+                .as_ref()
+                .map(|ty| ty.raw_text.as_str())
                 .and_then(Self::infer_pack_name_from_param_type)
             else {
                 continue;
@@ -1514,7 +1515,7 @@ mod tests {
         for direction in [Some(In), Some(Out), Some(InOut), None] {
             let parameter = ParserParam {
                 name: Some("value".to_string()),
-                param_type: Some("T".to_string()),
+                param_type: Some("T".into()),
                 direction,
                 multiplicity: None,
                 is_c_variadic: false,
@@ -1524,7 +1525,10 @@ mod tests {
             assert_eq!(converted.direction, direction);
             assert_eq!(converted.multiplicity, None);
             assert_eq!(converted.name, "value");
-            assert_eq!(converted.param_type.as_deref(), Some("T"));
+            assert_eq!(
+                converted.param_type.as_ref().map(|ty| ty.raw_text.as_str()),
+                Some("T"),
+            );
         }
     }
 

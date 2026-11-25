@@ -156,7 +156,7 @@ impl ClassSerializer {
         type_alias: &TypeAlias,
     ) -> flatbuffers::WIPOffset<fb::TypeAlias<'a>> {
         let alias_offset = builder.create_string(&type_alias.alias);
-        let original_type_offset = builder.create_string(&type_alias.original_type);
+        let original_type_offset = builder.create_string(&type_alias.original_type.raw_text);
         let source_location_offset =
             Self::serialize_source_location(builder, &type_alias.source_location);
 
@@ -178,7 +178,7 @@ impl ClassSerializer {
         let data_type_offset = variable
             .data_type
             .as_ref()
-            .map(|data_type| builder.create_string(data_type));
+            .map(|data_type| builder.create_string(&data_type.raw_text));
         let source_location_offset =
             Self::serialize_source_location(builder, &variable.source_location);
 
@@ -202,7 +202,7 @@ impl ClassSerializer {
         let return_type_offset = method
             .return_type
             .as_ref()
-            .map(|return_type| builder.create_string(return_type));
+            .map(|return_type| builder.create_string(&return_type.raw_text));
         let return_multiplicity_offset = method
             .return_multiplicity
             .as_ref()
@@ -264,7 +264,7 @@ impl ClassSerializer {
         let return_type_offset = function
             .return_type
             .as_ref()
-            .map(|return_type| builder.create_string(return_type));
+            .map(|return_type| builder.create_string(&return_type.raw_text));
         let return_multiplicity_offset = function
             .return_multiplicity
             .as_ref()
@@ -309,7 +309,7 @@ impl ClassSerializer {
         let param_type_offset = param
             .param_type
             .as_ref()
-            .map(|param_type| builder.create_string(param_type));
+            .map(|param_type| builder.create_string(&param_type.raw_text));
         let multiplicity_offset = param
             .multiplicity
             .as_ref()

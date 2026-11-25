@@ -65,5 +65,7 @@ rust_test(
         "//plantuml/parser/integration_test:test_framework",
         "//plantuml/parser/puml_parser:parser_core",
         "//plantuml/parser/puml_utils",
+        "@crates_score_tooling//:serde_json",
+        "@crates_score_tooling//:serde_yaml",
     ],
 )

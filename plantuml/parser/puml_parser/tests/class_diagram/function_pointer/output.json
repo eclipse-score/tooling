@@ -1,0 +1,158 @@
+{
+  "function_pointer.puml": {
+    "name": "function_pointer",
+    "elements": [
+      {
+        "Type": {
+          "ClassLikeDef": {
+            "name": {
+              "internal": "CallbackRegistry",
+              "alias": null
+            },
+            "namespace": "",
+            "package": "",
+            "source_location": { "file": "", "line": 16 },
+            "type_aliases": [
+              {
+                "alias": "Callback",
+                "original_type": {
+                  "raw_text": "void (*)(std::vector<std::shared_ptr<app::Payload>>)",
+                  "expression": {
+                    "Pointer": {
+                      "Function": {
+                        "return_type": { "Builtin": "void" },
+                        "parameter_types": [
+                          {
+                            "Template": {
+                              "name": { "segments": ["std", "vector"] },
+                              "arguments": [
+                                {
+                                  "Template": {
+                                    "name": { "segments": ["std", "shared_ptr"] },
+                                    "arguments": [
+                                      { "NamedType": { "segments": ["app", "Payload"] } }
+                                    ]
+                                  }
+                                }
+                              ]
+                            }
+                          }
+                        ],
+                        "is_variadic": false,
+                        "is_noexcept": false
+                      }
+                    }
+                  }
+                },
+                "source_location": { "file": "", "line": 17 }
+              }
+            ],
+            "attributes": [
+              {
+                "visibility": "Public",
+                "name": "callback",
+                "type": {
+                  "raw_text": "const app::Result* (* const)(const app::Payload&) noexcept",
+                  "expression": {
+                    "Const": {
+                      "Pointer": {
+                        "Function": {
+                          "return_type": { "Pointer": { "Const": { "NamedType": { "segments": ["app", "Result"] } } } },
+                          "parameter_types": [
+                            { "Reference": { "Const": { "NamedType": { "segments": ["app", "Payload"] } } } }
+                          ],
+                          "is_variadic": false,
+                          "is_noexcept": true
+                        }
+                      }
+                    }
+                  }
+                },
+                "modifiers": [],
+                "source_location": { "file": "", "line": 18 }
+              }
+            ],
+            "methods": [
+              {
+                "visibility": "Public",
+                "name": "Set",
+                "params": [
+                  {
+                    "name": "handler",
+                    "param_type": {
+                      "raw_text": "void (*)(int, ...)",
+                      "expression": {
+                        "Pointer": {
+                          "Function": {
+                            "return_type": { "Builtin": "void" },
+                            "parameter_types": [
+                              { "Builtin": "int" }
+                            ],
+                            "is_variadic": true,
+                            "is_noexcept": false
+                          }
+                        }
+                      }
+                    }
+                  }
+                ],
+                "type": {
+                  "raw_text": "void",
+                  "expression": {
+                    "Builtin": "void"
+                  }
+                },
+                "template_parameters": null,
+                "modifiers": [],
+                "source_location": { "file": "", "line": 19 }
+              },
+              {
+                "visibility": "Public",
+                "name": "Handler",
+                "params": [],
+                "type": {
+                  "raw_text": "void (*)(app::Request&&, void (*)(int))",
+                  "expression": {
+                    "Pointer": {
+                      "Function": {
+                        "return_type": { "Builtin": "void" },
+                        "parameter_types": [
+                          { "RValueReference": { "NamedType": { "segments": ["app", "Request"] } } },
+                          {
+                            "Pointer": {
+                              "Function": {
+                                "return_type": { "Builtin": "void" },
+                                "parameter_types": [
+                                  { "Builtin": "int" }
+                                ],
+                                "is_variadic": false,
+                                "is_noexcept": false
+                              }
+                            }
+                          }
+                        ],
+                        "is_variadic": false,
+                        "is_noexcept": false
+                      }
+                    }
+                  }
+                },
+                "template_parameters": null,
+                "modifiers": [],
+                "source_location": { "file": "", "line": 20 }
+              }
+            ],
+            "kind": {
+              "Class": {
+                "is_abstract": false,
+                "extends": [],
+                "implements": []
+              }
+            }
+          }
+        }
+      }
+    ],
+    "relationships": []
+  }
+}

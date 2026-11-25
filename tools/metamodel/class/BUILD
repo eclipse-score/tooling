@@ -17,7 +17,10 @@ package(default_visibility = ["//visibility:public"])
 # Class Diagram Metamodel Library (shared types for use by other tools)
 rust_library(
     name = "class_diagram",
-    srcs = ["class_logic.rs"],
+    srcs = [
+        "class_logic.rs",
+        "type_expr.rs",
+    ],
     crate_name = "class_diagram",
     crate_root = "class_logic.rs",
     edition = "2021",

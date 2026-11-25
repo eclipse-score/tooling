@@ -1,113 +1,221 @@
 {
-    "pointer_trailing_const.puml": {
-        "name": "pointer_trailing_const",
-        "elements": [
-            {
-                "Type": {
-                    "ClassLikeDef": {
-                        "name": {
-                            "internal": "Allocator",
-                            "alias": null
-                        },
-                        "namespace": "",
-                        "package": "",
-                        "source_location": {
-                            "file": "",
-                            "line": 15
-                        },
-                        "type_aliases": [],
-                        "attributes": [
-                            {
-                                "visibility": "Private",
-                                "name": "buffer_",
-                                "type": "int* const",
-                                "modifiers": [],
-                                "source_location": {
-                                    "file": "",
-                                    "line": 16
-                                }
-                            }
-                        ],
-                        "methods": [
-                            {
-                                "visibility": "Public",
-                                "name": "do_deallocate",
-                                "params": [
-                                    {
-                                        "name": "p",
-                                        "param_type": "void* const"
-                                    },
-                                    {
-                                        "name": "bytes",
-                                        "param_type": "const std::size_t"
-                                    },
-                                    {
-                                        "name": "alignment",
-                                        "param_type": "const std::size_t"
-                                    }
-                                ],
-                                "type": null,
-                                "template_parameters": null,
-                                "modifiers": [
-                                    "override"
-                                ],
-                                "source_location": {
-                                    "file": "",
-                                    "line": 17
-                                }
-                            },
-                            {
-                                "visibility": "Public",
-                                "name": "Get",
-                                "params": [],
-                                "type": "Foo* const",
-                                "template_parameters": null,
-                                "modifiers": [],
-                                "source_location": {
-                                    "file": "",
-                                    "line": 18
-                                }
-                            },
-                            {
-                                "visibility": "Public",
-                                "name": "Size",
-                                "params": [],
-                                "type": "std::size_t",
-                                "template_parameters": null,
-                                "modifiers": [
-                                    "const"
-                                ],
-                                "source_location": {
-                                    "file": "",
-                                    "line": 19
-                                }
-                            },
-                            {
-                                "visibility": "Public",
-                                "name": "Name",
-                                "params": [],
-                                "type": "std::string",
-                                "template_parameters": null,
-                                "modifiers": [
-                                    "<<const>>"
-                                ],
-                                "source_location": {
-                                    "file": "",
-                                    "line": 20
-                                }
-                            }
-                        ],
-                        "kind": {
-                            "Class": {
-                                "is_abstract": false,
-                                "extends": [],
-                                "implements": []
-                            }
-                        }
-                    }
+  "pointer_trailing_const.puml": {
+    "name": "pointer_trailing_const",
+    "elements": [
+      {
+        "Type": {
+          "ClassLikeDef": {
+            "name": {
+              "internal": "Allocator",
+              "alias": null
+            },
+            "namespace": "",
+            "package": "",
+            "source_location": {
+              "file": "",
+              "line": 15
+            },
+            "type_aliases": [],
+            "attributes": [
+              {
+                "visibility": "Private",
+                "name": "buffer_",
+                "type": {
+                  "raw_text": "int* const",
+                  "expression": {
+                    "Const": { "Pointer": { "Builtin": "int" } }
+                  }
+                },
+                "modifiers": [],
+                "source_location": {
+                  "file": "",
+                  "line": 16
                 }
+              }
+            ],
+            "methods": [
+              {
+                "visibility": "Public",
+                "name": "do_deallocate",
+                "params": [
+                  {
+                    "name": "p",
+                    "param_type": {
+                      "raw_text": "void* const",
+                      "expression": {
+                        "Const": { "Pointer": { "Builtin": "void" } }
+                      }
+                    }
+                  },
+                  {
+                    "name": "bytes",
+                    "param_type": {
+                      "raw_text": "const std::size_t",
+                      "expression": {
+                        "Const": { "NamedType": { "segments": ["std", "size_t"] } }
+                      }
+                    }
+                  },
+                  {
+                    "name": "alignment",
+                    "param_type": {
+                      "raw_text": "const std::size_t",
+                      "expression": {
+                        "Const": { "NamedType": { "segments": ["std", "size_t"] } }
+                      }
+                    }
+                  }
+                ],
+                "type": null,
+                "template_parameters": null,
+                "modifiers": [
+                  "override"
+                ],
+                "source_location": {
+                  "file": "",
+                  "line": 17
+                }
+              },
+              {
+                "visibility": "Public",
+                "name": "Get",
+                "params": [
+                  {
+                    "name": "value",
+                    "param_type": {
+                      "raw_text": "Foo&",
+                      "expression": {
+                        "Reference": { "NamedType": { "segments": ["Foo"] } }
+                      }
+                    }
+                  },
+                  {
+                    "name": "moved",
+                    "param_type": {
+                      "raw_text": "Foo&&",
+                      "expression": {
+                        "RValueReference": { "NamedType": { "segments": ["Foo"] } }
+                      }
+                    }
+                  },
+                  {
+                    "name": "status",
+                    "param_type": {
+                      "raw_text": "volatile int",
+                      "expression": {
+                        "Volatile": { "Builtin": "int" }
+                      }
+                    }
+                  },
+                  {
+                    "name": "pointee",
+                    "param_type": {
+                      "raw_text": "const Foo*",
+                      "expression": {
+                        "Pointer": { "Const": { "NamedType": { "segments": ["Foo"] } } }
+                      }
+                    }
+                  },
+                  {
+                    "name": "pointer",
+                    "param_type": {
+                      "raw_text": "Foo* const",
+                      "expression": {
+                        "Const": { "Pointer": { "NamedType": { "segments": ["Foo"] } } }
+                      }
+                    }
+                  },
+                  {
+                    "name": "chain",
+                    "param_type": {
+                      "raw_text": "const Foo* const*",
+                      "expression": {
+                        "Pointer": { "Const": { "Pointer": { "Const": { "NamedType": { "segments": ["Foo"] } } } } }
+                      }
+                    }
+                  },
+                  {
+                    "name": "east",
+                    "param_type": {
+                      "raw_text": "Foo const&",
+                      "expression": {
+                        "Reference": { "Const": { "NamedType": { "segments": ["Foo"] } } }
+                      }
+                    }
+                  },
+                  {
+                    "name": "west",
+                    "param_type": {
+                      "raw_text": "const Foo&",
+                      "expression": {
+                        "Reference": { "Const": { "NamedType": { "segments": ["Foo"] } } }
+                      }
+                    }
+                  }
+                ],
+                "type": {
+                  "raw_text": "Foo* const",
+                  "expression": {
+                    "Const": { "Pointer": { "NamedType": { "segments": ["Foo"] } } }
+                  }
+                },
+                "template_parameters": null,
+                "modifiers": [],
+                "source_location": {
+                  "file": "",
+                  "line": 18
+                }
+              },
+              {
+                "visibility": "Public",
+                "name": "Size",
+                "params": [],
+                "type": {
+                  "raw_text": "std::size_t",
+                  "expression": {
+                    "NamedType": { "segments": ["std", "size_t"] }
+                  }
+                },
+                "template_parameters": null,
+                "modifiers": [
+                  "const"
+                ],
+                "source_location": {
+                  "file": "",
+                  "line": 19
+                }
+              },
+              {
+                "visibility": "Public",
+                "name": "Name",
+                "params": [],
+                "type": {
+                  "raw_text": "std::string",
+                  "expression": {
+                    "NamedType": { "segments": ["std", "string"] }
+                  }
+                },
+                "template_parameters": null,
+                "modifiers": [
+                  "<<const>>"
+                ],
+                "source_location": {
+                  "file": "",
+                  "line": 20
+                }
+              }
+            ],
+            "kind": {
+              "Class": {
+                "is_abstract": false,
+                "extends": [],
+                "implements": []
+              }
             }
-        ],
-        "relationships": []
-    }
+          }
+        }
+      }
+    ],
+    "relationships": []
+  }
 }

@@ -23,7 +23,7 @@
               {
                 "visibility": "Private",
                 "name": "id",
-                "type": "int",
+                "type": { "raw_text": "int" },
                 "modifiers": [],
                 "source_location": {
                   "file": "",
@@ -36,7 +36,7 @@
                 "visibility": "Public",
                 "name": "getName",
                 "params": [],
-                "type": "String",
+                "type": { "raw_text": "String" },
                 "template_parameters": null,
                 "modifiers": [],
                 "source_location": {
@@ -77,7 +77,7 @@
               {
                 "visibility": "Private",
                 "name": "instance",
-                "type": "Config",
+                "type": { "raw_text": "Config" },
                 "modifiers": [],
                 "source_location": {
                   "file": "",
@@ -113,7 +113,7 @@
                 "visibility": "Public",
                 "name": "doSomething",
                 "params": [],
-                "type": "void",
+                "type": { "raw_text": "void" },
                 "template_parameters": null,
                 "modifiers": [],
                 "source_location": {

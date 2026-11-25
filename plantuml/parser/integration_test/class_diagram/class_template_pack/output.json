@@ -16,7 +16,7 @@
             "parameters": [
               {
                 "name": "args",
-                "param_type": "InArgs",
+                "param_type": { "raw_text": "InArgs" },
                 "is_variadic": false,
                 "is_pack_expansion": true
               }
@@ -65,7 +65,7 @@
             "parameters": [
               {
                 "name": "args",
-                "param_type": "InArgs&&",
+                "param_type": { "raw_text": "InArgs&&" },
                 "is_variadic": false,
                 "is_pack_expansion": true
               }
@@ -114,7 +114,7 @@
             "parameters": [
               {
                 "name": "args",
-                "param_type": "InArgs",
+                "param_type": { "raw_text": "InArgs" },
                 "is_variadic": false,
                 "is_pack_expansion": true
               }
@@ -163,7 +163,7 @@
             "parameters": [
               {
                 "name": "args",
-                "param_type": "InArgs&&",
+                "param_type": { "raw_text": "InArgs&&" },
                 "is_variadic": false,
                 "is_pack_expansion": true
               }

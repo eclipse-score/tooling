@@ -22,9 +22,9 @@
                 "name": "Open",
                 "template_parameters": null,
                 "params": [
-                  { "name": "path", "param_type": "Path[1]", "direction": "in" }
+                  { "name": "path", "param_type": { "raw_text": "Path[1]" }, "direction": "in" }
                 ],
-                "type": "Shared<ISharedMemoryResource>",
+                "type": { "raw_text": "Shared<ISharedMemoryResource>" },
                 "return_multiplicity": "0..1",
                 "modifiers": [],
                 "source_location": { "file": "", "line": 16 }
@@ -34,7 +34,7 @@
                 "name": "ZeroOrMore",
                 "template_parameters": null,
                 "params": [],
-                "type": "Shared<T>",
+                "type": { "raw_text": "Shared<T>" },
                 "return_multiplicity": "0..*",
                 "modifiers": [],
                 "source_location": { "file": "", "line": 17 }
@@ -44,7 +44,7 @@
                 "name": "OneOrMore",
                 "template_parameters": null,
                 "params": [],
-                "type": "Shared<T>",
+                "type": { "raw_text": "Shared<T>" },
                 "return_multiplicity": "1..*",
                 "modifiers": [],
                 "source_location": { "file": "", "line": 18 }
@@ -54,7 +54,7 @@
                 "name": "Star",
                 "template_parameters": null,
                 "params": [],
-                "type": "Shared<T>",
+                "type": { "raw_text": "Shared<T>" },
                 "return_multiplicity": "*",
                 "modifiers": [],
                 "source_location": { "file": "", "line": 19 }
@@ -64,7 +64,7 @@
                 "name": "RawSpelling",
                 "template_parameters": null,
                 "params": [],
-                "type": "Shared<T>",
+                "type": { "raw_text": "Shared<T>" },
                 "return_multiplicity": " 01 .. 02 ",
                 "modifiers": [],
                 "source_location": { "file": "", "line": 20 }
@@ -74,7 +74,7 @@
                 "name": "FixedArray",
                 "template_parameters": null,
                 "params": [],
-                "type": "T[1]",
+                "type": { "raw_text": "T[1]" },
                 "modifiers": [],
                 "source_location": { "file": "", "line": 21 }
               },
@@ -83,7 +83,7 @@
                 "name": "BoundedArray",
                 "template_parameters": null,
                 "params": [],
-                "type": "T[N]",
+                "type": { "raw_text": "T[N]" },
                 "modifiers": [],
                 "source_location": { "file": "", "line": 22 }
               },
@@ -92,7 +92,7 @@
                 "name": "EmptyArray",
                 "template_parameters": null,
                 "params": [],
-                "type": "T[]",
+                "type": { "raw_text": "T[]" },
                 "modifiers": [],
                 "source_location": { "file": "", "line": 23 }
               }
@@ -127,7 +127,7 @@
                 "name": "Open",
                 "template_parameters": null,
                 "params": [],
-                "type": "Shared<T>",
+                "type": { "raw_text": "Shared<T>" },
                 "return_multiplicity": "0..1",
                 "modifiers": [],
                 "source_location": { "file": "", "line": 27 }
@@ -157,7 +157,7 @@
                 "name": "Collect",
                 "template_parameters": null,
                 "params": [],
-                "type": "Shared<T>",
+                "type": { "raw_text": "Shared<T>" },
                 "return_multiplicity": "*",
                 "modifiers": [],
                 "source_location": { "file": "", "line": 31 }
