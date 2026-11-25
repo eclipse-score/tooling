@@ -10,6 +10,7 @@
 
   SPDX-License-Identifier: Apache-2.0
 ----------------------------------------------------------------------------- -->
+
 # clickable_plantuml
 
 Sphinx extension that makes PlantUML diagrams clickable by injecting hyperlinks into rendered SVG/PNG diagrams.
@@ -18,12 +19,12 @@ Sphinx extension that makes PlantUML diagrams clickable by injecting hyperlinks 
 
 This extension is only the last of three stages in a pipeline that turns plain
 `.puml` text files into cross-linked, clickable architecture diagrams. It does
-**not** parse PlantUML itself — it only reads the small `.idmap.json` sidecar
-files produced upstream and uses them to inject link directives before
-`sphinxcontrib-plantuml` renders the image.
+**not** parse PlantUML and does **not** decide which diagram links where: it
+reads the `diagram_links.json` files computed upstream and injects their links
+before `sphinxcontrib-plantuml` renders the image.
 
-A PlantUML class diagram of the pipeline (steps plus their input/output
-artifacts) shows the three stages summarized below. Its source is stored in
+A PlantUML diagram of the pipeline (steps plus their input/output artifacts)
+shows the three stages summarized below. Its source is stored in
 `docs/assets/clickable_plantuml_pipeline.puml`:
 
 ```{uml} docs/assets/clickable_plantuml_pipeline.puml
@@ -31,28 +32,21 @@ artifacts) shows the three stages summarized below. Its source is stored in
 :alt: clickable_plantuml pipeline overview
 ```
 
-1. **Parse & resolve** — `puml_cli` (in `plantuml/parser/`) is invoked once per
-   `.puml` file by the `architectural_design()` Bazel rule. It preprocesses
-   `!include`s, parses the diagram with a `pest`-grammar parser
-   (`puml_parser`), and resolves aliases/references into a fully-qualified
-   model (`puml_resolver`). This is the only stage that actually understands
-   PlantUML syntax.
-2. **idmap generation** — `puml_idmap` walks the resolved model and classifies
-   each element as either a *define* (something this diagram elaborates,
-   e.g. a component with children, or a class with members) or a *reference*
-   (a leaf mention or relation endpoint that should link elsewhere). The
-   result is written as one `<file_stem>.idmap.json` sidecar per diagram — see
-   the *Role detection algorithm* and *idmap Format* sections below for the
-   exact rules and shape.
-3. **Sphinx consumption** — `clickable_plantuml.py` (this directory) never
-   touches `.puml` source or FlatBuffers output. At `builder-inited` it scans
-   the source tree for every `*.idmap.json`, builds a global
-   `{id → [definer source paths]}` index (plus a `{last id segment → …}` name
-   index), and at `doctree-resolved` uses
-   that index to rewrite each diagram's `uml` text with
-   `url of <alias> is [[<link>]]` directives *before* handing it off to
-   `sphinxcontrib-plantuml`'s own renderer, which does the actual PlantUML →
-   SVG/PNG rendering.
+1. **Parse & resolve** — `puml_cli` (in `plantuml/parser/`) parses the `.puml`
+   files of an `architectural_design()` or `unit_design()` view and writes one
+   `<stem>.fbs.bin` FlatBuffer per diagram. The FlatBuffer carries the
+   resolved model, the workspace-relative `source` path and, for component
+   diagrams, the `@startuml` name.
+2. **Diagram links** — the `dependable_element()` rule runs
+   `validation_cli --profile dependable-element --links-output --links-only`
+   over the FlatBuffers of all its architectural and unit designs and stages
+   the result as `<name>_index/diagram_links.json`. The link rules live in
+   `validation/core/src/links/` (see *Link Rules* below).
+3. **Sphinx consumption** — `clickable_plantuml.py` (this directory) loads
+   every `diagram_links.json` of the source tree at `builder-inited` and, at
+   `doctree-resolved`, rewrites each diagram's `uml` text with
+   `url of <alias> is [[<link>]]` directives and linked call labels *before*
+   handing it off to `sphinxcontrib-plantuml`'s own renderer.
 
 ## Sphinx Integration
 
@@ -68,11 +62,10 @@ Sphinx build lifecycle                   clickable_plantuml hooks
 ═══════════════════════════════════      ═══════════════════════════════════════
 
   builder-inited                   ───► on_builder_inited()
-  │  (one-time setup)                     Load all *.idmap.json files from
-  │                                       srcdir (recursive).
-  │                                       Build definition index
-  │                                       {id → [definer source paths]} and
-  │                                       name index {last id segment → [...]}.
+  │  (one-time setup)                     Load all diagram_links.json files
+  │                                       from srcdir (recursive, sorted).
+  │                                       Index element links by source and
+  │                                       call links by (source, line).
   │
   ├─ READ PHASE ──────────────────────────────────────────────────────────────
   │  for each document:
@@ -98,32 +91,25 @@ Sphinx build lifecycle                   clickable_plantuml hooks
   │    post-transform / resolve
   │    │
   │    doctree-resolved            ───► on_doctree_resolved()
-  │       (per document)                 For each plantuml node, load its idmap.
-  │                                      For each reference entry, look up the
-  │                                      definition index by id; if none and the
-  │                                      idmap has match_by_name, look up the
-  │                                      last id segment in the name index.
-  │                                      Apply proximity, then descendant-count
-  │                                      tiebreak on ambiguity.
-  │                                      Build the URL (relative to _images/ in
-  │                                      svg_obj mode, else page-relative via
-  │                                      get_relative_uri), then append
-  │                                      url of <alias> is [[url]] directives to
-  │                                      node['uml'] before rendering.
+  │       (per document)                 For each plantuml node, look up the
+  │                                      links of its source. Build the URL of
+  │                                      each target document (relative to
+  │                                      _images/ in svg_obj mode, else
+  │                                      page-relative), append
+  │                                      url of <alias> is [[url]] directives
+  │                                      and link the labels of refined calls
+  │                                      in node['uml'] before rendering.
   │
   build-finished
 ```
 
 ## How It Works
 
-1. **idmap discovery** (`builder-inited`) – Scans for `*.idmap.json` files in
-   the Sphinx source directory.  Each sidecar records *defines* (elements
-   elaborated in that diagram, i.e. with children/members) and *references*
-   (leaf mentions and relation endpoints).  A global definition index maps
-   each id to the set of diagrams that elaborate it; a name index maps the
-   last id segment of every define from a `match_by_name` idmap likewise.
-   The `alias` of an entry is the PlantUML code in its own diagram: it is
-   only used for `url of` injection and never matched across diagrams.
+1. **Link loading** (`builder-inited`) – Loads every `diagram_links.json` in
+   the Sphinx source directory in sorted path order. Nested dependable
+   elements stage their own file; when two files link the same alias or call,
+   the first wins. A file with an unknown `version` is skipped with a
+   warning.
 
 2. **Diagram location mapping** (`doctree-read`) – Records which `docname`
   contains which `.puml` diagram, keyed by the canonical workspace-relative
@@ -137,66 +123,51 @@ Sphinx build lifecycle                   clickable_plantuml hooks
   same-basename candidates), so same-basename diagrams in different packages
   remain distinct.
 
-3. **URL resolution & link injection** (`doctree-resolved`) – For each
-   reference in a diagram's idmap, resolves the unique definer via the index
-   (exact id first; then, for `match_by_name` idmaps, the last id segment —
-   a bare `unit_1` in a sequence/component diagram finds the diagram that
-   defines `pkg.comp.unit_1`).
-   When multiple diagrams define the same element, a *proximity tiebreak*
-   selects the definer sharing the longest common path prefix with the source
-   diagram (this is the case for a reference resolved across multiple
-   `static` files merged into one architecture, see the `component_model`
-   validator spec). If proximity still ties (e.g. candidates in the same
-   directory), a *descendant-count tiebreak* prefers the candidate whose
-   idmap elaborates more nested entries under the referenced id — this can
-   change which file a link points to compared to earlier releases, where a
-   proximity tie always meant no link. On a genuine tie after both stages, no
-   link is emitted (safe over wrong). URLs are built relative to `_images/`
-   in `svg_obj` mode (else page-relative via `app.builder.get_relative_uri()`)
-   and percent-encoded before injection.  An alias that is not a plain
-   identifier is written quoted (`url of "a::b" is [[url]]`); one that
-   contains a double quote or a line break cannot be written and is reported
-   with a warning.
+3. **Element links** (`doctree-resolved`) – Each element link of the diagram
+   whose target diagram is part of the docs becomes
+   `url of <alias> is [[url]]`. URLs are percent-encoded before injection.
+   An alias that is not a plain identifier is written quoted
+   (`url of "a::b" is [[url]]`); one that contains a double quote or a line
+   break cannot be written and is reported with a warning.
 
-4. **Incremental / parallel support** – `env-purge-doc` removes stale entries
+4. **Call links** (`doctree-resolved`) – The label of a refined call
+   (`A -> B : Get()`) on the linked line becomes `[[url Get()]]`; the arrow
+   and the lifeline stay unlinked. The link goes to the first target that is
+   part of the docs; with several targets the tooltip names all. No link is
+   written when the label already holds a link or when the label on that line
+   does not name the call's method (a stale `diagram_links.json`).
+
+5. **Incremental / parallel support** – `env-purge-doc` removes stale entries
    when a document is re-read; `env-merge-info` merges state from parallel
-   worker processes.
+   worker processes. The `clickable_plantuml_links_digest` config value
+   (`config-inited`) holds a digest of all `diagram_links.json` files; Sphinx
+   re-reads all documents when it changes, so changed links never stay stale
+   in unchanged pages.
 
-## Automatic idmap Generation (Bazel)
+## Link Rules
 
-`.idmap.json` sidecars are produced by the `architectural_design()` rule.
+The rules are implemented and unit-tested in `validation/core/src/links/`;
+the call links follow the sequence refinement rule of
+`docs/specifications/sequence_refinement.md`.
 
-The rule passes `--source-name <puml_file.short_path>` and
-`--idmap-output-dir` to `puml_cli` for every `.puml` file.  The
-`--source-name` argument **must be the srcdir-relative workspace path** to
-satisfy the canonical-key invariant.  Passing `short_path` (the workspace
-root-relative path for Bazel sources) ensures this requirement is met.  The
-resulting idmap `source` field is a stable, unique, workspace-relative path
-(e.g. `score/mw/com/proxy_detail.puml`), which becomes the diagram's identity
-key throughout the extension.  Duplicate `source` values across idmaps raise
-an error; duplicate basenames (file stems) within one target also raise an
-error.
-
-### Role detection algorithm
-
-Given the resolved model of one `.puml` diagram:
-
-1. **defines** – An element is a *define* when any of the following hold:
-   - At least one other element lists it as its `parent_id` (component diagrams).
-   - It has member variables or methods (class diagrams).
-   - The diagram's `@startuml <name>` matches its alias, display name or the
-     last segment of its id (component and class diagrams).
-   - It is a `$FailureMode` node — the tree root whose `connection` is `None`,
-     never used as a relation source (FTA diagrams). Each failure-mode FQN of
-     the node is a define.
-2. **references** – Elements that link away to another diagram:
-   - Top-level leaf boxes and relation endpoints (component diagrams).
-   - All participants (sequence diagrams — no defines in sequence).
-   - `$TransferInGate` nodes; the alias is the TRLC FQN (`Package.Record`) of
-     a failure mode covered by another fault tree, which links to the diagram
-     defining it (FTA diagrams).
-   - Internal FTA nodes (`$RootCause`, `$IntermediateEvent`, `$AndGate`,
-     `$OrGate`) are omitted — they do not cross-link to other diagrams.
+- **Defines and references** – A component diagram element is a *define* when
+  it has children or the `@startuml` name is its alias or name. A class
+  diagram entity is a define when it has members or the `@startuml` name is
+  its name or last id segment; a namespace holding a define is a define too
+  (a *namespace define*). All other elements, all relation endpoints and all
+  sequence participants are *references*.
+- **Element links** – A reference links to the one other diagram that
+  defines its id. Without one, the last id segment is matched (a bare
+  `unit_1` finds the diagram that defines `pkg.comp.unit_1`). Namespace
+  defines lose against diagrams that draw the element; remaining ties go to
+  the closest path, then to the diagram with most elements below the id. A
+  tie after that gives no link and a warning (safe over wrong). The first
+  reference per alias that has a definer is linked.
+- **Call links** – A call links to the sequence diagrams that refine it, in
+  any architectural design of the dependable element. Only refinements that
+  pass the zoom check (closed windows, boundary kept, no exit missing) are
+  linked; a call without such a refinement gets no link. Calls written in an
+  `!include` fragment get no link.
 
 ### Concrete example
 
@@ -214,150 +185,64 @@ package Proxy { [RequestHandler] }
 @enduml
 ```
 
-`proxy_detail.idmap.json`:
-```json
-{ "source": "score/mw/com/proxy_detail.puml",
-  "match_by_name": true,
-  "defines":    [{ "alias": "Proxy",          "id": "Proxy" }],
-  "references": [{ "alias": "RequestHandler", "id": "Proxy.RequestHandler" }] }
-```
-
-`overview.idmap.json`:
-```json
-{ "source": "score/overview.puml",
-  "match_by_name": true,
-  "defines":    [],
-  "references": [{ "alias": "Gateway", "id": "Gateway" },
-                 { "alias": "Proxy",   "id": "Proxy"   }] }
-```
-
 Result: `Proxy` in `overview.puml` links to `proxy_detail.puml`.
 `Gateway` has no definer → no link.
 
-## idmap Format
+## `diagram_links.json` Format
 
-`.idmap.json` files are written by the parser and read by this extension.
-They are not intended to be authored manually.
+Written by `validation_cli --links-output`, read by this extension. Paths are
+workspace-relative diagram sources; links are sorted.
 
 ```json
 {
-  "source": "path/to/diagram.puml",
-  "match_by_name": true,
-  "defines": [
-    { "alias": "ComponentName", "id": "fully.qualified.Name" }
+  "version": 1,
+  "element_links": [
+    { "source": "pkg/overview.puml", "alias": "Proxy", "target": "pkg/proxy_detail.puml" }
   ],
-  "references": [
-    { "alias": "OtherComponent", "id": "OtherComponent" }
+  "call_links": [
+    { "source": "pkg/overview.puml", "line": 19, "method": "Get",
+      "targets": ["pkg/get_detail.puml"] }
   ]
 }
 ```
 
-`match_by_name` (default `false`) is `true` for component, class and sequence
-diagrams, whose ids may be matched by their last segment, and `false` for FTA
-diagrams, whose id is a complete TRLC `Package.Record`.
+`line` is the 1-based line of the call in `source`; `method` is the call label
+up to the first `(`.
 
-## End-to-End Clickable Diagram Example
+## End-to-End Examples
 
-Rather than duplicating a hand-written, untested example here, this exact
-scenario is built and regression-tested as part of `rules_score`'s own test
-suite:
+The scenarios are built and regression-tested by `rules_score`'s own test
+suite in
+[`bazel/rules/rules_score/test/BUILD`](https://github.com/eclipse-score/tooling/blob/main/bazel/rules/rules_score/test/BUILD).
+Each `*_link_json_test` runs
+[`check_diagram_link.sh`](https://github.com/eclipse-score/tooling/blob/main/bazel/rules/rules_score/test/check_diagram_link.sh)
+to assert one element link in the Bazel-built `diagram_links.json`:
 
-- [`overview.puml`](https://github.com/eclipse-score/tooling/blob/main/bazel/rules/rules_score/test/fixtures/clickable_example/overview.puml)
-  references `Proxy` (a top-level leaf, per the *Role detection algorithm*
-  above).
-- [`proxy_detail.puml`](https://github.com/eclipse-score/tooling/blob/main/bazel/rules/rules_score/test/fixtures/clickable_example/proxy_detail.puml)
-  defines `Proxy` as a `package` with a nested child, making it a *define*.
-
-Both files are wired into a real `architectural_design()` +
-`dependable_element()` target
-(`clickable_example_lib` in [`bazel/rules/rules_score/test/BUILD`](https://github.com/eclipse-score/tooling/blob/main/bazel/rules/rules_score/test/BUILD)),
-so every change to the parser, `puml_idmap`, or this extension is checked
-against genuinely Bazel-built `.idmap.json` artifacts — not just prose. The
-[`clickable_example_link_rendered_test`](https://github.com/eclipse-score/tooling/blob/main/bazel/rules/rules_score/test/check_clickable_example_link.sh)
-`sh_test` asserts that:
-
-- `overview.idmap.json` references `Proxy`
-- `proxy_detail.idmap.json` defines `Proxy`
-
-i.e. that clickable_plantuml has exactly what it needs to make the rendered
-`Proxy` element in `overview.puml` clickable, linking to the page containing
-`proxy_detail.puml`. Run it with:
+- **Component diagrams** — `overview.puml` references `Proxy`,
+  `proxy_detail.puml` defines it (`clickable_example_link_json_test`).
+- **Cross-diagram-type interface** — the component diagram
+  `interface_overview.puml` references `InternalInterface`, the class diagram
+  `interface_detail.puml` defines it
+  (`interface_example_link_json_test`).
+- **Class diagrams** — `class_overview.puml` references `AuditTrail`,
+  `class_detail.puml` defines it (`class_example_link_json_test`).
+- **Static architecture to public API** — `public_api_overview.puml`
+  references `PublicInterface`, defined in `public_api_detail.puml`
+  (`public_api_example_link_json_test`).
+- **Unit to its class diagram** — `unit_overview.puml` references
+  `unit_one`, `unit_class_detail.puml` defines it
+  (`unit_example_link_json_test`); variants match by namespace
+  (`namespace_unit_example_link_json_test`) and by last id segment
+  (`leaf_unit_example_link_json_test`).
+- **Dynamic architecture** — participants of `dynamic_overview.puml` and units
+  of `dynamic_component_detail.puml` link to their class diagrams, and
+  `TaskInterface` to the public API (`dynamic_*_link_json_test`).
+- **Call links** — `diagram_links_golden_test` pins the `diagram_links.json`
+  of a dependable element whose zoom levels span two architectural designs:
+  an element link, a call link, a call with two details and a call in an
+  `!include` fragment (no link). `diagram_links_validation_test` asserts that
+  its diagrams have no zoom findings, so every call link is validated.
 
 ```shell
-bazel test //bazel/rules/rules_score/test:clickable_example_link_rendered_test
+bazel test //bazel/rules/rules_score/test:clickable_example_link_json_test
 ```
-
-The same pattern covers the other diagram-type scenarios from the *Role
-detection algorithm* above:
-
-- **Cross-diagram-type interface linking** — `interface_overview.puml` (a
-  component diagram) references `InternalInterface` via a unit's `-(`
-  binding, and `interface_detail.puml` (auto-detected as a class diagram
-  because the interface has a method) defines it. Both share the FQN
-  `package_a.InternalInterface`, since ids are rooted at the enclosing
-  `package_a` package rather than the `@startuml` name. See
-  `interface_example_lib` and `interface_example_link_rendered_test` in
-  [`bazel/rules/rules_score/test/BUILD`](https://github.com/eclipse-score/tooling/blob/main/bazel/rules/rules_score/test/BUILD).
-- **Pure class-diagram linking** — `class_overview.puml` references
-  `AuditTrail` as a bare, member-less class, and `class_detail.puml` defines
-  it (it has a method, making it the elaboration site). See
-  `class_example_lib` and `class_example_link_rendered_test` in the same
-  `BUILD` file.
-
-The following three scenarios each cover a full, real-world "chain" from the
-*Role detection algorithm* — a reference in one architectural view and the
-matching definition in another — and are wired up the same way:
-
-- **Interface in the static architecture links to the public API** —
-  `public_api_overview.puml` (a component diagram, `static` attribute) shows a
-  unit bound to `PublicInterface` via a `-(` port, and `public_api_detail.puml`
-  (passed via architectural_design's `public_api` attribute, which also feeds
-  FMEA/safety-analysis traceability) defines it. Both share the FQN
-  `package_pub.PublicInterface`. See `public_api_example_lib` and
-  `public_api_example_link_rendered_test` in
-  [`bazel/rules/rules_score/test/BUILD`](https://github.com/eclipse-score/tooling/blob/main/bazel/rules/rules_score/test/BUILD).
-- **Static architecture unit links to its class diagram** —
-  `unit_overview.puml` (a component diagram) shows `unit_one` as a leaf unit
-  (no children, so a reference), and `unit_class_detail.puml` (a class
-  diagram naming a class after the same unit, nested in the matching
-  namespace) defines it. Both share the FQN `package_u.component_u.unit_one`,
-  since component-diagram ids and class-diagram namespace FQNs use the same
-  dot-joined scheme. See `unit_example_lib` and
-  `unit_example_link_rendered_test` in the same `BUILD` file.
-- **Dynamic architecture participant links to its own class diagram, with a
-  shared public API** — `dynamic_overview.puml` (a sequence diagram, `dynamic`
-  attribute) shows participants `Dispatcher` and `Worker` — both references,
-  since sequence diagrams have no defines. `dynamic_component_detail.puml` (a
-  component diagram, `static` attribute) shows both as leaf units (also
-  references, since neither has children) sharing a `TaskInterface` binding
-  (so the diagrams also pass the architectural-design consistency validator).
-  Each unit is elaborated by its own class diagram
-  (`dynamic_dispatcher_class.puml`, `dynamic_worker_class.puml`, each in its
-  own `unit_design(static=[...])` -- `architectural_design`'s `static`
-  attribute is component/package diagrams only), which is where the click
-  ultimately lands. `TaskInterface` itself
-  is only ever a reference in the component diagram; its definition lives in
-  the public API (`dynamic_public_api_detail.puml`, via the `public_api`
-  attribute), exactly like the public-API scenario above. See
-  `dynamic_example_lib`, `dynamic_example_link_rendered_test`,
-  `dynamic_dispatcher_class_link_rendered_test`,
-  `dynamic_worker_class_link_rendered_test` and
-  `dynamic_public_api_link_rendered_test` in the same `BUILD` file.
-
-  **Limitation: clicking on individual *messages* in a sequence diagram (e.g.
-  `Assign`/`Done`) is not currently supported**, for two independent reasons:
-  1. `sequence_model_to_idmap()` in `puml_idmap/src/lib.rs` only extracts
-     `caller`/`callee` (participant names) into `references`. The resolved
-     `SequenceTree` (`tools/metamodel/sequence/sequence_logic.rs`) *does*
-     carry the message text (`Interaction.method`, `Return.return_content`),
-     but the idmap converter never reads those fields, so no reference is
-     ever produced for a message label today.
-  2. Even if (1) were fixed, this extension's injection mechanism
-     (`_inject_links_into_uml`) only knows how to append `url of <alias> is
-     [[url]]` directives before `@enduml` — a PlantUML feature that attaches
-     a link to a *declared, aliased element* (participant/class/component),
-     not to an arrow's message text. Making a message clickable requires
-     PlantUML's other, unrelated hyperlink form — rewriting the message line
-     itself, e.g. `Dispatcher -> Worker : [[url Assign]]` — which needs a
-     different, source-location-aware rewriting path (to target the right
-     occurrence when a label repeats) that doesn't exist yet.

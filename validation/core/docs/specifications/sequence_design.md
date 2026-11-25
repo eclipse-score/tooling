@@ -26,6 +26,7 @@ The related validators are specified in:
 - `sequence_internal_api.md` (methods, roles, coverage, gate messages)
 - `sequence_public_api.md` (actor calls and callbacks against the public API)
 - `class_design_sequence.md` (class lifelines and operations)
+- `sequence_refinement.md` (zoom into a SEooC, component or unit)
 
 ## Lifelines
 
@@ -86,7 +87,8 @@ Rules:
 2. A call label is `name(params)`. The method name is the text before the first
    `(`; the parameters are not compared with the internal API.
 3. Replies carry data back to the caller. Write them as dashed arrows; a
-   `return` statement is ignored. They are never matched against an API,
+   `return` statement is resolved the same way (it replies to the caller of
+   the innermost open activation). They are never matched against an API,
    whatever the label looks like (`Ack`, `Result(x)`).
    *(Requirement: {requirement:downstream-ref}`Tools.SequenceMessageKinds`)*
 4. A callback is a call, synchronous or asynchronous, from an element of the
@@ -149,6 +151,31 @@ API. Roles are not checked, because a container has no interface roles of its
 own. The call does not exercise the interface connection between two units
 inside the container. Calls with an environment participant are skipped by
 the unit-pair checks.
+
+## Zoom into a Black Box
+
+A call into a SEooC, component or unit can be refined by another sequence
+diagram that repeats the call from the same sender to a direct child and shows
+what happens inside (`sequence_refinement.md`). Use the same sender and
+method; the diagrams need no marker. The detail may be in any architectural
+design of the same dependable element.
+
+```text
+' sample_library.puml (overview)
+App -> sample_library : GetNumber()
+sample_library -> Platform : Log()
+sample_library --> App : number
+
+' sample_library_component.puml (detail, one level deeper)
+App -> component_example : GetNumber()
+component_example -> Platform : Log()
+component_example --> App : number
+```
+
+Every call the black box makes to its environment shall also appear in at
+least one detail. A detail shall not use architecture elements outside the
+refined element, except partners the overview shows. Reply with `-->` or
+`return` (or `deactivate`) so that the end of the call is clear.
 
 ## Unit Design
 
@@ -252,7 +279,8 @@ void Controller::Connect(const Path& path) {
 ### Return Value
 
 A returned value is a reply: a dashed arrow back to the caller. Replies are not
-matched against an API. A `return` statement is ignored.
+matched against an API. A `return` statement is a reply to the caller of the
+innermost open activation (`++` or `activate`).
 
 ```text
 ' PlantUML sequence diagram

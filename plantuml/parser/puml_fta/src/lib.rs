@@ -51,7 +51,7 @@ pub enum NodeKind {
 ///
 /// `NodeKind::Gate` alone does not distinguish an internal `$AndGate`/`$OrGate`
 /// from a `$TransferInGate` (which links to another fault tree's failure mode).
-/// Consumers that need that distinction (e.g. `puml_idmap`) must match on this
+/// Consumers that need that distinction must match on this
 /// field rather than guessing from the node's `alias` shape.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 pub enum GateKind {

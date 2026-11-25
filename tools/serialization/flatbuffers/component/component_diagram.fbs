@@ -81,6 +81,10 @@ table ComponentMap {
 
 table ComponentGraph {
   components:[ComponentMap];
+  /// `@startuml <name>` of the diagram
+  name:string;
+  /// Source path of the diagram file (`--source-name`)
+  source:string;
 }
 
 root_type ComponentGraph;

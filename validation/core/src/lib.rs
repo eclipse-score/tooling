@@ -16,11 +16,15 @@
 //! This crate contains the shared models, readers, and validators used by the
 //! CLI entrypoints for architecture and design verification.
 
+pub mod links;
 mod models;
 mod profiles;
 mod readers;
 mod results;
 mod validators;
 
-pub use profiles::{read_profile_inputs, run_profile, Profile, ProfileInputs, ProfileRun};
+pub use links::DiagramLinks;
+pub use profiles::{
+    diagram_links, read_profile_inputs, run_profile, Profile, ProfileInputs, ProfileRun,
+};
 pub use results::{Diagnostics, ErrorBuilder, ErrorCategory, ValidationResult};

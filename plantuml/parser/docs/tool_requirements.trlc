@@ -97,6 +97,10 @@ section "Tool Requirements" {
                 description = '''The tool shall resolve a message with a dashed line as a reply, a message with an `>>` arrowhead as an asynchronous call, and any other message as a synchronous call.'''
             }
 
+            ToolRequirement ArchitectureModelingSequenceReturn {
+                description = '''The tool shall resolve a `return` statement as a reply from the receiver of the innermost open activation to its caller, and shall resolve no message for a `return` without a caller or inside a `critical` group.'''
+            }
+
         }
 
         section "Group Resolution" {

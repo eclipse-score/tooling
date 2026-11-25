@@ -32,6 +32,7 @@ rust_test(
     ],
     deps = [
         "//plantuml/parser/integration_test:test_framework",
+        "//validation/core:validation",
         "@crates_score_tooling//:serde",
         "@crates_score_tooling//:serde_json",
         "@crates_score_tooling//:serde_yaml",

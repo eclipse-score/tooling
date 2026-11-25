@@ -36,6 +36,7 @@ fn validate(
 
 fn class_diagrams(entities: Vec<class_diagram::SimpleEntity>) -> ClassDiagramInputs {
     vec![ClassDiagram {
+        source: None,
         name: "class_design".to_string(),
         entities,
         free_functions: Vec::new(),

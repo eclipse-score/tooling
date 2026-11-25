@@ -20,7 +20,11 @@ use component_fbs::component as fb;
 pub struct ComponentSerializer;
 
 impl ComponentSerializer {
-    pub fn serialize(elements: &HashMap<String, LogicComponent>) -> Vec<u8> {
+    pub fn serialize(
+        elements: &HashMap<String, LogicComponent>,
+        name: Option<&str>,
+        source: Option<&str>,
+    ) -> Vec<u8> {
         let mut builder = FlatBufferBuilder::new();
 
         // Iterate in key-sorted order: `HashMap`'s default hasher is randomized
@@ -121,10 +125,14 @@ impl ComponentSerializer {
         // --------------------------
         // 3) root object
         // --------------------------
+        let name_offset = name.map(|n| builder.create_string(n));
+        let source_offset = source.map(|s| builder.create_string(s));
         let root = fb::ComponentGraph::create(
             &mut builder,
             &fb::ComponentGraphArgs {
                 components: Some(comps_vec),
+                name: name_offset,
+                source: source_offset,
             },
         );
 

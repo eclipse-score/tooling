@@ -51,6 +51,7 @@ impl SequenceSerializer {
         let mut builder = FlatBufferBuilder::new();
 
         let name_offset = diagram.name.as_deref().map(|n| builder.create_string(n));
+        let source_offset = diagram.source.as_deref().map(|s| builder.create_string(s));
 
         let participant_offsets: Vec<_> = diagram
             .participants
@@ -67,6 +68,7 @@ impl SequenceSerializer {
                 name: name_offset,
                 participants: Some(participants_offset),
                 root: Some(root_offset),
+                source: source_offset,
             },
         );
 

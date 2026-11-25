@@ -90,27 +90,25 @@ def run_puml_parser(ctx, files, stems, diagram_type = None, public_api_package =
             diagrams nor into outputs. Their `short_path` is the source path
             of the locations inside them.
     Returns:
-        Struct with `fbs` and `idmap` (output File lists, one entry per
-        `.puml` file in `files`, in order) and `public_api` (the declared
+        Struct with `fbs` (output File list, one entry per `.puml` file in
+        `files`, in order) and `public_api` (the declared
         `public_api.trlc` File, or `None` without `public_api_package` or
         `.puml` files).
     """
     puml_files = [f for f in files if f.extension == "puml"]
 
     if not puml_files:
-        return struct(fbs = [], idmap = [], public_api = None)
+        return struct(fbs = [], public_api = None)
 
     public_api = None
     if public_api_package:
         public_api = ctx.actions.declare_file("{}/public_api.trlc".format(ctx.label.name))
 
     fbs_outputs = []
-    idmap_outputs = []
     arguments = []
     for f in puml_files:
         stem = stems[f.path]
         fbs_outputs.append(ctx.actions.declare_file("{}/{}.fbs.bin".format(ctx.label.name, stem)))
-        idmap_outputs.append(ctx.actions.declare_file("{}/{}.idmap.json".format(ctx.label.name, stem)))
         arguments.extend([
             "--file",
             f.path,
@@ -134,8 +132,6 @@ def run_puml_parser(ctx, files, stems, diagram_type = None, public_api_package =
     arguments.extend([
         "--fbs-output-dir",
         fbs_outputs[0].dirname,
-        "--idmap-output-dir",
-        idmap_outputs[0].dirname,
         "--log-level",
         get_log_level(ctx),
     ])
@@ -146,10 +142,10 @@ def run_puml_parser(ctx, files, stems, diagram_type = None, public_api_package =
 
     ctx.actions.run(
         inputs = puml_files + include_files,
-        outputs = fbs_outputs + idmap_outputs + api_outputs,
+        outputs = fbs_outputs + api_outputs,
         executable = ctx.executable._puml_parser,
         arguments = arguments,
         progress_message = "Parsing PlantUML diagram group: %s" % (progress_label or str(ctx.label)),
     )
 
-    return struct(fbs = fbs_outputs, idmap = idmap_outputs, public_api = public_api)
+    return struct(fbs = fbs_outputs, public_api = public_api)

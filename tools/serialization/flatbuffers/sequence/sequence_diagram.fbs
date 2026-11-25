@@ -147,6 +147,8 @@ table SequenceDiagram {
     participants: [SequenceParticipant];
     /// Root behavior block
     root: Block (required);
+    /// Source path of the diagram file (`--source-name`)
+    source: string;
 }
 
 root_type SequenceDiagram;

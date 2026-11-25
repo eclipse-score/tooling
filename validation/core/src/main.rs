@@ -16,11 +16,13 @@
 //! Supports architecture and design validations selected by validation profile.
 mod report;
 
-use clap::{Parser, ValueEnum};
+use clap::error::ErrorKind;
+use clap::{CommandFactory, Parser, ValueEnum};
 use env_logger::Builder;
+use std::fs;
 use std::process;
 
-use validation::{read_profile_inputs, run_profile, Profile};
+use validation::{diagram_links, read_profile_inputs, run_profile, Profile, ProfileInputs};
 
 /// CLI-visible log level (mirrors the parser/linker convention).
 #[derive(Copy, Clone, ValueEnum, Debug)]
@@ -68,11 +70,39 @@ struct Args {
     /// Log level: error, warn, info, debug, trace
     #[arg(long, value_enum, default_value = "warn")]
     log_level: CliLogLevel,
+
+    /// Write the diagram links (`diagram_links.json`) to this file. Only with
+    /// `--profile dependable-element`. Call links lead to refinements that pass
+    /// the zoom check; written even when validation fails.
+    #[arg(long)]
+    links_output: Option<String>,
+
+    /// Write only the diagram links: no validation, no report. Needs
+    /// `--links-output`.
+    #[arg(
+        long,
+        default_value_t = false,
+        requires = "links_output",
+        conflicts_with_all = ["output", "warn_on_errors"]
+    )]
+    links_only: bool,
+}
+
+fn write_links(path: &str, inputs: &ProfileInputs) -> Result<(), String> {
+    let links = diagram_links(inputs)?;
+    fs::write(path, links.to_json() + "\n")
+        .map_err(|e| format!("Failed to write diagram links {path}: {e}"))
 }
 
 fn run(args: Args) -> Result<(), String> {
     let inputs = read_profile_inputs(args.profile, &args.inputs)?;
+    if let (true, Some(path)) = (args.links_only, &args.links_output) {
+        return write_links(path, &inputs);
+    }
     let profile_run = run_profile(args.profile, &inputs)?;
+    if let Some(path) = &args.links_output {
+        write_links(path, &inputs)?;
+    }
     report::finish_profile_validation(
         args.output.as_deref(),
         args.warn_on_errors,
@@ -83,6 +113,14 @@ fn run(args: Args) -> Result<(), String> {
 
 fn main() {
     let args = Args::parse();
+    if args.links_output.is_some() && args.profile != Profile::DependableElement {
+        Args::command()
+            .error(
+                ErrorKind::ArgumentConflict,
+                "--links-output needs --profile dependable-element",
+            )
+            .exit();
+    }
     Builder::new()
         .filter_level(args.log_level.to_level_filter())
         .init();

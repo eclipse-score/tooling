@@ -95,6 +95,26 @@ pub(super) fn unit_with_parent_id(alias: &str, parent_id: &str) -> LogicComponen
     )
 }
 
+pub(super) fn seooc(alias: &str) -> LogicComponent {
+    logic_component(
+        alias,
+        None,
+        ComponentType::Package,
+        Some("SEooC"),
+        Vec::new(),
+    )
+}
+
+pub(super) fn component_with_parent_id(alias: &str, parent_id: &str) -> LogicComponent {
+    logic_component(
+        alias,
+        Some(parent_id),
+        ComponentType::Component,
+        Some("component"),
+        Vec::new(),
+    )
+}
+
 pub(super) fn interface(alias: &str) -> LogicComponent {
     interface_entity(alias, None)
 }
@@ -145,6 +165,7 @@ fn logic_component(
 pub(super) fn sequence_diagrams(participants: &[&str]) -> SequenceDiagramInputs {
     SequenceDiagramInputs {
         diagrams: vec![SequenceTree {
+            source: None,
             name: Some("seq".to_string()),
             participants: participants
                 .iter()
@@ -167,6 +188,7 @@ pub(super) fn sequence_calls(calls: &[(&str, &str, &str)]) -> SequenceDiagramInp
 
     SequenceDiagramInputs {
         diagrams: vec![SequenceTree {
+            source: None,
             name: Some("seq".to_string()),
             participants,
             root: Block {
@@ -223,6 +245,7 @@ pub(super) fn sequence_of(
 ) -> SequenceDiagramInputs {
     SequenceDiagramInputs {
         diagrams: vec![SequenceTree {
+            source: None,
             name: Some("seq".to_string()),
             participants,
             root: Block {
@@ -247,6 +270,7 @@ pub(super) fn sequence_of(
 
 pub(super) fn internal_api_index(interfaces: Vec<(&str, Vec<&str>)>) -> InternalApiIndex {
     let diagrams = vec![ClassDiagram {
+        source: None,
         name: "internal_api".to_string(),
         entities: interfaces
             .into_iter()
@@ -264,6 +288,7 @@ pub(super) fn internal_api_index(interfaces: Vec<(&str, Vec<&str>)>) -> Internal
 
 pub(super) fn public_api_index(interfaces: Vec<(&str, Vec<&str>)>) -> PublicApiIndex {
     let diagrams = vec![ClassDiagram {
+        source: None,
         name: "public_api".to_string(),
         entities: interfaces
             .into_iter()

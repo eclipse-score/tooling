@@ -194,6 +194,9 @@ pub struct SequenceParticipant {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct SequenceTree {
     pub name: Option<String>,
+    /// Source path of the diagram file (`--source-name`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub source: Option<String>,
     #[serde(default)]
     pub participants: Vec<SequenceParticipant>,
     pub root: Block,

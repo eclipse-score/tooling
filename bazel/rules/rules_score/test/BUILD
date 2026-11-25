@@ -38,7 +38,7 @@ load(
 load("@score_tooling//bazel/rules/rules_score:sphinx_toolchain.bzl", "score_sphinx_toolchain")
 load("@score_tooling//cpp/libclang:libclang_toolchain.bzl", "libclang_toolchain")
 load("@trlc//:trlc.bzl", "trlc_requirements", "trlc_requirements_test", "trlc_specification")
-load("//lib:artifacts.bzl", "output_file")
+load("//lib:artifacts.bzl", "golden_test", "output_file")
 load(
     ":dependable_element_aou_test.bzl",
     "aou_derived_test",
@@ -619,8 +619,7 @@ staged_files_test(
 # :authored_layout_compose_test / :authored_layout_override_test below.
 #
 # The two targets deliberately use separate fixture directories: a .puml shared
-# by two architectural_design targets of one dependable_element yields two
-# idmaps with the same --source-name, which clickable_plantuml rejects.
+# by two architectural_design targets is a duplicate diagram source.
 dependable_element(
     name = "authored_layout_example_lib",
     architectural_design = [
@@ -673,7 +672,7 @@ architectural_design(
 # in //plantuml/sphinx/clickable_plantuml/README.md: overview.puml references
 # `Proxy`, which proxy_detail.puml defines, so clickable_plantuml should
 # inject a real link between the two rendered diagrams. Regression-checked by
-# :clickable_example_link_rendered_test below.
+# :clickable_example_link_json_test below.
 architectural_design(
     name = "arch_design_clickable_example_overview",
     static = ["fixtures/clickable_example/overview.puml"],
@@ -714,7 +713,7 @@ dependable_element(
 # the FQN `package_a.InternalInterface` because ids are rooted at the
 # enclosing `package_a` package, not at the `@startuml` name. Mirrors
 # validation/core/integration_test/component_internal_api/positive_interface_match.
-# Regression-checked by :interface_example_link_rendered_test below.
+# Regression-checked by :interface_example_link_json_test below.
 architectural_design(
     name = "arch_design_interface_example",
     internal_api = ["fixtures/clickable_example/interface_detail.puml"],
@@ -740,7 +739,7 @@ dependable_element(
 # Live example of clickable_plantuml's pure class-diagram linking:
 # class_overview.puml references `AuditTrail` as a bare, member-less class,
 # and class_detail.puml defines it (it has a method, making it the
-# elaboration site). Regression-checked by :class_example_link_rendered_test
+# elaboration site). Regression-checked by :class_example_link_json_test
 # below.
 #
 # Both files are class diagrams (no component diagram is involved in this
@@ -802,7 +801,7 @@ dependable_element(
 # `public_api` attribute, which also feeds FMEA/safety-analysis traceability -
 # mirrors examples/seooc/design/public_api.puml) defines it. Both share the
 # FQN `package_pub.PublicInterface`. Regression-checked by
-# :public_api_example_link_rendered_test below.
+# :public_api_example_link_json_test below.
 architectural_design(
     name = "arch_design_public_api_example",
     package = "package_pub_api",
@@ -997,7 +996,7 @@ dependable_element(
 # nested in the matching namespace) defines it. Both share the FQN
 # `package_u.component_u.unit_one`, since component-diagram ids and
 # class-diagram namespace FQNs use the same dot-joined scheme. Regression-
-# checked by :unit_example_link_rendered_test below.
+# checked by :unit_example_link_json_test below.
 #
 # unit_class_detail.puml is a class diagram, so it's routed through
 # unit_design()/unit()/component() (not architectural_design's `static`,
@@ -1051,17 +1050,12 @@ dependable_element(
     deps = [],
 )
 
-# Live example of clickable_plantuml's namespace-as-define synthesis: unlike
-# :unit_example above (whose class is literally named after the unit),
-# namespace_unit_class_detail.puml elaborates `ns_unit` purely via the
-# enclosing namespace `package_ns::component_ns::ns_unit`, nesting a
-# differently-named class (`RealImpl`) inside it. class_model_to_idmap() must
-# synthesize a define for the namespace FQN itself (not just for RealImpl)
-# for namespace_unit_overview.puml's leaf `ns_unit` reference to resolve.
-# Routed through unit_design()/unit()/component() (not a bare
-# architectural_design static list) so this also regression-checks
-# unit_design.bzl's idmap generation. Regression-checked by
-# :namespace_unit_example_link_rendered_test below.
+# Namespace as link target: namespace_unit_class_detail.puml elaborates
+# `ns_unit` only via the enclosing namespace
+# `package_ns::component_ns::ns_unit`, nesting class `RealImpl`. The leaf
+# `ns_unit` in namespace_unit_overview.puml must link to it. Routed through
+# unit_design() so unit_design diagrams are part of the links input.
+# Checked by :namespace_unit_example_link_json_test.
 unit_design(
     name = "namespace_unit_design",
     static = ["fixtures/clickable_example/namespace_unit_class_detail.puml"],
@@ -1120,10 +1114,12 @@ dependable_element(
 # namespace itself, not a same-named class (namespace_unit_class_detail.puml,
 # built via unit_design()) - the "namespace-as-define synthesis" scenario.
 sh_test(
-    name = "namespace_unit_example_link_rendered_test",
-    srcs = ["check_idmap_link.sh"],
+    name = "namespace_unit_example_link_json_test",
+    srcs = ["check_diagram_link.sh"],
     args = [
-        "package_ns.component_ns.ns_unit",
+        "namespace_unit_overview.puml",
+        "ns_unit",
+        "namespace_unit_class_detail.puml",
         "$(rootpaths :namespace_unit_example_lib_index)",
     ],
     data = [":namespace_unit_example_lib_index"],
@@ -1490,43 +1486,34 @@ sh_test(
 )
 
 sh_test(
-    name = "leaf_unit_example_link_rendered_test",
-    srcs = ["check_idmap_link.sh"],
+    name = "leaf_unit_example_link_json_test",
+    srcs = ["check_diagram_link.sh"],
     args = [
-        "--leaf",
+        "leaf_unit_overview.puml",
         "unit_x",
+        "leaf_unit_class_detail.puml",
         "$(rootpaths :leaf_unit_example_lib_index)",
     ],
     data = [":leaf_unit_example_lib_index"],
 )
 
-# Live example of clickable_plantuml's "dynamic to static" linking chain: the
-# *dynamic* architecture (dynamic_overview.puml, a sequence diagram) shows
-# participants `Dispatcher` and `Worker` - both references, since sequence
-# diagrams have no defines - and dynamic_component_detail.puml (a component
-# diagram in the *static* architecture) shows both as leaf units (also
-# references, since neither has children of its own). Both units are
-# elaborated by their own class diagrams (dynamic_dispatcher_class.puml,
-# dynamic_worker_class.puml), which is where the actual click target lands -
-# mirrors :unit_example above, applied to both units of a dynamic scenario.
-# TaskInterface (shared by both units) is likewise only a reference in the
-# component diagram; its definition lives in the *public API*
-# (dynamic_public_api_detail.puml), exactly like :public_api_example above.
-# Regression-checked by :dynamic_example_link_rendered_test,
-# :dynamic_dispatcher_class_link_rendered_test,
-# :dynamic_worker_class_link_rendered_test and
-# :dynamic_public_api_link_rendered_test below.
+# "Dynamic to static" linking chain: the sequence diagram dynamic_overview.puml
+# shows `Dispatcher` and `Worker` (references); dynamic_component_detail.puml
+# shows both as leaf units (references). Their class diagrams
+# (dynamic_dispatcher_class.puml, dynamic_worker_class.puml) are the click
+# targets, like :unit_example above. TaskInterface is a reference in the
+# component diagram and defined in the public API
+# (dynamic_public_api_detail.puml), like :public_api_example above.
+# Checked by :dynamic_example_link_json_test,
+# :dynamic_dispatcher_class_link_json_test,
+# :dynamic_worker_class_link_json_test and
+# :dynamic_public_api_link_json_test below.
 #
-# NOTE: clicking on individual *messages* in the sequence diagram (e.g.
-# "Assign"/"Done") is not currently supported - sequence_model_to_idmap()
-# only tracks participant names, not per-message/method labels (see
-# puml_idmap/src/lib.rs). Implementing that would require the sequence
-# resolver to persist message identifiers in SequenceTree first.
+# The sequence diagram has no refined call, so there are no call links; see
+# :diagram_links_golden.
 #
-# dynamic_dispatcher_class.puml/dynamic_worker_class.puml are class
-# diagrams, so they're routed through unit_design()/unit()/component() (not
-# architectural_design's `static`, which is component-diagrams only) -
-# mirroring :namespace_unit_design/:unit_example_unit_design above.
+# The class diagrams go through unit_design()/unit()/component(), as in
+# :namespace_unit_design/:unit_example_unit_design above.
 architectural_design(
     name = "arch_design_dynamic_example",
     dynamic = ["fixtures/clickable_example/dynamic_overview.puml"],
@@ -2175,8 +2162,7 @@ sh_test(
 # an authored index.rst *composes* with the generated toctree (its title/prose
 # is included, the diagram wrapper is still listed) -- see plan_view_layout()'s
 # docstring in puml_utils.bzl. Real HTML rendering isn't exercised here since
-# the `plantuml` renderer binary isn't runnable in this sandbox (see
-# check_clickable_example_link.sh above for the same caveat).
+# `plantuml` isn't runnable in this sandbox.
 output_file(
     name = "authored_layout_compose_index",
     src = ":authored_layout_example_lib_index",
@@ -2291,9 +2277,14 @@ sh_test(
 # between the two example diagrams in fixtures/clickable_example/ (mirrors
 # //plantuml/sphinx/clickable_plantuml/README.md's documented example).
 sh_test(
-    name = "clickable_example_link_rendered_test",
-    srcs = ["check_clickable_example_link.sh"],
-    args = ["$(rootpaths :clickable_example_lib_index)"],
+    name = "clickable_example_link_json_test",
+    srcs = ["check_diagram_link.sh"],
+    args = [
+        "overview.puml",
+        "Proxy",
+        "proxy_detail.puml",
+        "$(rootpaths :clickable_example_lib_index)",
+    ],
     data = [":clickable_example_lib_index"],
 )
 
@@ -2302,10 +2293,12 @@ sh_test(
 # diagram) and its definition (interface_detail.puml, auto-detected as a
 # class diagram) - the cross-diagram-type "interface" scenario.
 sh_test(
-    name = "interface_example_link_rendered_test",
-    srcs = ["check_idmap_link.sh"],
+    name = "interface_example_link_json_test",
+    srcs = ["check_diagram_link.sh"],
     args = [
-        "package_a.InternalInterface",
+        "interface_overview.puml",
+        "InternalInterface",
+        "interface_detail.puml",
         "$(rootpaths :interface_example_lib_index)",
     ],
     data = [":interface_example_lib_index"],
@@ -2315,10 +2308,12 @@ sh_test(
 # "AuditTrail" reference (class_overview.puml) and its definition
 # (class_detail.puml) - the pure class-diagram scenario.
 sh_test(
-    name = "class_example_link_rendered_test",
-    srcs = ["check_idmap_link.sh"],
+    name = "class_example_link_json_test",
+    srcs = ["check_diagram_link.sh"],
     args = [
+        "class_overview.puml",
         "AuditTrail",
+        "class_detail.puml",
         "$(rootpaths :class_example_lib_index)",
     ],
     data = [":class_example_lib_index"],
@@ -2329,10 +2324,12 @@ sh_test(
 # its definition in the public API diagram (public_api_detail.puml) - the
 # "interface in static architecture links to public API" scenario.
 sh_test(
-    name = "public_api_example_link_rendered_test",
-    srcs = ["check_idmap_link.sh"],
+    name = "public_api_example_link_json_test",
+    srcs = ["check_diagram_link.sh"],
     args = [
-        "package_pub.PublicInterface",
+        "public_api_overview.puml",
+        "PublicInterface",
+        "public_api_detail.puml",
         "$(rootpaths :public_api_example_lib_index)",
     ],
     data = [":public_api_example_lib_index"],
@@ -2343,10 +2340,12 @@ sh_test(
 # elaborating class diagram (unit_class_detail.puml) - the "unit links to its
 # class diagram" scenario.
 sh_test(
-    name = "unit_example_link_rendered_test",
-    srcs = ["check_idmap_link.sh"],
+    name = "unit_example_link_json_test",
+    srcs = ["check_diagram_link.sh"],
     args = [
-        "package_u.component_u.unit_one",
+        "unit_overview.puml",
+        "unit_one",
+        "unit_class_detail.puml",
         "$(rootpaths :unit_example_lib_index)",
     ],
     data = [":unit_example_lib_index"],
@@ -2358,10 +2357,12 @@ sh_test(
 # (dynamic_component_detail.puml) - the "dynamic participant links to static
 # unit" scenario.
 sh_test(
-    name = "dynamic_example_link_rendered_test",
-    srcs = ["check_idmap_link.sh"],
+    name = "dynamic_example_link_json_test",
+    srcs = ["check_diagram_link.sh"],
     args = [
+        "dynamic_overview.puml",
         "Worker",
+        "dynamic_worker_class.puml",
         "$(rootpaths :dynamic_example_lib_index)",
     ],
     data = [":dynamic_example_lib_index"],
@@ -2373,10 +2374,12 @@ sh_test(
 # (dynamic_dispatcher_class.puml) - the "unit links to its own class diagram"
 # scenario, for the first of the two units.
 sh_test(
-    name = "dynamic_dispatcher_class_link_rendered_test",
-    srcs = ["check_idmap_link.sh"],
+    name = "dynamic_dispatcher_class_link_json_test",
+    srcs = ["check_diagram_link.sh"],
     args = [
+        "dynamic_component_detail.puml",
         "Dispatcher",
+        "dynamic_dispatcher_class.puml",
         "$(rootpaths :dynamic_example_lib_index)",
     ],
     data = [":dynamic_example_lib_index"],
@@ -2385,10 +2388,12 @@ sh_test(
 # Regression test: same as above, for the second unit ("Worker" links to
 # dynamic_worker_class.puml).
 sh_test(
-    name = "dynamic_worker_class_link_rendered_test",
-    srcs = ["check_idmap_link.sh"],
+    name = "dynamic_worker_class_link_json_test",
+    srcs = ["check_diagram_link.sh"],
     args = [
+        "dynamic_component_detail.puml",
         "Worker",
+        "dynamic_worker_class.puml",
         "$(rootpaths :dynamic_example_lib_index)",
     ],
     data = [":dynamic_example_lib_index"],
@@ -2400,13 +2405,79 @@ sh_test(
 # (dynamic_public_api_detail.puml) - the "interface in static architecture
 # links to public API" scenario, applied to the dynamic_example units.
 sh_test(
-    name = "dynamic_public_api_link_rendered_test",
-    srcs = ["check_idmap_link.sh"],
+    name = "dynamic_public_api_link_json_test",
+    srcs = ["check_diagram_link.sh"],
     args = [
+        "dynamic_component_detail.puml",
         "TaskInterface",
+        "dynamic_public_api_detail.puml",
         "$(rootpaths :dynamic_example_lib_index)",
     ],
     data = [":dynamic_example_lib_index"],
+)
+
+# Zoom across two architectural designs: element link, call links, a variant
+# and an `!include` call (no link).
+architectural_design(
+    name = "diagram_links_system_design",
+    dynamic = [
+        "fixtures/diagram_links/overview.puml",
+        "fixtures/diagram_links/ping.iuml",
+    ],
+    maturity = "development",
+    static = ["fixtures/diagram_links/component_diagram.puml"],
+)
+
+architectural_design(
+    name = "diagram_links_component_design",
+    dynamic = [
+        "fixtures/diagram_links/get_detail.puml",
+        "fixtures/diagram_links/ping_detail.puml",
+        "fixtures/diagram_links/put_first.puml",
+        "fixtures/diagram_links/put_second.puml",
+    ],
+    maturity = "development",
+)
+
+dependable_element(
+    name = "diagram_links_lib",
+    architectural_design = [
+        ":diagram_links_system_design",
+        ":diagram_links_component_design",
+    ],
+    components = [],
+    dependability_analysis = [":dependability_analysis_target"],
+    integrity_level = "B",
+    maturity = "development",
+    requirements = [":feat_req"],
+    tests = [],
+)
+
+output_file(
+    name = "diagram_links_json",
+    src = ":diagram_links_lib_index",
+    suffix = "diagram_links.json",
+)
+
+golden_test(
+    name = "diagram_links_golden",
+    src = ":diagram_links_json",
+    golden = "fixtures/diagram_links/diagram_links.json.golden",
+)
+
+# The links of the golden stem from refinements that pass the zoom check.
+output_file(
+    name = "diagram_links_validation_log",
+    src = ":diagram_links_lib_index",
+    output_group = "debug",
+    suffix = "dependable_element.diagram_links_lib_index.log",
+)
+
+sh_test(
+    name = "diagram_links_validation_test",
+    srcs = ["check_no_zoom_findings.sh"],
+    args = ["$(rootpath :diagram_links_validation_log)"],
+    data = [":diagram_links_validation_log"],
 )
 
 # Test that sphinx_module is generated with correct providers

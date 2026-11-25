@@ -203,6 +203,7 @@ mod tests {
 
     fn diagram(entities: Vec<SimpleEntity>, free_functions: Vec<FreeFunctionDecl>) -> ClassDiagram {
         ClassDiagram {
+            source: None,
             name: "d".to_string(),
             entities,
             free_functions,

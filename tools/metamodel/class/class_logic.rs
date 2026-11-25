@@ -18,6 +18,9 @@ pub use source_location::SourceLocation;
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
 pub struct ClassDiagram {
     pub name: String,
+    /// Source path of the diagram file (`--source-name`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub source: Option<String>,
     #[serde(default)]
     pub entities: Vec<SimpleEntity>,
     #[serde(default)]

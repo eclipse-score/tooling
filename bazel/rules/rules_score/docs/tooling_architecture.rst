@@ -103,11 +103,7 @@ are rendered under :doc:`tool_reference/index`.
      - Parses ``.puml`` diagrams into a FlatBuffers AST (``.fbs.bin``, one
        ``root_type`` per diagram kind), emits ``public_api.trlc`` (one
        ``ApiMethod`` TRLC record per public method of the ``public_api`` class
-       diagrams; see ``--api-output-file``),
-       and emits ``.idmap.json`` sidecars recording the *defines/references*
-       roles of each element.  The ``clickable_plantuml`` Sphinx extension reads
-       these sidecars to resolve cross-diagram links without a separate linker
-       step.  Rejects syntactically invalid diagrams with a non-zero exit code.
+       diagrams; see ``--api-output-file``).  Rejects syntactically invalid diagrams with a non-zero exit code.
    * - **puml_cli (FTA mode)**
      - ``//plantuml/parser/puml_cli`` ``--fta-output-dir`` (Rust; FTA model in
        the ``puml_fta`` crate)
@@ -152,7 +148,11 @@ are rendered under :doc:`tool_reference/index`.
      - Compares the *current* architecture (components/units collected from the
        implementation tree via an aspect, serialised to ``architecture.json``)
        against the *expected* architecture (static/dynamic ``.fbs.bin`` from
-       ``architectural_design``). Fails the build on a mismatch.
+       ``architectural_design``). Fails the build on a mismatch. Also
+       validates sequence refinement across the designs of the dependable
+       element. A second run with ``--links-output --links-only`` writes
+       ``diagram_links.json`` without validating, the cross-diagram links
+       the ``clickable_plantuml`` Sphinx extension injects.
    * - **Sphinx (Docs)**
      - Sphinx build binary (``src/sphinx_wrapper.py``, resolved via the
        registered ``sphinx_toolchain``), HTML merge tool

@@ -14,7 +14,7 @@
 ' Unlike unit_class_detail.puml (whose class is literally named after the
 ' unit, "unit_one"), this fixture elaborates the unit purely via the
 ' enclosing namespace: no class here is named "ns_unit". This exercises
-' puml_idmap's namespace-as-define synthesis in class_model_to_idmap() -
+' the namespace-as-define synthesis of the diagram links -
 ' the namespace itself (not any class inside it) must become the "define"
 ' so namespace_unit_overview.puml's leaf `ns_unit` reference resolves.
 

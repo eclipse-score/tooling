@@ -222,6 +222,7 @@ fn serialize_class_diagram(
 ) -> Result<(), std::io::Error> {
     let entities: Vec<_> = entities.into_values().collect();
     let class_diagram = ClassDiagram {
+        source: None,
         name: String::new(), // no name for c++ side
         entities,
         free_functions,

@@ -11,7 +11,7 @@
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
 # `.` and `::` spell the same id: a class declared with `::` and a component
-# declared with `.` share the idmap id `a.b.Worker`.
+# declared with `.` share the element id `a.b.Worker`.
 diagram_types:
   component_diagram.puml: component
   class_diagram.puml: class

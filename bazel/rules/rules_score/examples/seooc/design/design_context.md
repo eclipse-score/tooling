@@ -41,6 +41,7 @@ Several files of one view describe one design; read them together.
 | `static` | `overview_design.puml`, `static_design.puml`, `sub_component_design.puml` | The overview nests `component_example` under the SEooC without a body; `static_design.puml` declares its content without a wrapper and `sub_component_example` without a body; `sub_component_design.puml` declares the content of `sub_component_example` without a wrapper. Each is matched by name, element type and stereotype and anchored transitively. The overview aliases `component_example` as `CE`, the detail does not |
 | `internal_api` | `internal_api.puml`, `internal_api_detail.puml` | `InternalInterface` is a reference in the first file, its operations are in the second |
 | `dynamic` | `dynamic_cast.puml`, `dynamic_design.puml` | The cast declares the participants, the scenario uses their names |
+| `dynamic` (zoom) | `get_number_seooc.puml`, `get_number_component.puml`, `get_number_unit.puml` | One call, `GetNumber()` from `App`, shown at SEooC, component and unit level; each level is a call into a direct child of the previous callee |
 
 
 ## Assumptions of Use

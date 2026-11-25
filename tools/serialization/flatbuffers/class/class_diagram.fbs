@@ -161,6 +161,8 @@ table ClassDiagram {
     name: string (required);
     entities: [SimpleEntity];
     free_functions: [FreeFunctionDecl];
+    /// Source path of the diagram file (`--source-name`)
+    source: string;
 }
 
 root_type ClassDiagram;

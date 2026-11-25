@@ -11,7 +11,7 @@
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
 # The alias is only a per-diagram key: three differently aliased elements
-# with the same name share one idmap id.
+# with the same name share one element id.
 diagram_types:
   class_diagram.puml: class
   component_diagram.puml: component

@@ -527,6 +527,76 @@ Bazel
         dynamic = ["sequence.puml"],
     )
 
+Zoom into a Black Box
+~~~~~~~~~~~~~~~~~~~~~~
+
+A call to a SEooC, component or unit can be zoomed: a second sequence diagram repeats the call one
+level deeper and shows the inside. There is no marker. The build links the two diagrams because
+the first call of the deeper diagram has the same sender, the same method and a receiver that is a
+direct child of the receiver above. The deeper diagram can be in any ``architectural_design`` of
+the same ``dependable_element``, which checks the zoom rules below.
+
+The nesting comes from the static design:
+
+.. code-block:: text
+
+    package safety_software_seooc_example <<SEooC>> {         ' level 0
+        component component_example <<component>> {           ' level 1: child of the SEooC
+            component unit_1 <<unit>>                         ' level 2: child of component_example
+        }
+    }
+
+Three diagrams show the same call at three levels. The parts that have to match are the sender
+(``App``), the method (``GetNumber``) and the receiver one level deeper:
+
+.. code-block:: text
+
+    ' get_number_seooc.puml          (level 0)
+    App -> safety_software_seooc_example : GetNumber()
+    safety_software_seooc_example -> Platform : Log()
+    safety_software_seooc_example --> App : number
+
+    ' get_number_component.puml      (level 1)
+    App -> component_example : GetNumber()      ' same sender, same method, child of level 0
+    component_example -> unit_1 : GetNumber()   ' new: the component hands the work to unit_1
+    unit_1 --> component_example : number
+    component_example -> Platform : Log()       ' the exit of level 0 is kept
+    component_example --> App : number
+
+    ' get_number_unit.puml           (level 2)
+    App -> unit_1 : GetNumber()                 ' same sender, same method, child of level 1
+    unit_1 -> unit_2 : GetData()                ' new: unit_1 uses unit_2
+    unit_1 -> Platform : Log()                  ' the exit is kept
+    unit_1 --> App : number
+
+Compared with ``App -> safety_software_seooc_example : GetNumber()``, these first calls do not
+zoom into it:
+
+.. code-block:: text
+
+    App -> component_example : Fetch()             ' other method
+    Client -> component_example : GetNumber()      ' other sender
+    App -> sub_component_example : GetNumber()     ' grandchild, not a direct child
+
+For a zoom the following rules apply:
+
+- The call that zooms shall be the first call of its diagram.
+- Every call the black box makes to its environment (``Log()`` to ``Platform`` above) shall also
+  appear in at least one zooming diagram, so nothing is lost when zooming in.
+- A zooming diagram shall not use architecture elements outside the zoomed element, except the
+  sender, the partners shown in the overview (``App``, ``Platform``) and the elements those partners
+  call, and not the zoomed element itself.
+- Close each synchronous zoomed call (``->``) with ``-->``, ``return`` (after a call with ``++``
+  or an ``activate``) or ``deactivate``, in the overview and in each zooming diagram. A call inside
+  it needs a reply only if it is zoomed itself; calls to the environment need no reply. An
+  asynchronous call (``->>``) needs no reply.
+
+In the rendered documentation the label of the zoomed call (``GetNumber()`` in
+``get_number_seooc.puml``) links to the zooming diagram. The arrow and the lifeline are not
+clickable, and a call from an ``!include`` fragment gets no link. A zooming diagram that does not
+pass these rules is reported and not linked. The ``dependable_element`` computes the links into
+``diagram_links.json``.
+
 Reusing Diagram Parts
 ~~~~~~~~~~~~~~~~~~~~~~
 

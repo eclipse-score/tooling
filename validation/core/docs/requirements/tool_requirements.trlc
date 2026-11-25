@@ -191,10 +191,40 @@ section "Tool Requirements" {
                 description = '''The validators shall treat only
                 synchronous and asynchronous messages as operation calls.
                 Only the `>>` and `<<` arrowheads shall make a message
-                asynchronous. Reply messages and messages with the create
+                asynchronous. Reply messages, including those written as
+                `return`, and messages with the create
                 (`**`) or delete (`!!`) marker shall not be matched against an
                 API and shall not count for interface coverage. A `create`
                 statement shall not change the kind of a message.'''
+                derived_from = [UseCases.Validate_Architecture_Specification_Documents]
+                satisfied_by = Verifier
+            }
+
+            ToolQualification.ToolRequirement SequenceRefinement {
+                description = '''The validators shall link a call into a
+                SEooC, component or unit to a call with the same sender and
+                method, as the first call of a sequence diagram, to a direct
+                child of the callee, across the sequence diagrams of all
+                architectural designs of a dependable element. For each link
+                they shall report a participant of the refining diagram that
+                is outside the callee, is not the sender, is no exit partner
+                and is not called by one, or is the callee itself; a call of
+                the callee to its environment that no refining diagram keeps;
+                and a synchronous call or refining diagram that no reply or
+                deactivation closes on every path.'''
+                derived_from = [UseCases.Validate_Architecture_Specification_Documents]
+                satisfied_by = Verifier
+            }
+
+            ToolQualification.ToolRequirement DiagramLinks {
+                description = '''For a dependable element, the validator
+                shall write the links between its diagrams: a reference to an
+                element shall link to the one other diagram that defines the
+                element, and a call shall link to the sequence diagrams that
+                refine it and pass the sequence refinement checks, unless the
+                call is written in an `!include` fragment. When no single
+                defining diagram can be chosen, it shall write no link for
+                the reference.'''
                 derived_from = [UseCases.Validate_Architecture_Specification_Documents]
                 satisfied_by = Verifier
             }

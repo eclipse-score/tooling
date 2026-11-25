@@ -13,6 +13,8 @@
 
 //! Profile-owned input schemas and validation orchestration.
 
+use crate::links::DiagramLinks;
+
 mod architectural_design;
 mod dependable_element;
 mod profile;
@@ -38,6 +40,17 @@ pub fn read_profile_inputs(profile: Profile, path: &str) -> Result<ProfileInputs
             profile::read_input_bundle(path).map(ProfileInputs::DependableElement)
         }
         Profile::Unit => profile::read_input_bundle(path).map(ProfileInputs::Unit),
+    }
+}
+
+/// Diagram links of a `dependable-element` input bundle.
+pub fn diagram_links(inputs: &ProfileInputs) -> Result<DiagramLinks, String> {
+    match inputs {
+        ProfileInputs::DependableElement(inputs) => dependable_element::links(inputs),
+        _ => Err(format!(
+            "Diagram links need the {} profile",
+            Profile::DependableElement.as_str()
+        )),
     }
 }
 

@@ -36,6 +36,7 @@ fn seooc_with_public_api_relations(alias: &str, relation_targets: &[&str]) -> Lo
 
 fn public_api_index(interfaces: Vec<(&str, Option<&str>)>) -> PublicApiIndex {
     let diagrams = vec![ClassDiagram {
+        source: None,
         name: "public_api".to_string(),
         entities: interfaces
             .into_iter()
