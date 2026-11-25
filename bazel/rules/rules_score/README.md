@@ -128,8 +128,6 @@ own file and line. Not supported by `unit_design`.
 **`bazel build`** — runs `puml_parser` on every `.puml` file, producing:
 - a `.fbs.bin` FlatBuffers binary (diagram AST) — consumed by validation/core checks
 - a `validation.log` from the `architectural-design` validation profile
-- a `.idmap.json` sidecar — consumed by the `clickable_plantuml` Sphinx extension
-  to resolve cross-diagram links based on element *defines/references* roles
 - a `public_api.trlc` — one `ScoreReq.ApiMethod` record per public method (all
   overloads) and per free function of the `public_api` class diagrams (other
   diagram kinds in `public_api` fail the build; attributes, enums, typedefs and
@@ -348,6 +346,11 @@ Internally:
     artifacts, runs validation/core architecture checks as a subrule, and
    produces a DE-level LOBSTER report (`lobster_de.conf` template covering
    Feature Req → Component Req → Architecture → Public API → Failure Modes).
+   It also validates sequence refinement across all architectural designs
+   and writes `<name>_index/diagram_links.json` (a separate
+   `validation_cli --links-only` action): the element and call links
+   the `clickable_plantuml` Sphinx extension injects into the diagrams.
+   Call links lead only to refinements that pass the zoom check.
 
 2. `sphinx_module` compiles all RST sources + diagrams into an HTML zip.
 

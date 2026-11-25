@@ -15,7 +15,8 @@
 
 use std::collections::BTreeSet;
 
-use super::shared::{best_string_suggestion, extract_method_name, format_sequence_call};
+use super::shared::{best_string_suggestion, format_sequence_call};
+use crate::models::extract_method_name;
 use crate::models::{
     ClassEntityIndex, ObservedSequenceCall, SequenceDiagramIndex, SequenceParticipantInfo,
 };

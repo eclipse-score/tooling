@@ -30,7 +30,6 @@ rust_binary(
     deps = [
         "//plantuml/parser/puml_api",
         "//plantuml/parser/puml_fta",
-        "//plantuml/parser/puml_idmap",
         "//plantuml/parser/puml_parser",
         "//plantuml/parser/puml_resolver",
         "//plantuml/parser/puml_utils",
@@ -57,7 +56,6 @@ rust_test(
     deps = [
         "//plantuml/parser/puml_api",
         "//plantuml/parser/puml_fta",
-        "//plantuml/parser/puml_idmap",
         "//plantuml/parser/puml_parser",
         "//plantuml/parser/puml_resolver",
         "//plantuml/parser/puml_utils",

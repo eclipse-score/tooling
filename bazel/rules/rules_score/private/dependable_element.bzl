@@ -456,9 +456,8 @@ def _architectural_design_root(files, target_name):
     Every file an architectural_design puts into SphinxSourcesInfo is declared
     under "<package>/<target name>/", so the staged layout is always
     "<target name>/<view>/...". `_find_common_directory` alone can't guarantee
-    that: a view without diagrams has no idmap sidecars sitting directly in
-    "<target name>/", so the common directory sinks one level deeper and the
-    "<view>/" segment is lost. Truncating at the target-name segment pins it.
+    that: no file sits directly in "<target name>/", so the common directory
+    may sink one level deeper. Truncating at the target-name segment pins it.
 
     Args:
         files: List of File objects from one architectural_design label.
@@ -1020,13 +1019,21 @@ dependable_element_test_helpers = struct(
     collect_architecture_components = _collect_architecture_components,
 )
 
-def _run_validation(ctx, arch_json, static_fbs_files):
+def _validation_input_bundle(arch_json, diagram_fbs, link_diagrams):
+    return {
+        "architecture": arch_json.path,
+        "component_diagrams": [f.path for f in diagram_fbs.static],
+        "link_diagrams": [f.path for f in link_diagrams],
+        "sequence_diagrams": [f.path for f in diagram_fbs.dynamic],
+    }
+
+def _run_validation(ctx, arch_json, diagram_fbs):
     """Run the dependable-element validation profile.
 
     Args:
         ctx: Rule context
         arch_json: The architecture JSON File object (already declared and written)
-        static_fbs_files: Component-diagram FlatBuffer files from architectural_design targets.
+        diagram_fbs: Struct from _collect_diagram_fbs.
     Returns:
         validation_log File object
     """
@@ -1035,15 +1042,60 @@ def _run_validation(ctx, arch_json, static_fbs_files):
         ctx = ctx,
         validation_cli = ctx.executable._validation_cli,
         profile = PROFILES.DEPENDABLE_ELEMENT,
-        input_bundle = {
-            "architecture": arch_json.path,
-            "component_diagrams": [f.path for f in static_fbs_files],
-        },
-        inputs = [arch_json] + static_fbs_files,
+        input_bundle = _validation_input_bundle(arch_json, diagram_fbs, []),
+        inputs = [arch_json] + diagram_fbs.static + diagram_fbs.dynamic,
         mnemonic = "DependableElementValidate",
         maturity = ctx.attr.maturity,
         log_level = get_log_level(ctx),
     )
+
+def _collect_diagram_fbs(ctx, units):
+    """Diagram FlatBuffers: `static`/`dynamic` views, other diagrams in `links`."""
+    static = []
+    dynamic = []
+    links = []
+    for ad in ctx.attr.architectural_design:
+        if ArchitecturalDesignInfo in ad:
+            info = ad[ArchitecturalDesignInfo]
+            static.extend(info.static.to_list())
+            dynamic.extend(info.dynamic.to_list())
+            links.extend(info.public_api.to_list())
+            links.extend(info.internal_api.to_list())
+    for unit_target in units.values():
+        info = unit_target[UnitInfo]
+        links.extend(info.unit_design_static_fbs.to_list())
+        links.extend(info.unit_design_dynamic_fbs.to_list())
+    return struct(static = static, dynamic = dynamic, links = links)
+
+def _run_diagram_links(ctx, arch_json, diagram_fbs):
+    """Write diagram_links.json; findings are reported by _run_validation."""
+    prefix = ctx.label.name + "/diagram_links"
+    links_inputs = ctx.actions.declare_file(prefix + "_inputs.json")
+    links_json = ctx.actions.declare_file(prefix + ".json")
+    ctx.actions.write(
+        output = links_inputs,
+        content = json.encode_indent(
+            _validation_input_bundle(arch_json, diagram_fbs, diagram_fbs.links),
+            indent = "  ",
+        ),
+    )
+
+    args = ctx.actions.args()
+    args.add("--profile", PROFILES.DEPENDABLE_ELEMENT)
+    args.add("--inputs", links_inputs)
+    args.add("--log-level", get_log_level(ctx))
+    args.add("--links-output", links_json)
+    args.add("--links-only")
+
+    ctx.actions.run(
+        inputs = [links_inputs, arch_json] + diagram_fbs.static + diagram_fbs.dynamic + diagram_fbs.links,
+        outputs = [links_json],
+        executable = ctx.executable._validation_cli,
+        arguments = [args],
+        progress_message = "Computing diagram links: {}".format(ctx.label.name),
+        mnemonic = "DiagramLinks",
+    )
+    return links_json
 
 def _run_trlc_checks(ctx):
     """Run the plugin checks that need the requirements of all levels in one TRLC run.
@@ -1388,17 +1440,15 @@ def _dependable_element_index_impl(ctx):
         content = json.encode_indent({"components": all_components}, indent = "  "),
     )
 
-    # Collect static FlatBuffers from architectural_design targets (the expected
-    # static architecture) and verify them against the current architecture.
-    static_fbs_files = []
+    diagram_fbs = _collect_diagram_fbs(ctx, all_units)
     validation_logs = []
     for ad in ctx.attr.architectural_design:
         if ArchitecturalDesignInfo in ad:
-            static_fbs_files.extend(ad[ArchitecturalDesignInfo].static.to_list())
             validation_logs.extend(ad[ArchitecturalDesignInfo].validation_logs)
 
     # Run validation; build fails automatically on non-zero exit
-    validation_logs.append(_run_validation(ctx, arch_json, static_fbs_files))
+    validation_logs.append(_run_validation(ctx, arch_json, diagram_fbs))
+    output_files.append(_run_diagram_links(ctx, arch_json, diagram_fbs))
     trlc_checks_log = _run_trlc_checks(ctx)
     if trlc_checks_log:
         validation_logs.append(trlc_checks_log)

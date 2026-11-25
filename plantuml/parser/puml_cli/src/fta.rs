@@ -20,12 +20,11 @@ use std::path::PathBuf;
 use std::rc::Rc;
 
 use puml_fta::{merge_root_causes, render_trlc_stub, FaultTree, FtaModel};
-use puml_idmap::{write_idmap_to_file, IdMapModel};
 use puml_parser::{DiagramParser, ProcedureParserService};
 use puml_utils::LogLevel;
 
-use crate::inputs::{collect_input_files, source_path_for_output};
-use crate::sinks::{create_output_dir, IdmapOutputs};
+use crate::inputs::collect_input_files;
+use crate::sinks::create_output_dir;
 use crate::Args;
 
 /// FTA processing pipeline: parse the fault-tree macro calls straight from
@@ -54,14 +53,6 @@ pub fn run_fta(
     // Fault trees reference each diagram by basename; two inputs sharing a
     // basename (in different directories) would be indistinguishable downstream.
     let mut seen_basenames: HashSet<String> = HashSet::new();
-    // Independent of the basename check above, which only fires on an exact
-    // basename match: two inputs with the same file *stem* would overwrite
-    // each other's `<stem>.idmap.json`.
-    let mut idmap_outputs = args
-        .idmap_output_dir
-        .as_deref()
-        .map(|dir| create_output_dir(dir).map(IdmapOutputs::new))
-        .transpose()?;
 
     for file in &sorted {
         let basename = file.file_name().and_then(|n| n.to_str()).ok_or_else(|| {
@@ -94,18 +85,6 @@ pub fn run_fta(
         let model =
             FtaModel::from_procedure_file(&parsed).map_err(|e| format!("FTA {basename}: {e}"))?;
         all_trees.extend(model.fault_trees(basename)?);
-
-        if let Some(outputs) = idmap_outputs.as_mut() {
-            outputs.claim(file, "FTA input")?;
-            let source_file = source_path_for_output(file);
-            write_idmap_to_file(
-                IdMapModel::Fta(&model),
-                file,
-                Some(&source_file),
-                None,
-                outputs.dir(),
-            )?;
-        }
 
         debug!("Processed FTA diagram: {}", file.display());
     }

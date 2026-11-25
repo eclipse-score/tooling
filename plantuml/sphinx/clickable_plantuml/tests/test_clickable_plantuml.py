@@ -22,48 +22,46 @@ from types import SimpleNamespace
 
 import pytest
 from docutils import nodes
-from sphinx.errors import ExtensionError
 
 import clickable_plantuml as clickable_plantuml_module
 from clickable_plantuml import (
-    _ENV_DEF_INDEX,
-    _ENV_IDMAP_BY_SOURCE,
-    _ENV_NAME_INDEX,
-    _ENV_NO_IDMAP_NODE_COUNTS_BY_DOC,
+    _ENV_CALL_LINKS,
+    _ENV_ELEMENT_LINKS,
     _ENV_PUML_DOCNAMES,
     _ENV_SOURCE_KEYS,
+    _ENV_UNLINKED_NODE_COUNTS_BY_DOC,
     _ENV_WORKSPACE_OFFSET,
     _build_target_url,
-    _common_prefix_length,
     _escape_plantuml_url,
     _inject_links_into_uml,
-    _load_idmap_files,
+    _link_message_label,
+    _links_digest,
+    _load_diagram_links,
     _node_source_key,
+    _source_keys,
     on_build_finished,
+    on_builder_inited,
+    on_config_inited,
     on_doctree_read,
     on_doctree_resolved,
     on_env_merge_info,
     on_env_purge_doc,
-    _resolve_definer,
 )
 
 
-def _write_idmap(
+def _write_links(
     directory: Path,
-    name: str,
-    source: str,
-    defines: list[dict[str, str]] | None = None,
-    references: list[dict[str, str]] | None = None,
-    match_by_name: bool = False,
+    element_links: list[dict[str, str]] | None = None,
+    call_links: list[dict[str, object]] | None = None,
+    version: int = 1,
 ) -> None:
     directory.mkdir(parents=True, exist_ok=True)
-    (directory / name).write_text(
+    (directory / "diagram_links.json").write_text(
         json.dumps(
             {
-                "source": source,
-                "defines": defines or [],
-                "references": references or [],
-                "match_by_name": match_by_name,
+                "version": version,
+                "element_links": element_links or [],
+                "call_links": call_links or [],
             }
         ),
         encoding="utf-8",
@@ -71,63 +69,84 @@ def _write_idmap(
 
 
 # ---------------------------------------------------------------------------
-# index build
+# links loading
 # ---------------------------------------------------------------------------
 
 
-def test_load_idmap_builds_source_and_definition_indices(tmp_path: Path) -> None:
-    _write_idmap(
+def test_load_diagram_links_reads_element_and_call_links(tmp_path: Path) -> None:
+    _write_links(
+        tmp_path / "de",
+        element_links=[{"source": "/pkg/overview.puml", "alias": "Proxy", "target": "pkg/proxy.puml"}],
+        call_links=[{"source": "pkg/seq.puml", "line": 3, "method": "Get", "targets": ["pkg/a.puml", "pkg/b.puml"]}],
+    )
+
+    element_links, call_links = _load_diagram_links(tmp_path)
+
+    assert element_links == {"pkg/overview.puml": {"Proxy": "pkg/proxy.puml"}}
+    assert call_links == {"pkg/seq.puml": [(3, "Get", ["pkg/a.puml", "pkg/b.puml"])]}
+    assert _source_keys(element_links, call_links) == {
+        "pkg/overview.puml",
+        "pkg/proxy.puml",
+        "pkg/seq.puml",
+        "pkg/a.puml",
+        "pkg/b.puml",
+    }
+
+
+def test_load_diagram_links_merges_files_first_wins(tmp_path: Path) -> None:
+    _write_links(
         tmp_path / "a",
-        "proxy.idmap.json",
-        "/pkg/a/proxy.puml",
-        defines=[{"alias": "Proxy", "id": "pkg.Proxy"}],
-        match_by_name=True,
+        element_links=[{"source": "pkg/o.puml", "alias": "P", "target": "pkg/first.puml"}],
     )
-    _write_idmap(
+    _write_links(
         tmp_path / "b",
-        "overview.idmap.json",
-        "pkg/b/overview.puml",
-        references=[{"alias": "Proxy", "id": "pkg.Proxy"}],
+        element_links=[
+            {"source": "pkg/o.puml", "alias": "P", "target": "pkg/second.puml"},
+            {"source": "pkg/o.puml", "alias": "Q", "target": "pkg/q.puml"},
+        ],
     )
 
-    idmap_by_source, definition_index, name_index = _load_idmap_files(tmp_path)
+    element_links, _ = _load_diagram_links(tmp_path)
 
-    assert set(idmap_by_source) == {"pkg/a/proxy.puml", "pkg/b/overview.puml"}
-    # Identity is the id; the alias (local PlantUML code) is not indexed.
-    assert definition_index == {"pkg.Proxy": ["pkg/a/proxy.puml"]}
-    assert name_index == {"Proxy": ["pkg/a/proxy.puml"]}
+    assert element_links == {"pkg/o.puml": {"P": "pkg/first.puml", "Q": "pkg/q.puml"}}
 
 
-def test_load_idmap_skips_name_index_without_match_by_name(tmp_path: Path) -> None:
-    _write_idmap(
-        tmp_path,
-        "fta.idmap.json",
-        "pkg/fta.puml",
-        defines=[{"alias": "pkg.Top", "id": "pkg.Top"}],
-    )
+def test_load_diagram_links_skips_unknown_version(tmp_path: Path, caplog: pytest.LogCaptureFixture) -> None:
+    _write_links(tmp_path, element_links=[{"source": "a.puml", "alias": "A", "target": "b.puml"}], version=2)
 
-    _, definition_index, name_index = _load_idmap_files(tmp_path)
-
-    assert definition_index == {"pkg.Top": ["pkg/fta.puml"]}
-    assert name_index == {}
+    caplog.set_level(logging.WARNING)
+    assert _load_diagram_links(tmp_path) == ({}, {})
+    assert "expected 1" in caplog.text
 
 
-def test_same_basename_in_different_dirs_are_distinct_keys(tmp_path: Path) -> None:
-    _write_idmap(tmp_path / "a", "proxy.idmap.json", "pkg/a/proxy.puml")
-    _write_idmap(tmp_path / "b", "proxy.idmap.json", "pkg/b/proxy.puml")
+def test_builder_inited_without_links_file_loads_nothing(tmp_path: Path) -> None:
+    env = SimpleNamespace()
+    app = SimpleNamespace(builder=SimpleNamespace(format="html"), srcdir=str(tmp_path), env=env)
 
-    idmap_by_source, _, _ = _load_idmap_files(tmp_path)
+    on_builder_inited(app)
 
-    # No basename collapse: two proxy.puml remain independently keyed.
-    assert set(idmap_by_source) == {"pkg/a/proxy.puml", "pkg/b/proxy.puml"}
+    assert not hasattr(env, _ENV_SOURCE_KEYS)
 
 
-def test_duplicate_canonical_key_raises_build_error(tmp_path: Path) -> None:
-    _write_idmap(tmp_path / "a", "one.idmap.json", "pkg/dup.puml")
-    _write_idmap(tmp_path / "b", "two.idmap.json", "pkg/dup.puml")
+def test_links_digest_changes_with_the_links(tmp_path: Path) -> None:
+    empty = _links_digest(tmp_path)
+    _write_links(tmp_path / "de", call_links=[{"source": "a.puml", "line": 3, "method": "Get", "targets": ["b.puml"]}])
+    with_call = _links_digest(tmp_path)
+    _write_links(tmp_path / "de", call_links=[])
+    without_call = _links_digest(tmp_path)
 
-    with pytest.raises(ExtensionError, match="duplicate idmap source key"):
-        _load_idmap_files(tmp_path)
+    assert len({empty, with_call, without_call}) == 3
+    assert _links_digest(tmp_path) == without_call
+
+
+def test_config_inited_sets_the_links_digest(tmp_path: Path) -> None:
+    _write_links(tmp_path / "de")
+    config = SimpleNamespace(clickable_plantuml_links_digest="")
+    app = SimpleNamespace(srcdir=str(tmp_path))
+
+    on_config_inited(app, config)
+
+    assert config.clickable_plantuml_links_digest == _links_digest(tmp_path)
 
 
 # ---------------------------------------------------------------------------
@@ -275,7 +294,7 @@ def test_node_source_key_returns_none_for_tied_basename_overlap() -> None:
     assert key is None
 
 
-def test_doctree_read_non_idmap_backed_node_is_debug_only(
+def test_doctree_read_unknown_node_is_debug_only(
     caplog: pytest.LogCaptureFixture,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -295,10 +314,9 @@ def test_doctree_read_non_idmap_backed_node_is_debug_only(
     doctree += node
 
     env = SimpleNamespace(docname="index")
-    setattr(env, _ENV_IDMAP_BY_SOURCE, {"pkg/a/proxy.puml": {}})
     setattr(env, _ENV_SOURCE_KEYS, frozenset({"pkg/a/proxy.puml"}))
     setattr(env, _ENV_WORKSPACE_OFFSET, "/workspace")
-    setattr(env, _ENV_NO_IDMAP_NODE_COUNTS_BY_DOC, {})
+    setattr(env, _ENV_UNLINKED_NODE_COUNTS_BY_DOC, {})
 
     app = SimpleNamespace(
         builder=SimpleNamespace(format="html"),
@@ -314,283 +332,45 @@ def test_doctree_read_non_idmap_backed_node_is_debug_only(
         "has no resolvable source path" in record.getMessage() and record.levelno == logging.DEBUG
         for record in caplog.records
     )
-    assert getattr(env, _ENV_NO_IDMAP_NODE_COUNTS_BY_DOC) == {"index": 1}
+    assert getattr(env, _ENV_UNLINKED_NODE_COUNTS_BY_DOC) == {"index": 1}
 
 
-def test_build_finished_logs_aggregate_no_idmap_count(
+def test_build_finished_logs_aggregate_unlinked_count(
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     env = SimpleNamespace()
-    setattr(env, _ENV_NO_IDMAP_NODE_COUNTS_BY_DOC, {"a": 2, "b": 1})
+    setattr(env, _ENV_UNLINKED_NODE_COUNTS_BY_DOC, {"a": 2, "b": 1})
     app = SimpleNamespace(builder=SimpleNamespace(format="html"), env=env)
 
     caplog.set_level(logging.INFO)
     on_build_finished(app, None)
 
-    assert "3 plantuml nodes had no idmap (not linkable)" in caplog.text
+    assert "3 plantuml nodes are in no diagram link" in caplog.text
 
 
-def test_env_purge_doc_removes_no_idmap_count_for_purged_doc() -> None:
+def test_env_purge_doc_removes_unlinked_count_for_purged_doc() -> None:
     env = SimpleNamespace()
     setattr(env, _ENV_PUML_DOCNAMES, {"pkg/a.puml": ("stale", None)})
-    setattr(env, _ENV_NO_IDMAP_NODE_COUNTS_BY_DOC, {"stale": 2, "keep": 5})
+    setattr(env, _ENV_UNLINKED_NODE_COUNTS_BY_DOC, {"stale": 2, "keep": 5})
 
     on_env_purge_doc(SimpleNamespace(), env, "stale")
 
-    assert getattr(env, _ENV_NO_IDMAP_NODE_COUNTS_BY_DOC) == {"keep": 5}
+    assert getattr(env, _ENV_UNLINKED_NODE_COUNTS_BY_DOC) == {"keep": 5}
     assert getattr(env, _ENV_PUML_DOCNAMES) == {}
 
 
-def test_env_merge_info_merges_no_idmap_counts_from_parallel_workers() -> None:
+def test_env_merge_info_merges_unlinked_counts_from_parallel_workers() -> None:
     env = SimpleNamespace()
     setattr(env, _ENV_PUML_DOCNAMES, {})
-    setattr(env, _ENV_NO_IDMAP_NODE_COUNTS_BY_DOC, {"a": 1})
+    setattr(env, _ENV_UNLINKED_NODE_COUNTS_BY_DOC, {"a": 1})
 
     other = SimpleNamespace()
     setattr(other, _ENV_PUML_DOCNAMES, {})
-    setattr(other, _ENV_NO_IDMAP_NODE_COUNTS_BY_DOC, {"b": 4})
+    setattr(other, _ENV_UNLINKED_NODE_COUNTS_BY_DOC, {"b": 4})
 
     on_env_merge_info(SimpleNamespace(), env, {"b"}, other)
 
-    assert getattr(env, _ENV_NO_IDMAP_NODE_COUNTS_BY_DOC) == {"a": 1, "b": 4}
-
-
-def _resolve_overview_uml(
-    monkeypatch: pytest.MonkeyPatch,
-    overview_idmap: dict[str, object],
-    definition_index: dict[str, list[str]],
-    name_index: dict[str, list[str]] | None = None,
-) -> str:
-    """Run ``on_doctree_resolved`` for ``pkg/overview.puml`` and return the injected UML."""
-
-    class _FakePlantumlNode(nodes.Element):
-        pass
-
-    monkeypatch.setattr(
-        clickable_plantuml_module,
-        "_get_plantuml_node_class",
-        lambda: _FakePlantumlNode,
-    )
-
-    node = _FakePlantumlNode()
-    node["filename"] = "overview.puml"
-    node["incdir"] = "pkg"
-    node["uml"] = "@startuml\n[Proxy]\n@enduml\n"
-
-    doctree = nodes.document("", "")
-    doctree += node
-
-    env = SimpleNamespace()
-    setattr(env, _ENV_IDMAP_BY_SOURCE, {"pkg/overview.puml": overview_idmap})
-    setattr(env, _ENV_DEF_INDEX, definition_index)
-    setattr(env, _ENV_NAME_INDEX, name_index or {})
-    setattr(env, _ENV_SOURCE_KEYS, frozenset({"pkg/overview.puml", "pkg/proxy.puml"}))
-    setattr(env, _ENV_WORKSPACE_OFFSET, "/workspace")
-    setattr(env, _ENV_PUML_DOCNAMES, {"pkg/proxy.puml": ("design/proxy", "proxy-section")})
-
-    class _FakeBuilder:
-        format = "html"
-        imagedir = "_images"
-
-        def get_relative_uri(self, from_docname: str, to_docname: str) -> str:
-            _ = from_docname
-            return f"{to_docname}.html"
-
-    app = SimpleNamespace(
-        builder=_FakeBuilder(),
-        config=SimpleNamespace(plantuml_output_format="svg"),
-        srcdir="/workspace",
-        env=env,
-    )
-
-    on_doctree_resolved(app, doctree, "index")
-
-    return node["uml"]
-
-
-def test_doctree_resolved_injects_link_directives(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    uml = _resolve_overview_uml(
-        monkeypatch,
-        {"references": [{"alias": "Proxy", "id": "pkg.Proxy"}]},
-        {"pkg.Proxy": ["pkg/proxy.puml"]},
-    )
-
-    assert "url of Proxy is [[design/proxy.html#proxy-section]]" in uml
-
-
-def test_doctree_resolved_links_bare_reference_through_name_index(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    uml = _resolve_overview_uml(
-        monkeypatch,
-        {"match_by_name": True, "references": [{"alias": "Proxy", "id": "Proxy"}]},
-        {"pkg.Proxy": ["pkg/proxy.puml"]},
-        {"Proxy": ["pkg/proxy.puml"]},
-    )
-
-    assert "url of Proxy is [[design/proxy.html#proxy-section]]" in uml
-
-
-def test_doctree_resolved_ignores_name_index_without_match_by_name(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    uml = _resolve_overview_uml(
-        monkeypatch,
-        {"references": [{"alias": "Proxy", "id": "Proxy"}]},
-        {"pkg.Proxy": ["pkg/proxy.puml"]},
-        {"Proxy": ["pkg/proxy.puml"]},
-    )
-
-    assert "url of" not in uml
-
-
-def test_doctree_resolved_does_not_link_by_alias(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    # The local alias equals the leaf of an unrelated definition, but the id
-    # points elsewhere: the alias must not act as a cross-diagram identity.
-    uml = _resolve_overview_uml(
-        monkeypatch,
-        {"match_by_name": True, "references": [{"alias": "Proxy", "id": "other.Beta"}]},
-        {"pkg.Proxy": ["pkg/proxy.puml"]},
-        {"Proxy": ["pkg/proxy.puml"]},
-    )
-
-    assert "url of" not in uml
-
-
-# ---------------------------------------------------------------------------
-# reference resolution and tiebreak behavior
-# ---------------------------------------------------------------------------
-
-
-def test_resolve_definer_matches_exact_id() -> None:
-    definition_index = {"pkg.Proxy": ["pkg/fqn_hit.puml"]}
-    name_index = {"Proxy": ["pkg/name_hit.puml"]}
-
-    target = _resolve_definer("pkg.Proxy", "pkg/src.puml", definition_index, name_index)
-
-    assert target == "pkg/fqn_hit.puml"
-
-
-def test_resolve_definer_falls_back_to_id_leaf_when_id_missing() -> None:
-    name_index = {"Proxy": ["pkg/name_hit.puml"]}
-
-    target = _resolve_definer("Proxy", "pkg/src.puml", {}, name_index)
-
-    assert target == "pkg/name_hit.puml"
-
-
-def test_resolve_definer_leaf_fallback_uses_last_segment_of_qualified_id() -> None:
-    name_index = {"Proxy": ["pkg/name_hit.puml"]}
-
-    target = _resolve_definer("other.Proxy", "pkg/src.puml", {}, name_index)
-
-    assert target == "pkg/name_hit.puml"
-
-
-def test_resolve_definer_skips_leaf_fallback_when_by_name_disabled() -> None:
-    name_index = {"Proxy": ["pkg/name_hit.puml"]}
-
-    target = _resolve_definer("Proxy", "pkg/src.puml", {}, name_index, by_name=False)
-
-    assert target is None
-
-
-def test_resolve_definer_falls_back_to_id_leaf_when_id_hit_is_only_self() -> None:
-    # The id index has an entry, but it's *only* a self-link (the diagram
-    # re-declares its own id); a distinct name-based definer must still be
-    # found rather than giving up after the id lookup is filtered to empty.
-    definition_index = {"pkg.Proxy": ["pkg/src.puml"]}
-    name_index = {"Proxy": ["pkg/name_hit.puml"]}
-
-    target = _resolve_definer("pkg.Proxy", "pkg/src.puml", definition_index, name_index)
-
-    assert target == "pkg/name_hit.puml"
-
-
-def test_resolve_definer_skips_self_link() -> None:
-    definition_index = {"Proxy": ["pkg/src.puml"]}
-
-    target = _resolve_definer("Proxy", "pkg/src.puml", definition_index, {})
-
-    assert target is None
-
-
-def test_resolve_definer_tie_returns_none_and_warns(
-    caplog: pytest.LogCaptureFixture,
-) -> None:
-    definition_index = {
-        "Proxy": ["a/one.puml", "b/two.puml"],
-    }
-
-    caplog.set_level(logging.WARNING)
-    target = _resolve_definer("Proxy", "pkg/src.puml", definition_index, {})
-
-    assert target is None
-    assert "ambiguous definition" in caplog.text
-
-
-def test_resolve_definer_same_directory_tie_broken_by_descendant_count() -> None:
-    # Same-directory candidates tie on proximity; descendant count breaks the tie.
-    definition_index = {
-        "pkg.component_example": ["design/static_design.puml", "design/internal_api.puml"],
-    }
-    idmap_by_source = {
-        "design/static_design.puml": {
-            "defines": [
-                {"alias": "component_example", "id": "pkg.component_example"},
-            ],
-            "references": [
-                {"alias": "unit_1", "id": "pkg.component_example.unit_1"},
-                {"alias": "unit_2", "id": "pkg.component_example.unit_2"},
-                {"alias": "sub_component_example", "id": "pkg.component_example.sub_component_example"},
-                {"alias": "InternalInterface", "id": "pkg.component_example.InternalInterface"},
-            ],
-        },
-        "design/internal_api.puml": {
-            "defines": [
-                {"alias": "component_example", "id": "pkg.component_example"},
-                {"alias": "InternalInterface", "id": "pkg.component_example.InternalInterface"},
-            ],
-            "references": [],
-        },
-    }
-
-    target = _resolve_definer(
-        "pkg.component_example",
-        "design/overview_design.puml",
-        definition_index,
-        {},
-        idmap_by_source,
-    )
-
-    assert target == "design/static_design.puml"
-
-
-def test_resolve_definer_same_directory_tie_with_equal_descendant_counts_still_warns(
-    caplog: pytest.LogCaptureFixture,
-) -> None:
-    definition_index = {
-        "pkg.Proxy": ["design/one.puml", "design/two.puml"],
-    }
-    idmap_by_source = {
-        "design/one.puml": {"defines": [{"alias": "Proxy", "id": "pkg.Proxy"}], "references": []},
-        "design/two.puml": {"defines": [{"alias": "Proxy", "id": "pkg.Proxy"}], "references": []},
-    }
-
-    caplog.set_level(logging.WARNING)
-    target = _resolve_definer("pkg.Proxy", "design/overview.puml", definition_index, {}, idmap_by_source)
-
-    assert target is None
-    assert "ambiguous definition" in caplog.text
-
-
-def test_common_prefix_length_requires_canonical_keys() -> None:
-    with pytest.raises(ValueError, match="non-canonical source key"):
-        _common_prefix_length("/abs/a.puml", "pkg/b.puml")
+    assert getattr(env, _ENV_UNLINKED_NODE_COUNTS_BY_DOC) == {"a": 1, "b": 4}
 
 
 # ---------------------------------------------------------------------------
@@ -702,14 +482,166 @@ def test_inject_links_appends_directives_when_enduml_missing() -> None:
     assert result.endswith("url of A is [[a.html]]")
 
 
-def test_one_url_per_alias_dedup_contract() -> None:
-    # The resolved_links dict in on_doctree_resolved keys by alias, so an
-    # alias maps to exactly one URL (last write wins).  Emulate that contract.
-    resolved_links: dict[str, str] = {}
-    resolved_links["A"] = "first.html"
-    resolved_links["A"] = "second.html"
+# ---------------------------------------------------------------------------
+# refined call links
+# ---------------------------------------------------------------------------
 
-    uml = _inject_links_into_uml("@startuml\n@enduml\n", resolved_links)
+# ---------------------------------------------------------------------------
+# call label linking
+# ---------------------------------------------------------------------------
 
-    assert uml.count("url of A is") == 1
-    assert "[[second.html]]" in uml
+
+def test_link_message_label_wraps_the_label() -> None:
+    uml = "@startuml\nA -> B : Get()\n@enduml"
+
+    linked = _link_message_label(uml, 2, "Get", "d.html", None)
+
+    assert linked == "@startuml\nA -> B : [[d.html Get()]]\n@enduml"
+
+
+def test_link_message_label_adds_tooltip() -> None:
+    linked = _link_message_label("A -> B : Get()", 1, "Get", "d.html", "Refined by: a, b")
+
+    assert linked == "A -> B : [[d.html{Refined by: a, b} Get()]]"
+
+
+def test_link_message_label_accepts_call_operator_and_spaced_arguments() -> None:
+    assert _link_message_label("A -> B : operator()(x)", 1, "operator()", "d.html", None) == (
+        "A -> B : [[d.html operator()(x)]]"
+    )
+    assert _link_message_label("A -> B : Get (x)", 1, "Get", "d.html", None) == "A -> B : [[d.html Get (x)]]"
+
+
+def test_link_message_label_uses_the_colon_outside_quotes() -> None:
+    linked = _link_message_label('"a:b" -> B : Get()', 1, "Get", "d.html", None)
+
+    assert linked == '"a:b" -> B : [[d.html Get()]]'
+
+
+@pytest.mark.parametrize(
+    ("uml", "line"),
+    [
+        ("A -> B : Other()", 1),
+        ("A -> B : [[x Get()]]", 1),
+        ("A -> B", 1),
+        ("A -> B : Get()", 2),
+        ("A -> B : GetAll()", 1),
+    ],
+)
+def test_link_message_label_leaves_other_lines_unchanged(uml: str, line: int) -> None:
+    assert _link_message_label(uml, line, "Get", "d.html", None) == uml
+
+
+# ---------------------------------------------------------------------------
+# link injection in doctree-resolved
+# ---------------------------------------------------------------------------
+
+
+def _resolve_uml(
+    monkeypatch: pytest.MonkeyPatch,
+    uml: str,
+    element_links: dict[str, dict[str, str]],
+    call_links: dict[str, list[tuple[int, str, list[str]]]],
+    docnames: dict[str, tuple[str, str | None]],
+) -> str:
+    """Run ``on_doctree_resolved`` for ``pkg/overview.puml`` and return the injected UML."""
+
+    class _FakePlantumlNode(nodes.Element):
+        pass
+
+    monkeypatch.setattr(clickable_plantuml_module, "_get_plantuml_node_class", lambda: _FakePlantumlNode)
+
+    node = _FakePlantumlNode()
+    node["filename"] = "overview.puml"
+    node["incdir"] = "pkg"
+    node["uml"] = uml
+    doctree = nodes.document("", "")
+    doctree += node
+
+    env = SimpleNamespace()
+    setattr(env, _ENV_ELEMENT_LINKS, element_links)
+    setattr(env, _ENV_CALL_LINKS, call_links)
+    setattr(env, _ENV_SOURCE_KEYS, _source_keys(element_links, call_links) | {"pkg/overview.puml"})
+    setattr(env, _ENV_WORKSPACE_OFFSET, "/workspace")
+    setattr(env, _ENV_PUML_DOCNAMES, docnames)
+
+    class _ResolveBuilder:
+        format = "html"
+        imagedir = "_images"
+
+        def get_relative_uri(self, from_docname: str, to_docname: str) -> str:
+            _ = from_docname
+            return f"{to_docname}.html"
+
+    app = SimpleNamespace(
+        builder=_ResolveBuilder(),
+        config=SimpleNamespace(plantuml_output_format="svg"),
+        srcdir="/workspace",
+        env=env,
+    )
+    on_doctree_resolved(app, doctree, "index")
+    return node["uml"]
+
+
+def test_doctree_resolved_injects_element_link(monkeypatch: pytest.MonkeyPatch) -> None:
+    uml = _resolve_uml(
+        monkeypatch,
+        "@startuml\n[Proxy]\n@enduml\n",
+        {"pkg/overview.puml": {"Proxy": "pkg/proxy.puml"}},
+        {},
+        {"pkg/proxy.puml": ("design/proxy", "proxy-section")},
+    )
+
+    assert "url of Proxy is [[design/proxy.html#proxy-section]]" in uml
+
+
+def test_doctree_resolved_skips_target_outside_the_documents(monkeypatch: pytest.MonkeyPatch) -> None:
+    uml = _resolve_uml(
+        monkeypatch,
+        "@startuml\n[Proxy]\n@enduml\n",
+        {"pkg/overview.puml": {"Proxy": "pkg/proxy.puml"}},
+        {},
+        {},
+    )
+
+    assert "url of" not in uml
+
+
+_OVERVIEW_UML = "@startuml\n\nApp -> seooc : Get()\nseooc -> Ext : Log()\n@enduml"
+
+
+def test_doctree_resolved_links_call_to_its_detail(monkeypatch: pytest.MonkeyPatch) -> None:
+    uml = _resolve_uml(
+        monkeypatch,
+        _OVERVIEW_UML,
+        {},
+        {"pkg/overview.puml": [(3, "Get", ["pkg/component.puml"])]},
+        {"pkg/component.puml": ("design/component", None)},
+    )
+
+    assert "App -> seooc : [[design/component.html Get()]]" in uml
+    assert "seooc -> Ext : Log()" in uml
+
+
+def test_doctree_resolved_names_all_details_in_tooltip(monkeypatch: pytest.MonkeyPatch) -> None:
+    uml = _resolve_uml(
+        monkeypatch,
+        _OVERVIEW_UML,
+        {},
+        {"pkg/overview.puml": [(3, "Get", ["pkg/a.puml", "pkg/b.puml"])]},
+        {"pkg/a.puml": ("design/a", None), "pkg/b.puml": ("design/b", None)},
+    )
+
+    assert "App -> seooc : [[design/a.html{Refined by: a, b} Get()]]" in uml
+
+
+def test_doctree_resolved_keeps_stale_call_line(monkeypatch: pytest.MonkeyPatch) -> None:
+    uml = _resolve_uml(
+        monkeypatch,
+        _OVERVIEW_UML,
+        {},
+        {"pkg/overview.puml": [(4, "Get", ["pkg/component.puml"])]},
+        {"pkg/component.puml": ("design/component", None)},
+    )
+
+    assert uml == _OVERVIEW_UML

@@ -68,6 +68,13 @@ The CLI accepts a validation profile and a JSON input bundle:
 
 - `--profile`: validation scenario to run. Named profiles such as `architectural-design` select validators in the Rust validation layer.
 - `--inputs`: JSON file containing the input paths for the selected profile.
+- `--links-output`: optional; writes the diagram links (`diagram_links.json`)
+  for clickable diagrams in the docs. Only with `dependable-element`; the file
+  is written even when validation fails. Call links lead only to refinements
+  that pass the zoom check.
+- `--links-only`: optional; with `--links-output`, writes the links without
+  validating and without a report. It conflicts with `--output` and
+  `--warn-on-errors`.
 
 Supported profiles:
 
@@ -84,6 +91,7 @@ Profile validators:
 
 `dependable-element`:
 - `validate_bazel_component`
+- `validate_sequence_refinement` (zoom across all architectural designs)
 - `validate_component_class` (pending)
 
 `unit`:
@@ -96,9 +104,33 @@ Each profile owns its own input schema.
 ```json
 {
   "architecture": "path/to/architecture.json",
-  "component_diagrams": ["path/to/component.fbs.bin"]
+  "component_diagrams": ["path/to/component.fbs.bin"],
+  "sequence_diagrams": ["path/to/sequence.fbs.bin"],
+  "link_diagrams": ["path/to/public_api.fbs.bin"]
 }
 ```
+
+`sequence_diagrams` are the dynamic views of all architectural designs.
+`link_diagrams` (public API, internal API, unit designs) only take part in the
+diagram links.
+
+`diagram_links.json`:
+
+```json
+{
+  "version": 1,
+  "element_links": [
+    {"source": "a/overview.puml", "alias": "comp", "target": "a/comp.puml"}
+  ],
+  "call_links": [
+    {"source": "a/seq.puml", "line": 20, "method": "Get", "targets": ["b/detail.puml"]}
+  ]
+}
+```
+
+An element link points from an alias in a diagram to the diagram that defines
+the element. A call link points from a call to the diagrams that refine it
+(`docs/specifications/sequence_refinement.md`).
 
 `architectural-design`:
 

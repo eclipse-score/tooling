@@ -13,10 +13,13 @@
 
 //! Shared data models for validation inputs and indexed architectures.
 
+mod architecture_tree;
 mod bazel_models;
 mod class_diagram_models;
 mod component_diagram_models;
+mod method_name;
 mod sequence_diagram_models;
+mod sequence_refinement_models;
 mod shared;
 pub(crate) mod type_names;
 
@@ -32,7 +35,9 @@ pub use component_diagram_models::{
     ComponentDiagramArchitecture, ComponentDiagramInputs, ComponentRelationType, ComponentType,
     EndpointRole, LogicComponent, LogicComponentExt, LogicRelation,
 };
+pub use method_name::extract_method_name;
 pub use sequence_diagram_models::{
     Environment, ObservedSequenceCall, SequenceDiagramIndex, SequenceDiagramInputs,
-    SequenceParticipantInfo,
+    SequenceParticipantInfo, GATE_LABEL,
 };
+pub use sequence_refinement_models::{Lifeline, SequenceRefinementIndex, WindowCall, ZoomEntry};

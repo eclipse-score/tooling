@@ -1,0 +1,33 @@
+' *******************************************************************************
+' Copyright (c) 2026 Contributors to the Eclipse Foundation
+'
+' See the NOTICE file(s) distributed with this work for additional
+' information regarding copyright ownership.
+'
+' This program and the accompanying materials are made available under the
+' terms of the Apache License Version 2.0 which is available at
+' https://www.apache.org/licenses/LICENSE-2.0
+'
+' SPDX-License-Identifier: Apache-2.0
+' *******************************************************************************
+
+@startuml get_number_unit
+
+' Zoom level 2: the component opened at its units. unit_1 keeps the exit to
+' the platform; unit_2 is new inside the component.
+
+actor App
+participant unit_1 <<unit>>
+participant unit_2 <<unit>>
+participant Platform <<external>>
+
+App -> unit_1 : GetNumber()
+activate unit_1
+unit_1 -> unit_2 : GetData()
+activate unit_2
+return Data*
+unit_1 -> Platform : Log()
+unit_1 --> App : number
+deactivate unit_1
+
+@enduml

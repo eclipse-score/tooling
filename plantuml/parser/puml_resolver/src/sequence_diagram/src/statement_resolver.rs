@@ -17,7 +17,9 @@ use sequence_logic::{
     Block, Interaction, LifecycleAction, MessageKind, Node, ParticipantId, ParticipantLifecycle,
     Reference, SourceLocation,
 };
-use sequence_parser::{GroupCmd, Message, MessageEndpoint, MessageSuffix, RefCmd, Statement};
+use sequence_parser::{
+    GroupCmd, GroupKind, Message, MessageEndpoint, MessageSuffix, RefCmd, Statement,
+};
 
 use crate::error::SequenceResolverError;
 use crate::participant_table::ParticipantTable;
@@ -35,66 +37,250 @@ enum LifecycleTarget {
     Receiver,
 }
 
+/// A call that activated its callee.
+#[derive(Clone, Debug, PartialEq)]
+struct Activation {
+    caller: Option<ParticipantId>,
+    callee: ParticipantId,
+    /// False for an `activate` that no call to the callee precedes: a
+    /// `return` closes it without a reply.
+    caller_known: bool,
+}
+
+/// Open activations of a group at its start and at the end of each case.
+struct GroupFrame {
+    kind: GroupKind,
+    start: Vec<Activation>,
+    ends: Vec<Vec<Activation>>,
+}
+
+impl GroupFrame {
+    /// Activations after the group: a group that may be skipped changes
+    /// nothing, an `alt` with `else` keeps what any case keeps open, a `par`
+    /// keeps what every branch keeps open.
+    fn merge(mut self) -> Vec<Activation> {
+        let longest =
+            |a: Vec<Activation>, b: Vec<Activation>| if b.len() > a.len() { b } else { a };
+        let shortest =
+            |a: Vec<Activation>, b: Vec<Activation>| if b.len() < a.len() { b } else { a };
+        match self.kind {
+            GroupKind::Opt | GroupKind::Loop | GroupKind::Break => self.start,
+            GroupKind::Alt if self.ends.len() > 1 => {
+                self.ends.into_iter().reduce(longest).unwrap_or(self.start)
+            }
+            GroupKind::Alt => self.start,
+            GroupKind::Par => self.ends.into_iter().reduce(shortest).unwrap_or(self.start),
+            GroupKind::Critical | GroupKind::Group => self.ends.pop().unwrap_or(self.start),
+        }
+    }
+}
+
+/// Open activations, innermost last. `return` replies to the caller of the
+/// innermost one. Contents of `critical` are not in the model and are not
+/// tracked.
+#[derive(Default)]
+struct Activations {
+    open: Vec<Activation>,
+    /// Callee and caller of the last call, until another node follows it.
+    fresh_call: Option<(ParticipantId, Option<ParticipantId>)>,
+    groups: Vec<GroupFrame>,
+}
+
+impl Activations {
+    fn in_critical(&self) -> bool {
+        self.groups
+            .iter()
+            .any(|frame| frame.kind == GroupKind::Critical)
+    }
+
+    fn observe(&mut self, node: &Node) {
+        if self.in_critical() {
+            return;
+        }
+        let fresh_call = self.fresh_call.take();
+
+        match node {
+            Node::Interaction(interaction)
+                if matches!(
+                    interaction.kind,
+                    MessageKind::SynchCall | MessageKind::AsynchCall
+                ) =>
+            {
+                if let Some(receiver) = &interaction.receiver {
+                    self.fresh_call = Some((receiver.clone(), interaction.sender.clone()));
+                }
+            }
+            Node::Lifecycle(lifecycle) => match lifecycle.action {
+                LifecycleAction::Activate => {
+                    let activation = match fresh_call {
+                        Some((callee, caller)) if callee == lifecycle.participant => Activation {
+                            caller,
+                            callee,
+                            caller_known: true,
+                        },
+                        _ => Activation {
+                            caller: None,
+                            callee: lifecycle.participant.clone(),
+                            caller_known: false,
+                        },
+                    };
+                    self.open.push(activation);
+                }
+                LifecycleAction::Deactivate => {
+                    if let Some(index) = self
+                        .open
+                        .iter()
+                        .rposition(|activation| activation.callee == lifecycle.participant)
+                    {
+                        self.open.remove(index);
+                    }
+                }
+                LifecycleAction::Create | LifecycleAction::Destroy => {}
+            },
+            _ => {}
+        }
+    }
+
+    // lobster-trace: Tools.ArchitectureModelingSequenceReturn
+    /// Closes the innermost activation for a `return`.
+    fn close_innermost(&mut self) -> Option<Activation> {
+        if self.in_critical() {
+            return None;
+        }
+        self.fresh_call = None;
+        self.open.pop()
+    }
+
+    fn start_group(&mut self, kind: GroupKind) {
+        self.fresh_call = None;
+        self.groups.push(GroupFrame {
+            kind,
+            start: self.open.clone(),
+            ends: Vec::new(),
+        });
+    }
+
+    /// Every case of a group starts with the activations of the group start.
+    fn else_group(&mut self) {
+        if let Some(frame) = self.groups.last_mut() {
+            let end = std::mem::replace(&mut self.open, frame.start.clone());
+            frame.ends.push(end);
+        }
+    }
+
+    fn end_group(&mut self) {
+        self.fresh_call = None;
+        if let Some(mut frame) = self.groups.pop() {
+            frame.ends.push(std::mem::take(&mut self.open));
+            self.open = frame.merge();
+        }
+    }
+}
+
 pub(crate) fn build_sequence_tree(
     statements: &[Statement],
     table: &ParticipantTable,
 ) -> Result<Block, SequenceResolverError> {
     let mut builder = SequenceTreeBuilder::new();
+    let mut activations = Activations::default();
 
     for statement in statements {
-        consume_statement(&mut builder, statement, table)?;
+        consume_statement(&mut builder, &mut activations, statement, table)?;
     }
 
     builder.finish()
 }
 
+fn push_observed(builder: &mut SequenceTreeBuilder, activations: &mut Activations, node: Node) {
+    activations.observe(&node);
+    builder.push(node);
+}
+
 fn consume_statement(
     builder: &mut SequenceTreeBuilder,
+    activations: &mut Activations,
     statement: &Statement,
     table: &ParticipantTable,
 ) -> Result<(), SequenceResolverError> {
     match statement {
         Statement::Message(message) => {
             for node in message_nodes(message, table)? {
-                builder.push(node);
+                push_observed(builder, activations, node);
             }
         }
-        Statement::GroupCmd(GroupCmd::Start(start)) => builder.start_group(start),
-        Statement::GroupCmd(GroupCmd::Else(cmd)) => builder.else_group(cmd)?,
-        Statement::GroupCmd(GroupCmd::End(end)) => builder.end_group(end)?,
+        Statement::GroupCmd(GroupCmd::Start(start)) => {
+            activations.start_group(start.kind);
+            builder.start_group(start);
+        }
+        Statement::GroupCmd(GroupCmd::Else(cmd)) => {
+            activations.else_group();
+            builder.else_group(cmd)?;
+        }
+        Statement::GroupCmd(GroupCmd::End(end)) => {
+            activations.end_group();
+            builder.end_group(end)?;
+        }
         Statement::CreateCmd(create_cmd) => {
-            builder.push(lifecycle_node(
-                table.uid_of_identifier(&create_cmd.identifier, &create_cmd.source_location)?,
-                LifecycleAction::Create,
-                create_cmd.source_location.clone(),
-            ));
+            push_observed(
+                builder,
+                activations,
+                lifecycle_node(
+                    table.uid_of_identifier(&create_cmd.identifier, &create_cmd.source_location)?,
+                    LifecycleAction::Create,
+                    create_cmd.source_location.clone(),
+                ),
+            );
         }
         Statement::DestroyCmd(destroy_cmd) => {
-            builder.push(lifecycle_node(
-                table.uid_of_ref(&destroy_cmd.participant, &destroy_cmd.source_location)?,
-                LifecycleAction::Destroy,
-                destroy_cmd.source_location.clone(),
-            ));
+            push_observed(
+                builder,
+                activations,
+                lifecycle_node(
+                    table.uid_of_ref(&destroy_cmd.participant, &destroy_cmd.source_location)?,
+                    LifecycleAction::Destroy,
+                    destroy_cmd.source_location.clone(),
+                ),
+            );
         }
         Statement::ActivateCmd(activate_cmd) => {
-            builder.push(lifecycle_node(
-                table.uid_of_ref(&activate_cmd.participant, &activate_cmd.source_location)?,
-                LifecycleAction::Activate,
-                activate_cmd.source_location.clone(),
-            ));
+            push_observed(
+                builder,
+                activations,
+                lifecycle_node(
+                    table.uid_of_ref(&activate_cmd.participant, &activate_cmd.source_location)?,
+                    LifecycleAction::Activate,
+                    activate_cmd.source_location.clone(),
+                ),
+            );
         }
         Statement::DeactivateCmd(deactivate_cmd) => {
-            builder.push(lifecycle_node(
-                table.uid_of_ref(&deactivate_cmd.participant, &deactivate_cmd.source_location)?,
-                LifecycleAction::Deactivate,
-                deactivate_cmd.source_location.clone(),
-            ));
+            push_observed(
+                builder,
+                activations,
+                lifecycle_node(
+                    table
+                        .uid_of_ref(&deactivate_cmd.participant, &deactivate_cmd.source_location)?,
+                    LifecycleAction::Deactivate,
+                    deactivate_cmd.source_location.clone(),
+                ),
+            );
         }
         Statement::RefCmd(ref_cmd) => builder.push(reference_node(ref_cmd, table)?),
         Statement::ParticipantDef(_) => {}
-        // `return` has no sender or receiver. Modeling it requires a call stack
-        // to resolve the matching invocation, which the resolver does not yet maintain.
-        Statement::ReturnCmd(_) => {}
+        // A `return` without a caller to reply to produces no message.
+        Statement::ReturnCmd(return_cmd) => {
+            if let Some(activation) = activations.close_innermost() {
+                if activation.caller_known {
+                    builder.push(Node::Interaction(Interaction {
+                        sender: Some(activation.callee),
+                        receiver: activation.caller,
+                        message: return_cmd.label.clone(),
+                        kind: MessageKind::Reply,
+                        source_location: return_cmd.source_location.clone(),
+                    }));
+                }
+            }
+        }
     }
 
     Ok(())
@@ -627,6 +813,216 @@ mod message_arrow_tests {
                 if activate.participant.as_ref() == "comp.unit"
                     && reference.participants.iter().map(|p| p.as_ref()).eq(["comp.unit"])
         ));
+    }
+
+    fn activating_call() -> Statement {
+        let mut call = message(arrow("-", Some(">")));
+        call.suffix = Some(MessageSuffix::Activate);
+        Statement::Message(call)
+    }
+
+    fn return_cmd(label: &str) -> Statement {
+        Statement::ReturnCmd(sequence_parser::ReturnCmd {
+            label: Some(label.to_string()),
+            source_location: SourceLocation::new("", 9),
+        })
+    }
+
+    fn replies(root: &Block) -> Vec<(String, String, String)> {
+        let mut found = Vec::new();
+        for node in &root.items {
+            if let Node::Interaction(i) = node {
+                if i.kind == MessageKind::Reply {
+                    found.push((
+                        i.sender.as_deref().unwrap_or("").to_string(),
+                        i.receiver.as_deref().unwrap_or("").to_string(),
+                        i.message.clone().unwrap_or_default(),
+                    ));
+                }
+            }
+        }
+        found
+    }
+
+    #[test]
+    fn test_return_replies_to_the_caller_of_the_innermost_activation() {
+        let statements = [activating_call(), return_cmd("ok")];
+
+        let root = build_sequence_tree(&statements, &table_for(&statements))
+            .expect("statements must resolve");
+
+        assert_eq!(
+            replies(&root),
+            [("B".to_string(), "A".to_string(), "ok".to_string())]
+        );
+    }
+
+    #[test]
+    fn test_return_without_activation_produces_no_message() {
+        let statements = [
+            Statement::Message(message(arrow("-", Some(">")))),
+            return_cmd("ok"),
+        ];
+
+        let root = build_sequence_tree(&statements, &table_for(&statements))
+            .expect("statements must resolve");
+
+        assert!(replies(&root).is_empty());
+    }
+
+    #[test]
+    fn test_return_closes_each_alt_branch_separately() {
+        let location = SourceLocation::new("", 5);
+        let statements = [
+            activating_call(),
+            Statement::GroupCmd(GroupCmd::Start(sequence_parser::GroupStart {
+                kind: sequence_parser::GroupKind::Alt,
+                label: None,
+                is_parallel: false,
+                source_location: location.clone(),
+            })),
+            return_cmd("first"),
+            Statement::GroupCmd(GroupCmd::Else(sequence_parser::GroupElse {
+                label: None,
+                source_location: location.clone(),
+            })),
+            return_cmd("second"),
+            Statement::GroupCmd(GroupCmd::End(sequence_parser::GroupEnd {
+                kind: Some(sequence_parser::GroupKind::Alt),
+                source_location: location,
+            })),
+        ];
+
+        let root = build_sequence_tree(&statements, &table_for(&statements))
+            .expect("statements must resolve");
+
+        let Node::Branch(branch) = &root.items[2] else {
+            panic!("expected branch node");
+        };
+        assert_eq!(branch.cases.len(), 2);
+        for case in &branch.cases {
+            assert!(matches!(
+                case.block.items.as_slice(),
+                [Node::Interaction(reply)] if reply.kind == MessageKind::Reply
+            ));
+        }
+    }
+
+    fn group_start(kind: sequence_parser::GroupKind) -> Statement {
+        Statement::GroupCmd(GroupCmd::Start(sequence_parser::GroupStart {
+            kind,
+            label: None,
+            is_parallel: false,
+            source_location: SourceLocation::new("", 5),
+        }))
+    }
+
+    fn group_else() -> Statement {
+        Statement::GroupCmd(GroupCmd::Else(sequence_parser::GroupElse {
+            label: None,
+            source_location: SourceLocation::new("", 5),
+        }))
+    }
+
+    fn group_end(kind: sequence_parser::GroupKind) -> Statement {
+        Statement::GroupCmd(GroupCmd::End(sequence_parser::GroupEnd {
+            kind: Some(kind),
+            source_location: SourceLocation::new("", 5),
+        }))
+    }
+
+    fn top_level_replies(statements: &[Statement]) -> usize {
+        let root = build_sequence_tree(statements, &table_for(statements))
+            .expect("statements must resolve");
+        replies(&root).len()
+    }
+
+    #[test]
+    fn test_return_after_alt_with_early_return_in_one_case_still_replies() {
+        use sequence_parser::GroupKind::Alt;
+        let statements = [
+            activating_call(),
+            group_start(Alt),
+            return_cmd("early"),
+            group_else(),
+            group_end(Alt),
+            return_cmd("late"),
+        ];
+
+        assert_eq!(top_level_replies(&statements), 1);
+    }
+
+    #[test]
+    fn test_return_in_optional_group_leaves_the_activation_open() {
+        use sequence_parser::GroupKind::Opt;
+        let statements = [
+            activating_call(),
+            group_start(Opt),
+            return_cmd("early"),
+            group_end(Opt),
+            return_cmd("late"),
+        ];
+
+        assert_eq!(top_level_replies(&statements), 1);
+    }
+
+    #[test]
+    fn test_return_in_every_alt_case_closes_the_activation() {
+        use sequence_parser::GroupKind::Alt;
+        let statements = [
+            activating_call(),
+            group_start(Alt),
+            return_cmd("first"),
+            group_else(),
+            return_cmd("second"),
+            group_end(Alt),
+            return_cmd("late"),
+        ];
+
+        assert_eq!(top_level_replies(&statements), 0);
+    }
+
+    #[test]
+    fn test_return_in_one_parallel_branch_closes_the_activation() {
+        use sequence_parser::GroupKind::Par;
+        let statements = [
+            activating_call(),
+            group_start(Par),
+            return_cmd("first"),
+            group_else(),
+            group_end(Par),
+            return_cmd("late"),
+        ];
+
+        assert_eq!(top_level_replies(&statements), 0);
+    }
+
+    #[test]
+    fn test_return_inside_critical_is_ignored() {
+        use sequence_parser::GroupKind::Critical;
+        let statements = [
+            activating_call(),
+            group_start(Critical),
+            return_cmd("dropped"),
+            group_end(Critical),
+            return_cmd("kept"),
+        ];
+
+        assert_eq!(top_level_replies(&statements), 1);
+    }
+
+    #[test]
+    fn test_activate_without_a_call_has_no_caller_to_reply_to() {
+        let statements = [
+            Statement::Message(message(arrow("-", Some(">")))),
+            Statement::ActivateCmd(sequence_parser::ActivateCmd {
+                participant: participant_ref("A"),
+                source_location: SourceLocation::new("", 6),
+            }),
+            return_cmd("ok"),
+        ];
+
+        assert_eq!(top_level_replies(&statements), 0);
     }
 
     #[test]

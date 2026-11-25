@@ -12,45 +12,24 @@
 # *******************************************************************************
 """Sphinx extension to make PlantUML diagrams clickable.
 
-Design overview
----------------
-Link data is derived from ``.idmap.json`` sidecar files produced by the
-PlantUML parser (``puml_cli --idmap-output-dir ...``).  Each idmap file
-records two roles for the elements in one ``.puml`` diagram:
+The links come from ``diagram_links.json`` files that ``rules_score`` stages
+into the Sphinx source tree (``validation_cli --links-output``). The link rules
+live in the validation tool (see ``validation/core/README.md``); this extension
+only maps diagrams to documents and writes the links into the PlantUML source:
 
-* **defines** – elements elaborated (given children / structure) in that
-  diagram.  A component diagram that contains ``package Proxy { ... }`` is
-  the definition site of ``Proxy``.
-* **references** – leaf mentions and relation endpoints.  A top-level
-  ``[Proxy]`` box in an overview is a reference that should link to the
-  diagram that defines it.
+* an **element link** ``(source, alias, target)`` becomes
+  ``url of <alias> is [[url]]`` in the diagram ``source``;
+* a **call link** ``(source, line, method, targets)`` wraps the label of the
+  message on ``line`` in ``[[url label]]``. The first target that is part of a
+  document gets the link; with more than one, a tooltip names all of them.
 
-The ``alias`` of an entry is the PlantUML code of the element in its own
-diagram.  It is only used for the ``url of`` injection and is never matched
-across diagrams; identity is the ``id``.
-
-The matching algorithm:
-
-1. Build a *definition index* ``{id → [source_paths]}`` and a *name index*
-   ``{last id segment → [source_paths]}``.  Only idmaps with
-   ``"match_by_name": true`` feed the name index.
-2. For each reference ``id`` in a diagram, look up the definition index; if
-   nothing is found and the referencing idmap has ``match_by_name``, look up
-   the last segment of the ``id`` in the name index.
-3. If exactly one definer: emit the link.
-4. If multiple definers: pick the one sharing the longest common workspace-
-   relative path prefix with the source diagram (proximity tiebreak).
-5. If proximity still ties (e.g. same directory): pick the one with the most
-   idmap entries nested under the referenced id (descendant-count tiebreak) —
-   the file that elaborates more of that id's decomposition is assumed to be
-   the more useful navigation target.
-6. If still tied: log a warning and emit no link (safe over wrong).
-7. Never link a diagram to itself.
+A link whose target diagram is not part of any document is skipped.
 """
 
 from __future__ import annotations
 
 import functools
+import hashlib
 import json
 import os
 import re
@@ -61,32 +40,29 @@ from typing import Any
 
 from docutils import nodes
 from sphinx.application import Sphinx
-from sphinx.errors import ExtensionError
 from sphinx.util import logging
 
 logger = logging.getLogger(__name__)
+
+_LINKS_FILE = "diagram_links.json"
+_LINKS_VERSION = 1
 
 # ---------------------------------------------------------------------------
 # Environment attribute names
 # ---------------------------------------------------------------------------
 
-# {normalized_source_path: raw_idmap_dict} — loaded once in builder-inited.
-_ENV_IDMAP_BY_SOURCE = "clickable_plantuml_idmap_by_source"
-# {id: [source_path, ...]} — definition index built in builder-inited.
-_ENV_DEF_INDEX = "clickable_plantuml_def_index"
-# {last id segment: [source_path, ...]} — name index built in builder-inited.
-_ENV_NAME_INDEX = "clickable_plantuml_name_index"
+# {source_key: {alias: target_key}} — loaded once in builder-inited.
+_ENV_ELEMENT_LINKS = "clickable_plantuml_element_links"
+# {source_key: [(line, method, [target_key, ...])]} — loaded once in builder-inited.
+_ENV_CALL_LINKS = "clickable_plantuml_call_links"
 # {normalized_source_path: (docname, anchor_or_None)} — populated in doctree-read.
 _ENV_PUML_DOCNAMES = "clickable_plantuml_puml_docnames"
 # Absolute prefix to strip from PlantUML node paths to obtain canonical source keys.
 _ENV_WORKSPACE_OFFSET = "clickable_plantuml_workspace_offset"
 # Frozen set of known canonical source keys for fast membership checks.
 _ENV_SOURCE_KEYS = "clickable_plantuml_source_keys"
-# {docname: count} of plantuml nodes with no resolvable idmap, per document —
-# keyed by docname (like _ENV_PUML_DOCNAMES) so env-purge-doc/env-merge-info
-# can correctly drop/merge counts instead of maintaining a single running
-# total that double-counts on re-reads or under-merges across parallel workers.
-_ENV_NO_IDMAP_NODE_COUNTS_BY_DOC = "clickable_plantuml_no_idmap_node_counts_by_doc"
+# {docname: count} of plantuml nodes that are in no link, per document.
+_ENV_UNLINKED_NODE_COUNTS_BY_DOC = "clickable_plantuml_unlinked_node_counts_by_doc"
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -114,134 +90,6 @@ def _assert_canonical_source_key(source_key: str) -> None:
     """Assert that *source_key* is a workspace-relative POSIX key."""
     if source_key != _normalize_source_path(source_key):
         raise ValueError(f"non-canonical source key: {source_key!r}")
-
-
-def _common_prefix_length(path_a: str, path_b: str) -> int:
-    """Return the number of shared path components between two canonical keys.
-
-    Both inputs must be canonical workspace-relative POSIX keys to ensure
-    the proximity comparison is valid (never mixing staging paths with
-    canonical paths).
-    """
-    _assert_canonical_source_key(path_a)
-    _assert_canonical_source_key(path_b)
-    parts_a = PurePosixPath(path_a).parts
-    parts_b = PurePosixPath(path_b).parts
-    count = 0
-    for a, b in zip(parts_a, parts_b):
-        if a == b:
-            count += 1
-        else:
-            break
-    return count
-
-
-def _tied_top(candidates: list[str], score: Callable[[str], int]) -> tuple[int | None, list[str]]:
-    """Return the max score and every candidate achieving it (``(None, [])`` if empty).
-
-    Shared by both tiebreak stages in :func:`_resolve_definer`.
-    """
-    best_score: int | None = None
-    best: list[str] = []
-    for candidate in candidates:
-        candidate_score = score(candidate)
-        if best_score is None or candidate_score > best_score:
-            best_score = candidate_score
-            best = [candidate]
-        elif candidate_score == best_score:
-            best.append(candidate)
-    return best_score, best
-
-
-def _proximity_score(source: str, candidate: str) -> int:
-    """Common-prefix-length score used by the proximity tiebreak stage.
-
-    All inputs are canonical workspace-relative POSIX keys (guaranteed by the
-    exact-matching in P0-1); the assertions guard that invariant so a staging
-    path can never sneak into the comparison.
-    """
-    _assert_canonical_source_key(source)
-    _assert_canonical_source_key(candidate)
-    return _common_prefix_length(source, candidate)
-
-
-def _id_leaf(identifier: str) -> str:
-    """Return the last ``.``-separated segment of *identifier*."""
-    return identifier.rsplit(".", 1)[-1]
-
-
-def _descendant_count(idmap_by_source: dict[str, Any], source_key: str, fqn: str) -> int:
-    """Count *source_key*'s idmap entries nested under *fqn* (id starts with ``f"{fqn}."``).
-
-    Second tiebreak stage in :func:`_resolve_definer`: prefers the file that
-    elaborates more of that id's decomposition.
-    """
-    idmap = idmap_by_source.get(source_key)
-    if idmap is None:
-        return 0
-    prefix = f"{fqn}."
-    entries = idmap.get("defines", []) + idmap.get("references", [])
-    return sum(1 for entry in entries if entry.get("id", "").startswith(prefix))
-
-
-def _resolve_definer(
-    fqn: str,
-    source_key: str,
-    definition_index: dict[str, list[str]],
-    name_index: dict[str, list[str]],
-    idmap_by_source: dict[str, Any] | None = None,
-    *,
-    by_name: bool = True,
-) -> str | None:
-    """Return the definer source key for one reference, or ``None``.
-
-    Resolution rules:
-
-    * The exact id (``fqn``) is looked up in *definition_index*. Only when
-      that yields no definer *other than* the diagram itself, and *by_name*
-      is set, the last segment of the id is looked up in *name_index* (a
-      sequence/component diagram writes a bare name where the defining
-      diagram has a package-qualified id).
-    * A diagram never links to itself (self-links are dropped from both
-      lookups).
-    * A single remaining candidate wins outright. Multiple candidates go
-      through the proximity tiebreak, then the descendant-count tiebreak;
-      a genuine tie after both logs a warning and returns ``None``.
-    """
-    _assert_canonical_source_key(source_key)
-
-    def _candidates_for(index: dict[str, list[str]], key: str) -> list[str]:
-        raw = index.get(key, [])
-        for candidate in raw:
-            _assert_canonical_source_key(candidate)
-        return [c for c in raw if c != source_key]
-
-    candidates = _candidates_for(definition_index, fqn)
-    if not candidates and by_name:
-        candidates = _candidates_for(name_index, _id_leaf(fqn))
-    if not candidates:
-        return None
-    if len(candidates) == 1:
-        return candidates[0]
-
-    proximity_group = _tied_top(candidates, lambda c: _proximity_score(source_key, c))[1]
-    target: str | None = proximity_group[0] if len(proximity_group) == 1 else None
-
-    if target is None and idmap_by_source:
-        descendant_score, descendant_group = _tied_top(
-            proximity_group, lambda c: _descendant_count(idmap_by_source, c, fqn)
-        )
-        if len(descendant_group) == 1 and descendant_score > 0:
-            target = descendant_group[0]
-
-    if target is None:
-        logger.warning(
-            "clickable_plantuml: ambiguous definition for '%s' in '%s' — tied candidates %s; no link emitted",
-            fqn,
-            source_key,
-            candidates,
-        )
-    return target
 
 
 def _build_target_url(
@@ -291,77 +139,84 @@ def _escape_plantuml_url(url: str) -> str:
 
 
 # ---------------------------------------------------------------------------
-# idmap loading
+# Links loading
 # ---------------------------------------------------------------------------
 
+_CallLink = tuple[int, str, list[str]]
 
-def _load_idmap_files(
+
+def _load_diagram_links(
     source_dir: Path,
-) -> tuple[dict[str, Any], dict[str, list[str]], dict[str, list[str]]]:
-    """Scan *source_dir* for ``*.idmap.json`` and build the lookup indices.
+) -> tuple[dict[str, dict[str, str]], dict[str, list[_CallLink]]]:
+    """Read every ``diagram_links.json`` below *source_dir*.
 
-    The canonical key is the workspace-relative POSIX path stored in each
-    idmap's ``source`` field (baked in by ``--source-name``).  Matching is
-    exact — there is no basename fallback — so two same-basename diagrams in
-    different packages never mislink.
+    Files are read in sorted order; for a link given twice the first wins.
 
     Returns:
-        idmap_by_source:   ``{canonical_source_key → raw idmap dict}``
-        definition_index:  ``{id → [canonical_source_keys]}``
-        name_index:        ``{last id segment → [canonical_source_keys]}``,
-                           fed only by idmaps with ``match_by_name``.
-
-    Raises:
-        ExtensionError: when two idmaps normalise to the same canonical key.
+        element_links: ``{source_key → {alias → target_key}}``
+        call_links:    ``{source_key → [(line, method, [target_keys])]}``
     """
-    idmap_by_source: dict[str, Any] = {}
-    definition_index: dict[str, list[str]] = {}
-    name_index: dict[str, list[str]] = {}
+    element_links: dict[str, dict[str, str]] = {}
+    calls: dict[str, dict[tuple[int, str], list[str]]] = {}
 
-    def _add(index: dict[str, list[str]], key: str, source_key: str) -> None:
-        sources = index.setdefault(key, [])
-        if source_key not in sources:
-            sources.append(source_key)
-
-    for json_path in sorted(source_dir.rglob("*.idmap.json")):
+    for json_path in sorted(source_dir.rglob(_LINKS_FILE)):
         try:
             data = json.loads(json_path.read_text(encoding="utf-8"))
         except (json.JSONDecodeError, OSError) as exc:
             logger.warning("clickable_plantuml: failed to load %s: %s", json_path, exc)
             continue
-
-        raw_source = data.get("source", "")
-        if not raw_source:
+        if data.get("version") != _LINKS_VERSION:
             logger.warning(
-                "clickable_plantuml: idmap %s missing 'source' field — skipped",
-                json_path.name,
+                "clickable_plantuml: %s has version %r, expected %d — skipped",
+                json_path,
+                data.get("version"),
+                _LINKS_VERSION,
             )
             continue
 
-        source_key = _normalize_source_path(raw_source)
-        _assert_canonical_source_key(source_key)
-        if source_key in idmap_by_source:
-            raise ExtensionError(
-                "clickable_plantuml: duplicate idmap source key "
-                f"'{source_key}' (from {json_path.name}); each diagram's "
-                "--source-name must be a unique workspace-relative path."
-            )
-        idmap_by_source[source_key] = data
+        for link in data.get("element_links", []):
+            source = _normalize_source_path(link["source"])
+            element_links.setdefault(source, {}).setdefault(link["alias"], _normalize_source_path(link["target"]))
+        for link in data.get("call_links", []):
+            source = _normalize_source_path(link["source"])
+            targets = [_normalize_source_path(target) for target in link["targets"]]
+            calls.setdefault(source, {}).setdefault((link["line"], link["method"]), targets)
 
-        for entry in data.get("defines", []):
-            fqn = entry.get("id", "")
-            if not fqn:
-                continue
-            _add(definition_index, fqn, source_key)
-            if data.get("match_by_name"):
-                _add(name_index, _id_leaf(fqn), source_key)
-
+    call_links = {
+        source: [(line, method, targets) for (line, method), targets in sorted(by_call.items())]
+        for source, by_call in calls.items()
+    }
     logger.info(
-        "clickable_plantuml: loaded %d idmap file(s), %d unique definition keys",
-        len(idmap_by_source),
-        len(definition_index),
+        "clickable_plantuml: loaded links of %d diagram(s)",
+        len(set(element_links) | set(call_links)),
     )
-    return idmap_by_source, definition_index, name_index
+    return element_links, call_links
+
+
+def _links_digest(source_dir: Path) -> str:
+    """Digest of every ``diagram_links.json`` below *source_dir*."""
+    digest = hashlib.sha256()
+    for json_path in sorted(source_dir.rglob(_LINKS_FILE)):
+        try:
+            content = json_path.read_bytes()
+        except OSError:
+            continue
+        digest.update(json_path.relative_to(source_dir).as_posix().encode())
+        digest.update(content)
+    return digest.hexdigest()
+
+
+def _source_keys(element_links: dict[str, dict[str, str]], call_links: dict[str, list[_CallLink]]) -> frozenset[str]:
+    """Return every diagram that takes part in a link, as source or target."""
+    keys: set[str] = set(element_links) | set(call_links)
+    for links in element_links.values():
+        keys.update(links.values())
+    for links in call_links.values():
+        for _, _, targets in links:
+            keys.update(targets)
+    for key in keys:
+        _assert_canonical_source_key(key)
+    return frozenset(keys)
 
 
 # ---------------------------------------------------------------------------
@@ -403,6 +258,68 @@ def _inject_links_into_uml(uml_content: str, links: dict[str, str]) -> str:
             prefix += "\n"
         return prefix + url_directives + "\n" + uml_content[enduml_match.start() :]
     return uml_content + "\n" + url_directives
+
+
+# ---------------------------------------------------------------------------
+# Call links
+# ---------------------------------------------------------------------------
+
+
+def _split_message_label(line: str) -> tuple[str, str] | None:
+    """Split a sequence message line into ``(prefix, label)`` at the first colon outside quotes."""
+    in_quotes = False
+    for position, char in enumerate(line):
+        if char == '"':
+            in_quotes = not in_quotes
+        elif char == ":" and not in_quotes:
+            return line[: position + 1], line[position + 1 :].strip()
+    return None
+
+
+def _names_method(label: str, method: str) -> bool:
+    """Return whether *label* is a call of *method*, with or without arguments."""
+    rest = label.removeprefix(method)
+    return rest != label and (not rest or rest.lstrip().startswith("("))
+
+
+def _link_message_label(uml: str, line: int, method: str, url: str, tooltip: str | None) -> str:
+    """Return *uml* with the label of the message on 1-based *line* wrapped in ``[[url label]]``.
+
+    The line stays unchanged unless it is a message whose label names
+    *method* and holds no link yet (guard against a stale links file).
+    """
+    lines = uml.split("\n")
+    if not 1 <= line <= len(lines):
+        return uml
+    split = _split_message_label(lines[line - 1])
+    if split is None:
+        return uml
+    prefix, label = split
+    if "[[" in label or "]]" in label or not _names_method(label, method):
+        return uml
+    tooltip_text = f"{{{tooltip}}}" if tooltip else ""
+    lines[line - 1] = f"{prefix} [[{url}{tooltip_text} {label}]]"
+    return "\n".join(lines)
+
+
+def _link_calls(
+    uml: str,
+    links: list[_CallLink],
+    url_for: Callable[[str], str | None],
+) -> str:
+    """Link each call label of a sequence diagram to its detail diagrams.
+
+    The first detail that is part of a document gets the link; when several
+    diagrams refine the call the tooltip names all of them.
+    """
+    for line, method, targets in links:
+        details = [(target, url) for target in targets if (url := url_for(target)) is not None]
+        if not details:
+            continue
+        names = ", ".join(PurePosixPath(detail).stem for detail, _ in details)
+        tooltip = f"Refined by: {names}" if len(details) > 1 and "}" not in names else None
+        uml = _link_message_label(uml, line, method, _escape_plantuml_url(details[0][1]), tooltip)
+    return uml
 
 
 # ---------------------------------------------------------------------------
@@ -542,36 +459,42 @@ def _node_source_key(node: nodes.Node, srcdir: str, workspace_offset: str, sourc
 # ---------------------------------------------------------------------------
 
 
+def on_config_inited(app: Sphinx, config: Any) -> None:
+    """Make a change of the links a config change: Sphinx then re-reads all documents."""
+    source_dir = Path(app.srcdir)
+    if source_dir.exists():
+        config.clickable_plantuml_links_digest = _links_digest(source_dir)
+
+
 def on_builder_inited(app: Sphinx) -> None:
-    """Load idmap files and build the definition index once."""
+    """Load the diagram links once."""
     if app.builder.format != "html":
         return
 
     source_dir = Path(app.srcdir)
     if not source_dir.exists():
-        logger.info("clickable_plantuml: srcdir does not exist — no idmaps loaded")
+        logger.info("clickable_plantuml: srcdir does not exist — no links loaded")
         return
 
-    idmap_by_source, definition_index, name_index = _load_idmap_files(source_dir)
-    if not idmap_by_source:
-        logger.info("clickable_plantuml: no *.idmap.json files found")
+    element_links, call_links = _load_diagram_links(source_dir)
+    source_keys = _source_keys(element_links, call_links)
+    if not source_keys:
+        logger.info("clickable_plantuml: no %s found — diagrams stay without links", _LINKS_FILE)
         return
 
-    workspace_offset = _compute_workspace_offset(app.srcdir, set(idmap_by_source))
-    setattr(app.env, _ENV_WORKSPACE_OFFSET, workspace_offset)
-    setattr(app.env, _ENV_IDMAP_BY_SOURCE, idmap_by_source)
-    setattr(app.env, _ENV_DEF_INDEX, definition_index)
-    setattr(app.env, _ENV_NAME_INDEX, name_index)
-    setattr(app.env, _ENV_SOURCE_KEYS, frozenset(idmap_by_source))
-    setattr(app.env, _ENV_NO_IDMAP_NODE_COUNTS_BY_DOC, {})
+    setattr(app.env, _ENV_WORKSPACE_OFFSET, _compute_workspace_offset(app.srcdir, set(source_keys)))
+    setattr(app.env, _ENV_ELEMENT_LINKS, element_links)
+    setattr(app.env, _ENV_CALL_LINKS, call_links)
+    setattr(app.env, _ENV_SOURCE_KEYS, source_keys)
+    setattr(app.env, _ENV_UNLINKED_NODE_COUNTS_BY_DOC, {})
 
 
 def on_doctree_read(app: Sphinx, doctree: nodes.document) -> None:
     """Record which docname (and section anchor) contains which diagram.
 
-    Each diagram is registered under its canonical workspace-relative key (the
-    idmap ``source`` matched to the node's absolute path), which is directly
-    comparable to the idmap ``source`` field.
+    Each diagram is registered under its canonical workspace-relative key (a
+    ``source``/``target`` of ``diagram_links.json`` matched to the node's
+    absolute path).
     """
     PlantumlNode = _get_plantuml_node_class()
     if PlantumlNode is None:
@@ -580,19 +503,16 @@ def on_doctree_read(app: Sphinx, doctree: nodes.document) -> None:
     if app.builder.format != "html":
         return
 
-    idmap_by_source: dict[str, Any] = getattr(app.env, _ENV_IDMAP_BY_SOURCE, {})
-    if not idmap_by_source:
+    source_keys: frozenset[str] = getattr(app.env, _ENV_SOURCE_KEYS, frozenset())
+    if not source_keys:
         return
 
-    source_keys: frozenset[str] = getattr(app.env, _ENV_SOURCE_KEYS, frozenset(idmap_by_source))
     workspace_offset: str = getattr(app.env, _ENV_WORKSPACE_OFFSET, app.srcdir)
     puml_docnames: dict[str, tuple[str, str | None]] = getattr(app.env, _ENV_PUML_DOCNAMES, {})
-    no_idmap_counts_by_doc: dict[str, int] = getattr(app.env, _ENV_NO_IDMAP_NODE_COUNTS_BY_DOC, {})
+    unlinked_counts_by_doc: dict[str, int] = getattr(app.env, _ENV_UNLINKED_NODE_COUNTS_BY_DOC, {})
 
-    # doctree-read fires once per (re-)read of this docname; recompute this
-    # docname's count from scratch rather than accumulating onto a running
-    # total, so a rebuild doesn't double-count nodes from a previous read.
-    doc_no_idmap_count = 0
+    # Recomputed per (re-)read of this docname so a rebuild does not double-count.
+    doc_unlinked_count = 0
 
     for node in doctree.findall(PlantumlNode):
         key = _node_source_key(node, app.srcdir, workspace_offset, source_keys)
@@ -601,12 +521,11 @@ def on_doctree_read(app: Sphinx, doctree: nodes.document) -> None:
                 "clickable_plantuml: plantuml node in '%s' has no resolvable source path — skipped",
                 app.env.docname,
             )
-            doc_no_idmap_count += 1
+            doc_unlinked_count += 1
             continue
         if key in puml_docnames and puml_docnames[key][0] != app.env.docname:
             logger.warning(
-                "clickable_plantuml: diagram '%s' found in both '%s' and '%s'"
-                " — last wins (path collision; check idmap source fields)",
+                "clickable_plantuml: diagram '%s' found in both '%s' and '%s' — last wins (path collision)",
                 key,
                 puml_docnames[key][0],
                 app.env.docname,
@@ -614,35 +533,33 @@ def on_doctree_read(app: Sphinx, doctree: nodes.document) -> None:
         anchor = _find_parent_section_id(node)
         puml_docnames[key] = (app.env.docname, anchor)
 
-    if doc_no_idmap_count:
-        no_idmap_counts_by_doc[app.env.docname] = doc_no_idmap_count
+    if doc_unlinked_count:
+        unlinked_counts_by_doc[app.env.docname] = doc_unlinked_count
     else:
-        no_idmap_counts_by_doc.pop(app.env.docname, None)
+        unlinked_counts_by_doc.pop(app.env.docname, None)
 
     setattr(app.env, _ENV_PUML_DOCNAMES, puml_docnames)
-    setattr(app.env, _ENV_NO_IDMAP_NODE_COUNTS_BY_DOC, no_idmap_counts_by_doc)
+    setattr(app.env, _ENV_UNLINKED_NODE_COUNTS_BY_DOC, unlinked_counts_by_doc)
 
 
 def on_build_finished(app: Sphinx, exception: Exception | None) -> None:
-    """Emit an aggregate info log for non-idmap-backed plantuml nodes."""
+    """Emit an aggregate info log for plantuml nodes that are in no link."""
     if app.builder.format != "html" or exception is not None:
         return
 
-    no_idmap_counts_by_doc: dict[str, int] = getattr(app.env, _ENV_NO_IDMAP_NODE_COUNTS_BY_DOC, {})
-    total = sum(no_idmap_counts_by_doc.values())
+    unlinked_counts_by_doc: dict[str, int] = getattr(app.env, _ENV_UNLINKED_NODE_COUNTS_BY_DOC, {})
+    total = sum(unlinked_counts_by_doc.values())
     if total:
         logger.info(
-            "clickable_plantuml: %d plantuml nodes had no idmap (not linkable)",
+            "clickable_plantuml: %d plantuml nodes are in no diagram link",
             total,
         )
 
 
 def on_doctree_resolved(app: Sphinx, doctree: nodes.document, docname: str) -> None:
-    """Inject ``url of <alias> is [[url]]`` into plantuml nodes.
+    """Write the element and call links into the plantuml nodes.
 
-    Resolves each reference in the diagram's idmap to its definer diagram,
-    applies a proximity tiebreak on ambiguity, and builds a URL whose base
-    depends on the configured ``plantuml_output_format``:
+    The URL base depends on the configured ``plantuml_output_format``:
 
     * ``svg_obj`` – the rendered SVG lives in the ``_images/`` directory and is
       embedded via ``<object>``; ``<a href>`` targets inside the SVG resolve
@@ -652,23 +569,27 @@ def on_doctree_resolved(app: Sphinx, doctree: nodes.document, docname: str) -> N
       HTML page, so the URL is
       ``app.builder.get_relative_uri(docname, target_docname)``.
     """
-    idmap_by_source: dict[str, Any] = getattr(app.env, _ENV_IDMAP_BY_SOURCE, {})
-    definition_index: dict[str, list[str]] = getattr(app.env, _ENV_DEF_INDEX, {})
-    name_index: dict[str, list[str]] = getattr(app.env, _ENV_NAME_INDEX, {})
-    if app.builder.format != "html" or not idmap_by_source:
+    source_keys: frozenset[str] = getattr(app.env, _ENV_SOURCE_KEYS, frozenset())
+    if app.builder.format != "html" or not source_keys:
         return
 
     PlantumlNode = _get_plantuml_node_class()
     if PlantumlNode is None:
         return
 
-    source_keys: frozenset[str] = getattr(app.env, _ENV_SOURCE_KEYS, frozenset(idmap_by_source))
+    element_links: dict[str, dict[str, str]] = getattr(app.env, _ENV_ELEMENT_LINKS, {})
+    call_links: dict[str, list[_CallLink]] = getattr(app.env, _ENV_CALL_LINKS, {})
     workspace_offset: str = getattr(app.env, _ENV_WORKSPACE_OFFSET, app.srcdir)
     puml_docnames: dict[str, tuple[str, str | None]] = getattr(app.env, _ENV_PUML_DOCNAMES, {})
-
-    # Loop-invariant for the whole build: resolve once instead of per reference.
     output_format = getattr(app.config, "plantuml_output_format", "png")
     imagedir = getattr(app.builder, "imagedir", "_images")
+
+    def _url_for(target: str) -> str | None:
+        target_info = puml_docnames.get(target)
+        if target_info is None:
+            logger.debug("clickable_plantuml: diagram '%s' is in no document — no link", target)
+            return None
+        return _build_target_url(app.builder, output_format, imagedir, docname, *target_info)
 
     modified_count = 0
     for node in doctree.findall(PlantumlNode):
@@ -676,49 +597,16 @@ def on_doctree_resolved(app: Sphinx, doctree: nodes.document, docname: str) -> N
         if not source_key:
             continue
 
-        idmap = idmap_by_source.get(source_key)
-        if idmap is None:
-            continue
-
-        by_name = bool(idmap.get("match_by_name"))
-        resolved_links: dict[str, str] = {}
-        seen_aliases_in_node: set[str] = set()
-        for ref in idmap.get("references", []):
-            alias: str = ref.get("alias", "")
-            fqn: str = ref.get("id", alias)
-            if not alias or alias in seen_aliases_in_node:
-                continue
-
-            target_source = _resolve_definer(
-                fqn, source_key, definition_index, name_index, idmap_by_source, by_name=by_name
-            )
-            if target_source is None:
-                continue
-
-            target_info = puml_docnames.get(target_source)
-            if target_info is None:
-                logger.debug(
-                    "clickable_plantuml: definer '%s' for alias '%s' not found in any document — skipping",
-                    target_source,
-                    alias,
-                )
-                continue
-
-            target_docname, target_anchor = target_info
-            url = _build_target_url(
-                app.builder,
-                output_format,
-                imagedir,
-                docname,
-                target_docname,
-                target_anchor,
-            )
-
-            resolved_links[alias] = _escape_plantuml_url(url)
-            seen_aliases_in_node.add(alias)
-
-        if resolved_links:
-            node["uml"] = _inject_links_into_uml(node.get("uml", ""), resolved_links)
+        uml = node.get("uml", "")
+        resolved_links = {
+            alias: _escape_plantuml_url(url)
+            for alias, target in element_links.get(source_key, {}).items()
+            if (url := _url_for(target)) is not None
+        }
+        linked_uml = _inject_links_into_uml(uml, resolved_links)
+        linked_uml = _link_calls(linked_uml, call_links.get(source_key, []), _url_for)
+        if linked_uml != uml:
+            node["uml"] = linked_uml
             modified_count += 1
 
     if modified_count:
@@ -736,8 +624,8 @@ def on_env_purge_doc(app: Sphinx, env: Any, docname: str) -> None:
     for k in keys_to_remove:
         del puml_docnames[k]
 
-    no_idmap_counts_by_doc: dict[str, int] = getattr(env, _ENV_NO_IDMAP_NODE_COUNTS_BY_DOC, {})
-    no_idmap_counts_by_doc.pop(docname, None)
+    unlinked_counts_by_doc: dict[str, int] = getattr(env, _ENV_UNLINKED_NODE_COUNTS_BY_DOC, {})
+    unlinked_counts_by_doc.pop(docname, None)
 
 
 def on_env_merge_info(app: Sphinx, env: Any, docnames: set[str], other: Any) -> None:
@@ -747,14 +635,16 @@ def on_env_merge_info(app: Sphinx, env: Any, docnames: set[str], other: Any) -> 
     puml_docnames.update(other_map)
     setattr(env, _ENV_PUML_DOCNAMES, puml_docnames)
 
-    no_idmap_counts_by_doc: dict[str, int] = getattr(env, _ENV_NO_IDMAP_NODE_COUNTS_BY_DOC, {})
-    other_no_idmap_counts_by_doc: dict[str, int] = getattr(other, _ENV_NO_IDMAP_NODE_COUNTS_BY_DOC, {})
-    no_idmap_counts_by_doc.update(other_no_idmap_counts_by_doc)
-    setattr(env, _ENV_NO_IDMAP_NODE_COUNTS_BY_DOC, no_idmap_counts_by_doc)
+    unlinked_counts_by_doc: dict[str, int] = getattr(env, _ENV_UNLINKED_NODE_COUNTS_BY_DOC, {})
+    other_unlinked_counts_by_doc: dict[str, int] = getattr(other, _ENV_UNLINKED_NODE_COUNTS_BY_DOC, {})
+    unlinked_counts_by_doc.update(other_unlinked_counts_by_doc)
+    setattr(env, _ENV_UNLINKED_NODE_COUNTS_BY_DOC, unlinked_counts_by_doc)
 
 
 def setup(app: Sphinx) -> dict[str, Any]:
     """Register the extension with Sphinx."""
+    app.add_config_value("clickable_plantuml_links_digest", "", "env")
+    app.connect("config-inited", on_config_inited)
     app.connect("builder-inited", on_builder_inited)
     app.connect("doctree-read", on_doctree_read)
     app.connect("doctree-resolved", on_doctree_resolved)
@@ -763,7 +653,7 @@ def setup(app: Sphinx) -> dict[str, Any]:
     app.connect("build-finished", on_build_finished)
 
     return {
-        "version": "5.0",
+        "version": "6.0",
         "parallel_read_safe": True,
         "parallel_write_safe": True,
     }

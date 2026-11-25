@@ -14,17 +14,17 @@
 //! Outputs written for the resolved diagrams of a run. Each output is an
 //! [`OutputSink`]; the run feeds every enabled sink the same diagrams.
 
-use std::collections::HashSet;
 use std::fs;
 use std::path::{Path, PathBuf};
 
 use activity_serializer::ActivitySerializer;
+use class_diagram::ClassDiagram;
 use class_serializer::ClassSerializer;
 use component_serializer::ComponentSerializer;
+use sequence_logic::SequenceTree;
 use sequence_serializer::SequenceSerializer;
 
 use puml_api::{render_trlc, ApiCollector};
-use puml_idmap::{write_empty_idmap_to_file, write_idmap_to_file, IdMapModel};
 use puml_utils::{write_fbs_to_file, write_json_to_file};
 
 use crate::parsing::ParsedDiagram;
@@ -94,106 +94,33 @@ impl OutputSink for FbsSink {
                 "logic.ast",
             )?;
         }
-        let buffer = serialize_resolved_diagram(diagram.resolved);
+        let buffer =
+            serialize_resolved_diagram(diagram.resolved, diagram.diagram_name, diagram.source_file);
         write_fbs_to_file(&buffer, diagram.naming_path, &self.dir)?;
         Ok(())
     }
 }
 
-pub fn serialize_resolved_diagram(resolved: &ResolvedDiagram) -> Vec<u8> {
+/// FlatBuffers binary of `resolved`; the root carries `source` and, for a
+/// component diagram, the `@startuml` name.
+pub fn serialize_resolved_diagram(
+    resolved: &ResolvedDiagram,
+    diagram_name: Option<&str>,
+    source: &str,
+) -> Vec<u8> {
     match resolved {
         ResolvedDiagram::Activity(model) => ActivitySerializer::serialize(model),
-        ResolvedDiagram::Component(model) => ComponentSerializer::serialize(model),
-        ResolvedDiagram::Class(model) => ClassSerializer::serialize(model),
-        ResolvedDiagram::Sequence(model) => SequenceSerializer::serialize(model),
-    }
-}
-
-/// The `<stem>.idmap.json` paths written so far in `dir`. Two inputs with the
-/// same file stem (in different directories) would silently overwrite each
-/// other's file, so a second claim of a path fails.
-pub struct IdmapOutputs {
-    dir: PathBuf,
-    claimed: HashSet<PathBuf>,
-}
-
-impl IdmapOutputs {
-    pub fn new(dir: PathBuf) -> Self {
-        Self {
-            dir,
-            claimed: HashSet::new(),
+        ResolvedDiagram::Component(model) => {
+            ComponentSerializer::serialize(model, diagram_name, Some(source))
         }
-    }
-
-    pub fn dir(&self) -> &Path {
-        &self.dir
-    }
-
-    /// Claims the idmap path of `naming_path`; `input_kind` names the inputs
-    /// in the error of a collision.
-    pub fn claim(&mut self, naming_path: &Path, input_kind: &str) -> SinkResult {
-        let output_path = puml_idmap::idmap_output_path(naming_path, &self.dir);
-        if !self.claimed.insert(output_path.clone()) {
-            return Err(format!(
-                "duplicate idmap output {}: multiple {} files map to the \
-                 same <stem>.idmap.json in {}; rename one of the inputs so \
-                 their file stems differ",
-                output_path.display(),
-                input_kind,
-                self.dir.display(),
-            )
-            .into());
-        }
-        Ok(())
-    }
-}
-
-/// `<stem>.idmap.json` per diagram: the defines/references the
-/// clickable_plantuml Sphinx extension uses to resolve cross-diagram links.
-pub struct IdmapSink {
-    outputs: IdmapOutputs,
-}
-
-impl IdmapSink {
-    pub fn new(dir: PathBuf) -> Self {
-        Self {
-            outputs: IdmapOutputs::new(dir),
-        }
-    }
-}
-
-impl OutputSink for IdmapSink {
-    fn write(&mut self, diagram: &DiagramOutput<'_>) -> SinkResult {
-        self.outputs.claim(diagram.naming_path, "input")?;
-        let dir = self.outputs.dir();
-        match idmap_model_for(diagram.resolved) {
-            Some(model) => {
-                write_idmap_to_file(
-                    model,
-                    diagram.naming_path,
-                    Some(diagram.source_file),
-                    diagram.diagram_name,
-                    dir,
-                )?;
-            }
-            None => {
-                write_empty_idmap_to_file(diagram.naming_path, Some(diagram.source_file), dir)?;
-            }
-        }
-        Ok(())
-    }
-}
-
-/// Map a resolved diagram to the `IdMapModel` variant used to build its
-/// `.idmap.json`, or `None` for diagram kinds with no linkable elements
-/// (currently only `Activity`), which the caller must route to
-/// [`write_empty_idmap_to_file`] instead.
-pub fn idmap_model_for(resolved: &ResolvedDiagram) -> Option<IdMapModel<'_>> {
-    match resolved {
-        ResolvedDiagram::Component(model) => Some(IdMapModel::Component(model)),
-        ResolvedDiagram::Class(model) => Some(IdMapModel::Class(model)),
-        ResolvedDiagram::Sequence(model) => Some(IdMapModel::Sequence(model)),
-        ResolvedDiagram::Activity(_) => None,
+        ResolvedDiagram::Class(model) => ClassSerializer::serialize(&ClassDiagram {
+            source: Some(source.to_string()),
+            ..model.clone()
+        }),
+        ResolvedDiagram::Sequence(model) => SequenceSerializer::serialize(&SequenceTree {
+            source: Some(source.to_string()),
+            ..model.clone()
+        }),
     }
 }
 
@@ -271,16 +198,6 @@ mod tests {
             diagram_name: None,
             resolved,
         }
-    }
-
-    #[test]
-    fn idmap_claim_rejects_a_second_input_with_the_same_stem() {
-        let mut outputs = IdmapOutputs::new(PathBuf::from("out"));
-
-        outputs.claim(Path::new("a/x.puml"), "input").unwrap();
-        let error = outputs.claim(Path::new("b/x.puml"), "input").unwrap_err();
-
-        assert!(error.to_string().starts_with("duplicate idmap output"));
     }
 
     #[test]

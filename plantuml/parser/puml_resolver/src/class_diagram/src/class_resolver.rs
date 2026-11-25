@@ -174,6 +174,7 @@ impl ClassResolver {
     pub fn new() -> Self {
         Self {
             logic: ClassDiagram {
+                source: None,
                 name: String::new(),
                 entities: Vec::new(),
                 free_functions: Vec::new(),
@@ -1171,6 +1172,7 @@ impl DiagramResolver for ClassResolver {
         let logic_class = std::mem::replace(
             &mut self.logic,
             ClassDiagram {
+                source: None,
                 name: String::new(),
                 entities: Vec::new(),
                 free_functions: Vec::new(),

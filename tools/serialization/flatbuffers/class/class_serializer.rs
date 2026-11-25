@@ -26,6 +26,7 @@ impl ClassSerializer {
         let mut builder = FlatBufferBuilder::new();
 
         let name_offset = builder.create_string(&diagram.name);
+        let source_offset = diagram.source.as_deref().map(|s| builder.create_string(s));
 
         let entity_offsets: Vec<_> = diagram
             .entities
@@ -47,6 +48,7 @@ impl ClassSerializer {
                 name: Some(name_offset),
                 entities: Some(entities_offset),
                 free_functions: Some(free_functions_offset),
+                source: source_offset,
             },
         );
 

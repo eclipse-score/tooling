@@ -14,7 +14,7 @@
 use serde::{Deserialize, Deserializer};
 use serde_json::Value;
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::Command;
 
 const DESIGN_SOURCE_FILE_LABEL: &str = "Design source file";
@@ -212,10 +212,60 @@ fn run_validation_cli(case_name: &str, cli_args: &[String]) -> CliRunResult {
 }
 
 pub fn run_validation_profile(case_name: &str, profile: &str, input_bundle: Value) -> CliRunResult {
+    run_validation_profile_with_args(case_name, profile, input_bundle, &[])
+}
+
+/// Runs the `dependable-element` profile with `--links-output` and returns the
+/// parsed `diagram_links.json`.
+pub fn run_dependable_element_links(case_name: &str, input_bundle: Value) -> (CliRunResult, Value) {
+    let links_path = test_tmp_file_path(case_name, "_diagram_links.json");
+    let result = run_validation_profile_with_args(
+        case_name,
+        "dependable-element",
+        input_bundle,
+        &[
+            "--links-output".to_string(),
+            links_path.display().to_string(),
+        ],
+    );
+    (result, read_links(&links_path))
+}
+
+/// Runs the `dependable-element` profile with `--links-only`: no validation,
+/// no report. Returns whether the CLI succeeded and the parsed
+/// `diagram_links.json`.
+pub fn run_dependable_element_links_only(case_name: &str, input_bundle: Value) -> (bool, Value) {
+    let links_path = test_tmp_file_path(case_name, "_diagram_links.json");
+    let inputs_path = write_inputs(case_name, &input_bundle);
+
+    let output = Command::new(case_file_path("validation/core/validation_cli"))
+        .args(["--profile", "dependable-element", "--inputs"])
+        .arg(&inputs_path)
+        .arg("--links-output")
+        .arg(&links_path)
+        .arg("--links-only")
+        .output()
+        .unwrap_or_else(|error| {
+            panic!("failed to execute validation_cli for {case_name}: {error}")
+        });
+    (output.status.success(), read_links(&links_path))
+}
+
+fn read_links(links_path: &Path) -> Value {
+    let content = fs::read_to_string(links_path).unwrap_or_else(|error| {
+        panic!(
+            "failed to read diagram links {}: {error}",
+            links_path.display()
+        )
+    });
+    serde_json::from_str(&content).expect("diagram links are no valid JSON")
+}
+
+fn write_inputs(case_name: &str, input_bundle: &Value) -> PathBuf {
     let inputs_path = test_tmp_file_path(case_name, "_inputs.json");
     fs::write(
         &inputs_path,
-        serde_json::to_string_pretty(&input_bundle).expect("failed to serialize validation inputs"),
+        serde_json::to_string_pretty(input_bundle).expect("failed to serialize validation inputs"),
     )
     .unwrap_or_else(|error| {
         panic!(
@@ -223,14 +273,23 @@ pub fn run_validation_profile(case_name: &str, profile: &str, input_bundle: Valu
             inputs_path.display()
         )
     });
+    inputs_path
+}
 
-    run_validation_cli(
-        case_name,
-        &[
-            "--profile".to_string(),
-            profile.to_string(),
-            "--inputs".to_string(),
-            inputs_path.display().to_string(),
-        ],
-    )
+fn run_validation_profile_with_args(
+    case_name: &str,
+    profile: &str,
+    input_bundle: Value,
+    extra_args: &[String],
+) -> CliRunResult {
+    let inputs_path = write_inputs(case_name, &input_bundle);
+
+    let mut args = vec![
+        "--profile".to_string(),
+        profile.to_string(),
+        "--inputs".to_string(),
+        inputs_path.display().to_string(),
+    ];
+    args.extend_from_slice(extra_args);
+    run_validation_cli(case_name, &args)
 }

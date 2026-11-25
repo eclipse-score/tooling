@@ -392,6 +392,7 @@ impl Reader for ClassDiagramReader {
             let free_functions = read_free_functions(diagram, path)?;
 
             diagrams.push(ClassDiagram {
+                source: diagram.source().map(|s| s.to_string()),
                 name: diagram.name().to_string(),
                 entities,
                 free_functions,

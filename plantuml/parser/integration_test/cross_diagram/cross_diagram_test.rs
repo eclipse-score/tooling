@@ -11,15 +11,16 @@
 // SPDX-License-Identifier: Apache-2.0
 // *******************************************************************************
 
-//! Cross-diagram integration suite for `puml_cli`'s `--idmap-output-dir` output.
+//! Cross-diagram integration suite for the element ids that diagram links use.
 //!
 //! Each seed case directory under this crate contains one or more `.puml`
 //! files, an optional `case.yaml` describing how to invoke `puml_cli` and
 //! which cross-file identifier assertions must hold, and an `output.json`
 //! (or, for cases where every file is expected to fail, `output.yaml`)
-//! golden capturing the idmap `defines`/`references` produced for every
-//! file. This suite drives `test_framework::run_case` like the other
-//! diagram-parser/resolver suites: [`PumlCliIdmapRunner`] shells out to
+//! golden capturing the `defines`/`references` of every file, as read by
+//! `validation::links::DiagramFacts` from the `puml_cli` FlatBuffers. This
+//! suite drives `test_framework::run_case` like the other
+//! diagram-parser/resolver suites: [`PumlCliFactsRunner`] shells out to
 //! `puml_cli` per file (`DiagramProcessor`), and [`CrossDiagramChecker`]
 //! adds the `links`/`distinct` cross-file id assertions on top of the
 //! framework's default per-file checks (`ExpectationChecker::check_case`).
@@ -40,6 +41,7 @@ use test_framework::{
     run_case, DefaultExpectationChecker, DiagramProcessor, ErrorView, ExpectationChecker, Expected,
     ProjectedError,
 };
+use validation::links::{DiagramFacts, FactEntry};
 
 #[derive(Debug, Default, Deserialize)]
 #[serde(deny_unknown_fields, default)]
@@ -54,17 +56,17 @@ struct CaseConfig {
     /// `diagram_types`) and no `errors`.
     group: bool,
     /// Groups of `file.puml#Alias` references that must resolve to the same
-    /// idmap id.
+    /// element id.
     links: Vec<Vec<String>>,
     /// Groups of `file.puml#Alias` references that must resolve to pairwise
-    /// distinct idmap ids.
+    /// distinct element ids.
     distinct: Vec<Vec<String>>,
     /// Files that must fail, with substrings their error must contain. Such
-    /// files produce no idmap output.
+    /// files produce no output.
     errors: HashMap<String, Vec<String>>,
 }
 
-/// One or more idmap ids sharing a single alias, e.g. two same-named classes
+/// One or more element ids sharing a single alias, e.g. two same-named classes
 /// nested in different scopes. A golden may write either a single scalar
 /// (`Recorder: "logging.Recorder"`) or a list (`Recorder: ["a.R", "b.R"]`).
 #[derive(Debug, PartialEq, Eq)]
@@ -106,7 +108,7 @@ impl Serialize for IdSet {
 
 #[derive(Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
 #[serde(deny_unknown_fields, default)]
-struct IdMapSections {
+struct FactSections {
     defines: BTreeMap<String, IdSet>,
     references: BTreeMap<String, IdSet>,
 }
@@ -183,14 +185,14 @@ impl ErrorView for PumlCliError {
     }
 }
 
-/// Runs `puml_cli --idmap-output-dir` once for `paths` (one file, or a whole
+/// Runs `puml_cli --fbs-output-dir` once for `paths` (one file, or a whole
 /// group) and parses each file's output (or the failure) into this suite's
-/// `DiagramProcessor` types. Returns one `IdMapSections` per path, in order.
+/// `DiagramProcessor` types. Returns one `FactSections` per path, in order.
 fn run_files(
     case_name: &str,
     paths: &[&Path],
     diagram_type: Option<&str>,
-) -> Result<Vec<IdMapSections>, PumlCliError> {
+) -> Result<Vec<FactSections>, PumlCliError> {
     let first = paths[0];
     let out_dir_name = if paths.len() == 1 {
         first
@@ -209,7 +211,7 @@ fn run_files(
     if let Some(diagram_type) = diagram_type {
         cmd.arg("--diagram-type").arg(diagram_type);
     }
-    cmd.arg("--idmap-output-dir").arg(&out_dir);
+    cmd.arg("--fbs-output-dir").arg(&out_dir);
 
     let output = cmd
         .output()
@@ -230,37 +232,30 @@ fn run_files(
 
     Ok(paths
         .iter()
-        .map(|path| read_idmap(case_name, &out_dir, path))
+        .map(|path| read_facts(case_name, &out_dir, path))
         .collect())
 }
 
-/// Reads `<stem>.idmap.json` for `path` from `out_dir`.
-fn read_idmap(case_name: &str, out_dir: &Path, path: &Path) -> IdMapSections {
+/// Reads the defines/references of `<stem>.fbs.bin` for `path` from `out_dir`.
+fn read_facts(case_name: &str, out_dir: &Path, path: &Path) -> FactSections {
     let stem = path
         .file_stem()
         .and_then(|s| s.to_str())
         .unwrap_or_else(|| panic!("{case_name}: non-utf8 file name {}", path.display()));
-    let idmap_path = out_dir.join(format!("{stem}.idmap.json"));
-    let idmap_content = fs::read_to_string(&idmap_path)
-        .unwrap_or_else(|error| panic!("failed to read {}: {error}", idmap_path.display()));
+    let fbs_path = out_dir
+        .join(format!("{stem}.fbs.bin"))
+        .display()
+        .to_string();
+    let facts = DiagramFacts::read_files(std::slice::from_ref(&fbs_path))
+        .unwrap_or_else(|error| panic!("failed to read {fbs_path}: {error}"));
 
-    #[derive(Deserialize)]
-    struct RawIdMapEntry {
-        alias: String,
-        id: String,
-    }
-    #[derive(Deserialize)]
-    struct RawIdMapFile {
-        defines: Vec<RawIdMapEntry>,
-        references: Vec<RawIdMapEntry>,
-    }
-
-    let raw: RawIdMapFile = serde_json::from_str(&idmap_content)
-        .unwrap_or_else(|error| panic!("failed to parse {}: {error}", idmap_path.display()));
-    let to_map = |entries: Vec<RawIdMapEntry>| {
+    let to_map = |entries: Vec<&FactEntry>| {
         let mut grouped: BTreeMap<String, BTreeSet<String>> = BTreeMap::new();
         for entry in entries {
-            grouped.entry(entry.alias).or_default().insert(entry.id);
+            grouped
+                .entry(entry.alias.clone())
+                .or_default()
+                .insert(entry.id.clone());
         }
         grouped
             .into_iter()
@@ -268,23 +263,23 @@ fn read_idmap(case_name: &str, out_dir: &Path, path: &Path) -> IdMapSections {
             .collect::<BTreeMap<_, _>>()
     };
 
-    IdMapSections {
-        defines: to_map(raw.defines),
-        references: to_map(raw.references),
+    FactSections {
+        defines: to_map(facts.iter().flat_map(|f| &f.defines).collect()),
+        references: to_map(facts.iter().flat_map(|f| &f.references).collect()),
     }
 }
 
 /// Runs `puml_cli` for every file in a case, driven by `test_framework`.
-struct PumlCliIdmapRunner;
+struct PumlCliFactsRunner;
 
-impl DiagramProcessor for PumlCliIdmapRunner {
-    type Output = IdMapSections;
+impl DiagramProcessor for PumlCliFactsRunner {
+    type Output = FactSections;
     type Error = PumlCliError;
 
     fn run(
         &self,
         files: &HashSet<Rc<PathBuf>>,
-    ) -> Result<HashMap<Rc<PathBuf>, IdMapSections>, PumlCliError> {
+    ) -> Result<HashMap<Rc<PathBuf>, FactSections>, PumlCliError> {
         let dir = files
             .iter()
             .next()
@@ -318,8 +313,8 @@ impl DiagramProcessor for PumlCliIdmapRunner {
                 .map(|mut sections| sections.remove(0));
 
             match (outcome, config.errors.get(&file_name)) {
-                (Ok(idmap), None) => {
-                    results.insert(Rc::clone(path), idmap);
+                (Ok(facts), None) => {
+                    results.insert(Rc::clone(path), facts);
                 }
                 (Err(error), None) => return Err(error),
                 (Err(error), Some(substrings)) => {
@@ -340,11 +335,11 @@ impl DiagramProcessor for PumlCliIdmapRunner {
     }
 }
 
-/// Resolves a `"file.puml#Alias"` reference to its idmap id. `alias` must
+/// Resolves a `"file.puml#Alias"` reference to its element id. `alias` must
 /// name exactly one define-or-reference entry, and that entry must resolve
 /// to exactly one id, or this panics.
 fn resolve_ref(
-    resolved: &HashMap<String, &IdMapSections>,
+    resolved: &HashMap<String, &FactSections>,
     reference: &str,
     case_name: &str,
 ) -> String {
@@ -353,7 +348,7 @@ fn resolve_ref(
     });
 
     let sections = resolved.get(file_name).unwrap_or_else(|| {
-        panic!("{case_name}: reference {reference:?} names a file with no successful idmap output")
+        panic!("{case_name}: reference {reference:?} names a file with no successful output")
     });
 
     let ids = match (sections.defines.get(alias), sections.references.get(alias)) {
@@ -362,7 +357,7 @@ fn resolve_ref(
         }
         (Some(ids), None) | (None, Some(ids)) => ids,
         (None, None) => {
-            panic!("{case_name}: alias {alias:?} not found in {file_name}'s idmap")
+            panic!("{case_name}: alias {alias:?} not found in {file_name}'s facts")
         }
     };
 
@@ -377,7 +372,7 @@ fn resolve_ref(
 
 /// Catches typos in `case.yaml`: file names that don't exist in this case,
 /// `errors` entries that assert nothing, `links`/`distinct` groups too small
-/// to assert anything, and references to files that produce no idmap.
+/// to assert anything, and references to files that produce no output.
 fn validate_case_config(case_name: &str, file_names: &BTreeSet<String>, config: &CaseConfig) {
     assert!(
         !config.group || (config.diagram_types.is_empty() && config.errors.is_empty()),
@@ -414,7 +409,7 @@ fn validate_case_config(case_name: &str, file_names: &BTreeSet<String>, config: 
             );
             assert!(
                 !config.errors.contains_key(file_name),
-                "{case_name}: reference {reference:?} names a file listed in `errors`, which produces no idmap"
+                "{case_name}: reference {reference:?} names a file listed in `errors`, which produces no output"
             );
         }
     }
@@ -424,9 +419,9 @@ fn validate_case_config(case_name: &str, file_names: &BTreeSet<String>, config: 
 /// framework's default per-file `check_ok`/`check_err`.
 struct CrossDiagramChecker;
 
-impl ExpectationChecker<PumlCliError, IdMapSections> for CrossDiagramChecker {
-    fn check_ok(&self, actual: &IdMapSections, expected: &Expected<IdMapSections>) {
-        ExpectationChecker::<PumlCliError, IdMapSections>::check_ok(
+impl ExpectationChecker<PumlCliError, FactSections> for CrossDiagramChecker {
+    fn check_ok(&self, actual: &FactSections, expected: &Expected<FactSections>) {
+        ExpectationChecker::<PumlCliError, FactSections>::check_ok(
             &DefaultExpectationChecker,
             actual,
             expected,
@@ -434,7 +429,7 @@ impl ExpectationChecker<PumlCliError, IdMapSections> for CrossDiagramChecker {
     }
 
     fn check_err(&self, err: &PumlCliError, expected: &YamlValue, base_dir: &Path) {
-        ExpectationChecker::<PumlCliError, IdMapSections>::check_err(
+        ExpectationChecker::<PumlCliError, FactSections>::check_err(
             &DefaultExpectationChecker,
             err,
             expected,
@@ -442,7 +437,7 @@ impl ExpectationChecker<PumlCliError, IdMapSections> for CrossDiagramChecker {
         );
     }
 
-    fn check_case(&self, outputs: &HashMap<Rc<PathBuf>, IdMapSections>, dir: &Path) {
+    fn check_case(&self, outputs: &HashMap<Rc<PathBuf>, FactSections>, dir: &Path) {
         let case_name = dir
             .file_name()
             .and_then(|n| n.to_str())
@@ -460,7 +455,7 @@ impl ExpectationChecker<PumlCliError, IdMapSections> for CrossDiagramChecker {
             .collect();
         validate_case_config(case_name, &file_names, &config);
 
-        let by_name: HashMap<String, &IdMapSections> = outputs
+        let by_name: HashMap<String, &FactSections> = outputs
             .iter()
             .map(|(path, sections)| {
                 let file_name = path
@@ -528,7 +523,7 @@ fn run_cross_diagram_case(case_name: &str) {
     run_case(
         "integration_test/cross_diagram",
         case_name,
-        PumlCliIdmapRunner,
+        PumlCliFactsRunner,
         CrossDiagramChecker,
     );
 }

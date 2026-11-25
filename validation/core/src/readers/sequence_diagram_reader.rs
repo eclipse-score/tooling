@@ -91,6 +91,7 @@ impl Reader for SequenceDiagramReader {
             };
 
             diagrams.push(SequenceTree {
+                source: diagram.source().map(|s| s.to_string()),
                 name: diagram.name().map(|s| s.to_string()),
                 participants,
                 root,

@@ -23,11 +23,12 @@ use std::collections::BTreeSet;
 
 use super::shared::{
     best_string_suggestion, build_container_units, build_observed_call_contexts,
-    build_unit_bindings, extract_method_name, format_name_list, format_sequence_call,
-    ContainerUnits, SequenceCallContext, UnitBindings,
+    build_unit_bindings, format_name_list, format_sequence_call, ContainerUnits,
+    SequenceCallContext, UnitBindings,
 };
 use crate::models::{
-    ComponentDiagramArchitecture, Environment, PublicApiIndex, SequenceDiagramIndex,
+    extract_method_name, ComponentDiagramArchitecture, Environment, PublicApiIndex,
+    SequenceDiagramIndex,
 };
 use crate::results::{ErrorBuilder, ErrorCategory};
 use crate::ValidationResult;

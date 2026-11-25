@@ -560,6 +560,7 @@ mod tests {
     #[test]
     fn class_entity_index_reports_duplicate_source_locations() {
         let diagrams = vec![ClassDiagram {
+            source: None,
             name: "classes".to_string(),
             entities: vec![
                 with_method(entity("Unit.Sample", "design_a.puml", 12), "Run"),
@@ -580,6 +581,7 @@ mod tests {
     #[test]
     fn class_entity_index_merges_declarations_with_bodies_across_diagrams() {
         let diagrams = vec![ClassDiagram {
+            source: None,
             name: "classes".to_string(),
             entities: vec![
                 with_method(entity("Unit.Sample", "design_a.puml", 12), "Run"),
@@ -607,6 +609,7 @@ mod tests {
         let mut const_overload = with_method(entity("Unit.Sample", "design_b.puml", 34), "data");
         const_overload.methods[0].modifiers = vec![MethodModifier::Const];
         let diagrams = vec![ClassDiagram {
+            source: None,
             name: "classes".to_string(),
             entities: vec![
                 with_method(entity("Unit.Sample", "design_a.puml", 12), "data"),
@@ -631,6 +634,7 @@ mod tests {
         let mut qualified = with_method(entity("a.B", "design_b.puml", 34), "Stop");
         qualified.name = "E".to_string(); // alias, as in `class B as E`
         let diagrams = vec![ClassDiagram {
+            source: None,
             name: "classes".to_string(),
             entities: vec![
                 with_method(entity("a.B", "design_a.puml", 12), "Run"),
@@ -653,6 +657,7 @@ mod tests {
     #[test]
     fn class_entity_index_reports_ids_differing_in_case_even_when_bodyless() {
         let diagrams = vec![ClassDiagram {
+            source: None,
             name: "classes".to_string(),
             entities: vec![
                 with_method(entity("Engine", "design_a.puml", 12), "start"),
@@ -682,6 +687,7 @@ mod tests {
         partial.entity_type = EntityType::Enum;
         partial.enum_literals = vec![literal("Running", 0, 2)];
         let diagrams = vec![ClassDiagram {
+            source: None,
             name: "classes".to_string(),
             entities: vec![full, partial],
             free_functions: Vec::new(),
@@ -699,6 +705,7 @@ mod tests {
         let mut conflicting = with_method(entity("Unit.Sample", "design_b.puml", 34), "Run");
         conflicting.methods[0].return_type = Some("int".into());
         let diagrams = vec![ClassDiagram {
+            source: None,
             name: "classes".to_string(),
             entities: vec![
                 with_method(entity("Unit.Sample", "design_a.puml", 12), "Run"),
@@ -719,6 +726,7 @@ mod tests {
     #[test]
     fn implementation_class_entity_index_ignores_same_source_location() {
         let diagrams = vec![ClassDiagram {
+            source: None,
             name: "implementation".to_string(),
             entities: vec![
                 entity("Unit.Sample", "implementation.h", 12),
@@ -747,6 +755,7 @@ mod tests {
             ],
         ] {
             let diagrams = vec![ClassDiagram {
+                source: None,
                 name: "classes".to_string(),
                 entities,
                 free_functions: Vec::new(),
@@ -778,6 +787,7 @@ mod tests {
         detail.relationships = vec![relationship("Unit.B"), relationship("Unit.C")];
 
         let diagrams = vec![ClassDiagram {
+            source: None,
             name: "classes".to_string(),
             entities: vec![overview, detail],
             free_functions: Vec::new(),
@@ -806,6 +816,7 @@ mod tests {
         let mut interface = entity("Unit.Sample", "detail.puml", 5);
         interface.entity_type = EntityType::Interface;
         let diagrams = vec![ClassDiagram {
+            source: None,
             name: "classes".to_string(),
             entities: vec![entity("Unit.Sample", "overview.puml", 3), interface],
             free_functions: Vec::new(),
@@ -822,6 +833,7 @@ mod tests {
 
     fn diagram_of(entities: Vec<SimpleEntity>) -> Vec<ClassDiagram> {
         vec![ClassDiagram {
+            source: None,
             name: "classes".to_string(),
             entities,
             free_functions: Vec::new(),
@@ -1034,6 +1046,7 @@ mod tests {
                 declared.methods.push(method(name));
             }
             ClassDiagram {
+                source: None,
                 name: file.to_string(),
                 entities: vec![declared],
                 free_functions: Vec::new(),
@@ -1064,6 +1077,7 @@ mod tests {
     #[test]
     fn internal_api_index_collects_interfaces_and_methods() {
         let diagrams = vec![ClassDiagram {
+            source: None,
             name: "internal_api".to_string(),
             entities: vec![
                 SimpleEntity {
@@ -1116,6 +1130,7 @@ mod tests {
     #[test]
     fn internal_api_index_keeps_distinct_interface_ids() {
         let diagrams = vec![ClassDiagram {
+            source: None,
             name: "internal_api".to_string(),
             entities: vec![
                 SimpleEntity {

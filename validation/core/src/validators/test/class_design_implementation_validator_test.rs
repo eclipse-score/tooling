@@ -140,6 +140,7 @@ fn entity_in_namespace(
 
 fn index(entities: Vec<SimpleEntity>) -> ClassEntityIndex {
     let diagrams: ClassDiagramInputs = vec![ClassDiagram {
+        source: None,
         name: "unit".to_string(),
         entities,
         free_functions: Vec::new(),
@@ -149,6 +150,7 @@ fn index(entities: Vec<SimpleEntity>) -> ClassEntityIndex {
 
 fn index_with_free_functions(free_functions: Vec<FreeFunctionDecl>) -> ClassEntityIndex {
     let diagrams: ClassDiagramInputs = vec![ClassDiagram {
+        source: None,
         name: "unit".to_string(),
         entities: Vec::new(),
         free_functions,

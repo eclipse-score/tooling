@@ -38,7 +38,7 @@ def _unit_design_impl(ctx):
     Collects unit design artifacts (RST documents and PlantUML diagrams) and
     provides them through the UnitDesignInfo and SphinxSourcesInfo providers.
     PlantUML files are passed through for Sphinx rendering and parsed into
-    FlatBuffers binaries and idmap sidecars.
+    FlatBuffers binaries.
 
     Args:
         ctx: Rule context
@@ -66,17 +66,10 @@ def _unit_design_impl(ctx):
         stems,
         progress_label = "{} (dynamic)".format(ctx.label),
     )
-    idmap_list = static.idmap + dynamic.idmap
     static_fbs = depset(static.fbs)
     dynamic_fbs = depset(dynamic.fbs)
 
-    # Stage idmap sidecars into the sphinx sources alongside the source
-    # diagrams so `clickable_plantuml` (which scans `srcdir` recursively for
-    # `*.idmap.json`) can discover them - see architectural_design.bzl's
-    # identical `all_idmap_files`/`sphinx_files` handling.
-    sphinx_srcs = depset(
-        transitive = [depset(idmap_list), all_source_files],
-    )
+    sphinx_srcs = all_source_files
 
     return [
         DefaultInfo(files = all_source_files),

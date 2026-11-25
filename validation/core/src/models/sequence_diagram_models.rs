@@ -347,6 +347,7 @@ mod tests {
     fn sequence_index_collects_nested_calls_recursively() {
         let inputs = SequenceDiagramInputs {
             diagrams: vec![SequenceTree {
+                source: None,
                 name: Some("seq".to_string()),
                 participants: Vec::new(),
                 root: Block {
@@ -390,6 +391,7 @@ mod tests {
     fn sequence_index_keys_participants_by_uid() {
         let inputs = SequenceDiagramInputs {
             diagrams: vec![SequenceTree {
+                source: None,
                 name: Some("seq".to_string()),
                 participants: vec![
                     participant("Unit 1", Some("unit_1"), "unit_1"),
@@ -413,6 +415,7 @@ mod tests {
     fn sequence_index_reports_participant_with_empty_uid() {
         let inputs = SequenceDiagramInputs {
             diagrams: vec![SequenceTree {
+                source: None,
                 name: Some("seq".to_string()),
                 participants: vec![participant("Unit 1", Some("unit_1"), "")],
                 root: Block::default(),
@@ -431,6 +434,7 @@ mod tests {
     fn sequence_index_maps_missing_caller_to_gate() {
         let inputs = SequenceDiagramInputs {
             diagrams: vec![SequenceTree {
+                source: None,
                 name: Some("seq".to_string()),
                 participants: Vec::new(),
                 root: Block {
@@ -456,6 +460,7 @@ mod tests {
     fn sequence_index_maps_missing_callee_to_gate() {
         let inputs = SequenceDiagramInputs {
             diagrams: vec![SequenceTree {
+                source: None,
                 name: Some("seq".to_string()),
                 participants: Vec::new(),
                 root: Block {
@@ -485,6 +490,7 @@ mod tests {
 
         let inputs = SequenceDiagramInputs {
             diagrams: vec![SequenceTree {
+                source: None,
                 name: Some("seq".to_string()),
                 participants: vec![actor, external, participant("Unit 1", None, "unit_1")],
                 root: Block {
@@ -516,6 +522,7 @@ mod tests {
         let mut actor = participant("App", None, "app");
         actor.participant_type = ParticipantType::Actor;
         let diagram = |participants, items| SequenceTree {
+            source: None,
             name: Some("seq".to_string()),
             participants,
             root: Block { items },
@@ -551,6 +558,7 @@ mod tests {
         let mut external = participant("App", None, "app");
         external.stereotype = Some("external".to_string());
         let diagram = |participant| SequenceTree {
+            source: None,
             name: Some("seq".to_string()),
             participants: vec![participant],
             root: Block::default(),
@@ -571,6 +579,7 @@ mod tests {
     fn sequence_index_observes_only_operation_calls() {
         let inputs = SequenceDiagramInputs {
             diagrams: vec![SequenceTree {
+                source: None,
                 name: Some("seq".to_string()),
                 participants: Vec::new(),
                 root: Block {
@@ -622,6 +631,7 @@ mod tests {
 
         let inputs = SequenceDiagramInputs {
             diagrams: vec![SequenceTree {
+                source: None,
                 name: Some("seq".to_string()),
                 participants: vec![external],
                 root: Block::default(),

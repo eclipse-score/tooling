@@ -208,7 +208,7 @@ def _architectural_design_impl(ctx):
     split = _split_fragments({view_name: getattr(ctx.files, view_name) for view_name, _ in ARCH_VIEWS})
     include_files = split.fragments
 
-    # All diagrams of this target share one flat fbs/idmap namespace
+    # All diagrams of this target share one flat fbs namespace
     # (keyed by ctx.label.name), so stems must be disambiguated across all
     # four views together, not per-view.
     stems = disambiguated_stems(
@@ -229,7 +229,6 @@ def _architectural_design_impl(ctx):
             fail("{}: {}".format(ctx.label, error))
 
     view_fbs = {}
-    view_idmap = {}
     view_root_indexes = {}
     view_source_files = []
     view_sphinx_srcs = []
@@ -253,7 +252,6 @@ def _architectural_design_impl(ctx):
             include_files = include_files,
         )
         view_fbs[view_name] = parsed.fbs
-        view_idmap[view_name] = parsed.idmap
         if is_public_api:
             api_trlc = parsed.public_api
 
@@ -324,19 +322,6 @@ def _architectural_design_impl(ctx):
 
     all_source_files = depset(transitive = view_source_files)
 
-    # All idmap sidecars (across static/dynamic/public_api/internal_api) are
-    # staged into the sphinx sources so the `clickable_plantuml` extension can
-    # discover them (it scans `srcdir` recursively for `*.idmap.json`) and
-    # resolve cross-diagram links — including component diagrams linking to
-    # the class diagrams that elaborate their public/internal API interfaces.
-    all_idmap_files = depset(
-        view_idmap["static"] + view_idmap["dynamic"] + view_idmap["public_api"] + view_idmap["internal_api"],
-    )
-
-    sphinx_files = depset(
-        transitive = [all_idmap_files, all_source_files],
-    )
-
     validation_log = _run_validation(
         ctx,
         view_fbs["static"],
@@ -346,12 +331,12 @@ def _architectural_design_impl(ctx):
     )
 
     # `deps` carries everything needed in the Sphinx tree for this rule
-    # (colocated sources, idmap sidecars, wrappers, and indexes at every
+    # (colocated sources, wrappers, and indexes at every
     # level). `srcs` is only each view's top-level root index -- the single
     # toctree entry dependable_element.bzl surfaces per view -- and
     # `aux_srcs` are the wrapper/sub-index/hand-written pages that must be
     # staged but reached only via that root index's own nested toctrees.
-    sphinx_deps = depset(transitive = [sphinx_files] + view_sphinx_srcs)
+    sphinx_deps = depset(transitive = [all_source_files] + view_sphinx_srcs)
     sphinx_own_srcs = depset(root_index_files)
     sphinx_aux_srcs = depset(view_aux_docs)
 
@@ -374,7 +359,7 @@ def _architectural_design_impl(ctx):
             deps = depset(),
         ),
         # Each view's root index is the only top-level toctree entry;
-        # everything else (wrappers, sub-indexes, idmap sidecars, colocated
+        # everything else (wrappers, sub-indexes, colocated
         # sources) is staged via aux_srcs/deps for the sphinx documentation build.
         SphinxSourcesInfo(
             srcs = sphinx_own_srcs,
@@ -442,7 +427,7 @@ def _architectural_design_attrs():
             default = Label("@score_tooling//plantuml/parser:parser"),
             executable = True,
             cfg = "exec",
-            doc = "PlantUML parser tool that generates FlatBuffers/idmap/ApiMethod TRLC files from .puml files",
+            doc = "PlantUML parser tool that generates FlatBuffers/ApiMethod TRLC files from .puml files",
         ),
         "_api_methods_lobster_config": attr.label(
             default = Label("//bazel/rules/rules_score/lobster/config:api_methods_config"),

@@ -137,7 +137,9 @@ Service -> Worker : process(item)
 return result
 ```
 
-The parser accepts `return result`. The resolver does not convert it into an interaction node; an explicit reverse message such as `Worker --> Service : result` is resolved as a reply `Worker -> Service` with the message text `"result"`.
+The parser accepts `return result`. The resolver turns it into a reply from the receiver of the innermost open activation (`++` or `activate`) to its caller, here `Worker --> Service : result`. A `return` without an open activation, or after an `activate` that no call precedes, produces no node. `autoactivate on` is ignored: use `++` or `activate`.
+
+Activations follow the groups: `opt`, `loop`, `break` and `alt` without `else` leave the open activations unchanged after the group, `alt` with `else` keeps what any case leaves open, `par` keeps what every branch leaves open. A `return` inside `critical` is ignored, as the content of `critical` is dropped.
 
 Self-messages, messages with a missing endpoint, and lost/found markers are supported:
 
@@ -269,7 +271,7 @@ It is recommended that participants in a `ref` block are established by a declar
 
 The following syntax is accepted or skipped during parsing for compatibility with existing PlantUML source files. The resolver does not create logical nodes for it or retain its visual effects. Do not rely on this syntax to express business semantics that downstream tools must understand.
 
-In particular, the current logical model does not support `return` or `critical`. The parser accepts them, but the resolver does not create a return interaction node or a critical-section logical node. Use a supported explicit message or control structure when the business meaning must enter the logical model.
+In particular, the current logical model does not support `critical`. The parser accepts it, but the resolver does not create a critical-section logical node. Use a supported explicit message or control structure when the business meaning must enter the logical model.
 
 | Category | Accepted example | Current behavior |
 |---|---|---|
@@ -278,7 +280,7 @@ In particular, the current logical model does not support `return` or `critical`
 | Parallel message marker | `&Service -> Worker : parallel call` | Parsed, but the parallel marker is ignored; use a `par` block for modeled parallel control flow |
 | Visual grouping | `group Deployment ... end group` | Contents are retained, but no `group` container node is created |
 | Critical section | `critical exclusive ... end` | Syntax and group balance are checked, but its contents do not enter the logical model |
-| Return command | `return result` | Parsed, but no interaction or return node is created |
+| Return command | `return result` | Resolved as a reply to the caller of the innermost open activation; no node without one |
 | Title, legend, sprite, and transformation | `legend ... end legend`, `sprite ...` | Ignored |
 | Preprocessing and display settings | `!pragma`, `!function`, `skinparam`, `autonumber`, `autoactivate`, `footbox` | Ignored |
 | Layout and visibility | `box ... end box`, `minwidth`, `rotate`, `hide`, `show`, `== section ==`, `...`, `delay` | Ignored |
@@ -317,7 +319,7 @@ Use the following checklist when submitting a sequence diagram:
 1. The file starts with `@startuml` and ends with `@enduml`.
 2. Important participants are declared explicitly, with identifier-path names (an alias only for long or qualified names).
 3. Once an alias is declared, references use that alias consistently to avoid creating a separate implicit participant.
-4. Every message has exactly one arrowhead. Use `return` only for responses shown in the diagram; use an explicit reverse message when the response must enter the logical model.
+4. Every message has exactly one arrowhead. Use `return` only after a call that activates its receiver (`++` or `activate`); otherwise it produces no reply.
 5. Combined message suffixes have clear semantics and order. `--` applies to the sender, `++` and `!!` apply to the receiver, and `**` creates the receiver before the interaction.
 6. Every control structure is closed, and `else` appears only in `alt` or `par`.
 7. A participant is not used after `destroy` unless it is created again first.

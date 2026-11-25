@@ -426,6 +426,10 @@ cast. Rules:
 - A bare name is never completed to a qualified one that another file
   declares.
 
+Sequence files are never merged. A call into a SEooC, component or unit is
+refined by a call in another file through the participant uids; this link is
+checked by the validation (`validation/core/docs/specifications/sequence_refinement.md`).
+
 ### Activity diagrams
 
 Activity diagrams carry no names, so a group is just the independent

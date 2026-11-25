@@ -1,0 +1,49 @@
+{
+  "version": 1,
+  "element_links": [
+    {
+      "source": "fixtures/diagram_links/get_detail.puml",
+      "alias": "comp",
+      "target": "fixtures/diagram_links/component_diagram.puml"
+    },
+    {
+      "source": "fixtures/diagram_links/overview.puml",
+      "alias": "sl",
+      "target": "fixtures/diagram_links/component_diagram.puml"
+    },
+    {
+      "source": "fixtures/diagram_links/ping_detail.puml",
+      "alias": "comp",
+      "target": "fixtures/diagram_links/component_diagram.puml"
+    },
+    {
+      "source": "fixtures/diagram_links/put_first.puml",
+      "alias": "comp",
+      "target": "fixtures/diagram_links/component_diagram.puml"
+    },
+    {
+      "source": "fixtures/diagram_links/put_second.puml",
+      "alias": "comp",
+      "target": "fixtures/diagram_links/component_diagram.puml"
+    }
+  ],
+  "call_links": [
+    {
+      "source": "fixtures/diagram_links/overview.puml",
+      "line": 19,
+      "method": "Get",
+      "targets": [
+        "fixtures/diagram_links/get_detail.puml"
+      ]
+    },
+    {
+      "source": "fixtures/diagram_links/overview.puml",
+      "line": 21,
+      "method": "Put",
+      "targets": [
+        "fixtures/diagram_links/put_first.puml",
+        "fixtures/diagram_links/put_second.puml"
+      ]
+    }
+  ]
+}

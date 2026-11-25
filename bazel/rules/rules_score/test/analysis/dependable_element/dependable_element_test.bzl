@@ -51,11 +51,15 @@ def _fixture_label(target, subject_suffix, fixture_name):
 
 def _validation_bundle_impl(env, target):
     bundle = file_write_json(env, target, "validation_inputs.json")
-    env.expect.that_dict(bundle).keys().contains_exactly(["architecture", "component_diagrams"])
+    env.expect.that_dict(bundle).keys().contains_exactly(
+        ["architecture", "component_diagrams", "sequence_diagrams", "link_diagrams"],
+    )
     env.expect.that_str(bundle["architecture"]).equals(
         output_path(env, target, "FileWrite", "architecture.json"),
     )
     env.expect.that_collection(bundle["component_diagrams"]).contains_exactly([])
+    env.expect.that_collection(bundle["sequence_diagrams"]).contains_exactly([])
+    env.expect.that_collection(bundle["link_diagrams"]).contains_exactly([])
 
 def _validation_bundle_test(name):
     subject = fixture_dependable_element(name + "_de")

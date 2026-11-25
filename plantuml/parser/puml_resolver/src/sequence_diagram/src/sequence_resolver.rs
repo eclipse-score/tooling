@@ -39,6 +39,7 @@ impl SequenceResolver {
         validate_lifecycle_consistency(&root, &table.participants)?;
 
         Ok(SequenceTree {
+            source: None,
             name: document.name.clone(),
             participants: table.participants,
             root,
