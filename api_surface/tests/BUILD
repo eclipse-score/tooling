@@ -324,6 +324,24 @@ api_surface_test(
     target = ":all_private_lib",
 )
 
+# target_compatible_with is added to the Linux-only constraint. The first test is compatible through a select() and has
+# to pass. The second one is incompatible and has to be skipped: its lock file does not match, so it fails otherwise.
+api_surface_test(
+    name = "target_compatible_with_select_api_test",
+    check_docs = False,
+    lock_file = "golden/basic_class.lock.json",
+    target = ":basic_class_lib",
+    target_compatible_with = select({"//conditions:default": []}),
+)
+
+api_surface_test(
+    name = "target_compatible_with_incompatible_api_test",
+    check_docs = False,
+    lock_file = "golden/type_alias.lock.json",
+    target = ":basic_class_lib",
+    target_compatible_with = ["@platforms//:incompatible"],
+)
+
 # Python assertion test that validates the CONTENT of extracted API surfaces
 # (not just that they match a lock file, but that specific expectations hold)
 py_test(

@@ -90,9 +90,32 @@ and commit it.
 | `lock_file`     | label    | The committed JSON lock file to compare against (in the current package) |
 | `check_docs`    | bool     | If true (default), fail when public symbols lack `\api` documentation  |
 | `cc_toolchain`  | label    | Hermetic LLVM `cc_toolchain` used to run clang. Default: `@llvm_toolchain//:cc-clang-x86_64-linux` (resolved in the calling repository) |
+| `target_compatible_with` | list or `select()` | Additional constraints for the generation, test and `.update` targets, on top of the Linux-only constraint. If they are not satisfied, the targets are incompatible and skipped. Default: none |
 
 The C++ standard and all built-in compiler flags (target, sysroot, standard library)
 come from this toolchain's `c++-header-parsing` action, so no system clang is needed.
+
+### Restricting the check to some build configurations
+
+If the public API depends on the build configuration, e.g. because optional features
+add API behind feature flags, its stability may only be guaranteed in some of them.
+Use `target_compatible_with` to check the lock file only there:
+
+```python
+api_surface_test(
+    name = "api_surface_test",
+    target = ":your_cc_library",
+    lock_file = "api_surface.lock.json",
+    target_compatible_with = select({
+        ":no_experimental_features": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+)
+```
+
+In all other configurations the test and its `.update` target are skipped by wildcard
+patterns such as `bazel test //...`. Requesting them explicitly is an error, as for any
+incompatible target.
 
 ## Lock file format
 
