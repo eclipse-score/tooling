@@ -15,6 +15,7 @@ load("@manual_analysis_deps//:requirements.bzl", "requirement")
 load("@rules_python//python:pip.bzl", "compile_pip_requirements")
 load(
     "//manual_analysis:manual_analysis_rules_test.bzl",
+    "context_from_cc_library_list_attrs_test",
     "context_from_cc_library_provider_test",
     "context_from_filegroup_provider_test",
     "manual_analysis_macro_test_env_test",
@@ -43,6 +44,11 @@ context_from_filegroup_provider_test(
 context_from_cc_library_provider_test(
     name = "context_from_cc_library_provider_test",
     target_under_test = "//manual_analysis/example:manual_analysis_context_from_cc_library",
+)
+
+context_from_cc_library_list_attrs_test(
+    name = "context_from_cc_library_list_attrs_test",
+    target_under_test = "//manual_analysis/example:manual_analysis_context_from_cc_library_with_list_attrs",
 )
 
 manual_analysis_update_env_test(
