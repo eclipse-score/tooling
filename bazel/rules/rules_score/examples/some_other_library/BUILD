@@ -25,6 +25,8 @@ load(
     "unit",
 )
 
+exports_files(["MODULE.bazel"])
+
 filegroup(
     name = "input_pointer_review_sources",
     srcs = [

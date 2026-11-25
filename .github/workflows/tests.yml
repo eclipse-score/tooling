@@ -131,6 +131,7 @@ jobs:
   rules_score_tests:
     name: rules_score_tests (${{ matrix.name }})
     runs-on: ubuntu-24.04
+    timeout-minutes: 45
     permissions:
       contents: read
       actions: write
@@ -144,21 +145,14 @@ jobs:
               bazel test //...
           - name: rules_score_integration_test
             run: |
+              export L4_CACHE_DIR="$RUNNER_TEMP/l4-cache"
               cd bazel/rules/rules_score/integration_test
-              bazel test //...
-          - name: minimal_example
-            run: |
-              cd bazel/rules/rules_score/examples/minimal
-              bazel build //...
-              bazel test //...
+              bazel --output_user_root="$RUNNER_TEMP/l4-bazel-root" \
+                --output_base="$RUNNER_TEMP/l4-bazel-root/output-base" \
+                test //... --test_output=streamed
           - name: seooc_example
             run: |
               cd bazel/rules/rules_score/examples/seooc
-              bazel build //...
-              bazel test //...
-          - name: integrator_example
-            run: |
-              cd bazel/rules/rules_score/examples/integrator
               bazel build //...
               bazel test //...
           - name: some_other_library_example
@@ -184,5 +178,28 @@ jobs:
         uses: ./.github/actions/configure_ubuntu_snapshot_mirror
         with:
           ubuntu-snapshot-mirror-url: ${{ secrets.UBUNTU_SNAPSHOT_MIRROR_URL }}
+      - name: Restore L4 cache
+        if: matrix.name == 'rules_score_integration_test'
+        uses: actions/cache/restore@v6
+        with:
+          path: ${{ runner.temp }}/l4-cache
+          key: l4-${{ runner.os }}-${{ github.event.pull_request.number || 'main' }}-${{ hashFiles('.bazelversion', '**/MODULE.bazel') }}
+          restore-keys: |
+            l4-${{ runner.os }}-${{ github.event.pull_request.number || 'main' }}-
+            l4-${{ runner.os }}-
       - name: Run ${{ matrix.name }}
         run: ${{ matrix.run }}
+      - name: Save L4 cache
+        if: matrix.name == 'rules_score_integration_test' && github.event_name == 'pull_request' && !cancelled()
+        uses: actions/cache/save@v6
+        with:
+          path: ${{ runner.temp }}/l4-cache
+          key: l4-${{ runner.os }}-${{ github.event.pull_request.number || 'main' }}-${{ hashFiles('.bazelversion', '**/MODULE.bazel') }}
+      - name: Upload L4 test logs
+        if: failure() && matrix.name == 'rules_score_integration_test'
+        uses: actions/upload-artifact@v7.0.2
+        with:
+          name: rules-score-l4-logs-${{ github.run_id }}
+          path: ${{ runner.temp }}/l4-bazel-root/output-base/execroot/_main/bazel-out/**/testlogs/**/test.log
+          if-no-files-found: warn
+          retention-days: 7

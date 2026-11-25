@@ -22,6 +22,8 @@ load(
     "unit_design",
 )
 
+exports_files(["MODULE.bazel"])
+
 # Exposes source files to the parent workspace so that the rules_score_doc
 # Sphinx build can reference them via sphinx_docs_library without copies.
 filegroup(
