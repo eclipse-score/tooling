@@ -137,6 +137,17 @@ def _context_from_cc_library_provider_test_impl(ctx):
 
 context_from_cc_library_provider_test = analysistest.make(_context_from_cc_library_provider_test_impl)
 
+def _context_from_cc_library_list_attrs_test_impl(ctx):
+    env = analysistest.begin(ctx)
+    rules = analysistest.target_under_test(env)[ManualAnalysisContextInfo].rules.to_list()
+    form = _get_rule_canonical_form(rules, "//manual_analysis/example:ma_cc_with_list_attrs")
+    asserts.true(env, form != None, "CC context should expose the canonical form")
+    asserts.true(env, '"copts":["-DMA_EXAMPLE"]' in form, "Non-empty list attrs must be serialized")
+    asserts.true(env, '"local_defines":["MA_LOCAL"]' in form, "Non-empty list attrs must be serialized")
+    return analysistest.end(env)
+
+context_from_cc_library_list_attrs_test = analysistest.make(_context_from_cc_library_list_attrs_test_impl)
+
 def _manual_analysis_update_env_test_impl(ctx):
     env = analysistest.begin(ctx)
     target_under_test = analysistest.target_under_test(env)
@@ -304,6 +315,7 @@ def manual_analysis_rules_test_suite(name):
         tests = [
             ":context_from_filegroup_provider_test",
             ":context_from_cc_library_provider_test",
+            ":context_from_cc_library_list_attrs_test",
             ":manual_analysis_macro_update_env_test",
             ":manual_analysis_macro_test_env_test",
             ":normalize_repo_name_test",

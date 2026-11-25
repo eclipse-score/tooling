@@ -38,6 +38,13 @@ cc_library(
 )
 
 cc_library(
+    name = "ma_cc_with_list_attrs",
+    srcs = ["ma_cc_dep.cc"],
+    copts = ["-DMA_EXAMPLE"],
+    local_defines = ["MA_LOCAL"],
+)
+
+cc_library(
     name = "ma_cc_root",
     srcs = ["ma_cc_root.cc"],
     hdrs = ["ma_cc_root.h"],
@@ -50,12 +57,19 @@ manual_analysis_context_from_cc_library(
     visibility = ["//manual_analysis:__pkg__"],
 )
 
+manual_analysis_context_from_cc_library(
+    name = "manual_analysis_context_from_cc_library_with_list_attrs",
+    library = ":ma_cc_with_list_attrs",
+    visibility = ["//manual_analysis:__pkg__"],
+)
+
 manual_analysis(
     name = "manual_analysis",
     analysis = "analysis.yaml",
     contexts = [
         ":manual_analysis_context_from_filegroup",
         ":manual_analysis_context_from_cc_library",
+        ":manual_analysis_context_from_cc_library_with_list_attrs",
     ],
     lock_file = "manual.lock",
     results_file = "results.json",
