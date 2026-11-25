@@ -193,13 +193,14 @@ def _component_impl(ctx):
     # Lobster Tracing: collect .lobster files from component_requirements targets
     # and from upstream requirements targets -- feature_requirements, or
     # assumed_system_requirements when a SEooC traces component requirements
-    # directly to ASRs without a feature requirements layer. Both feed the
-    # config's upstream level, so derived_from references resolve either way.
+    # directly to ASRs without a feature requirements layer. Each feeds its own
+    # level of the config, so derived_from references resolve either way.
     # -------------------------------------------------------------------------
     req_lobster_files = []
     req_lobster_transitive_files = []
     req_trlc_files = []
     feat_req_lobster_files = []
+    asr_lobster_files = []
     for req_target in ctx.attr.requirements:
         if TrlcProviderInfo in req_target:
             trlc_info = req_target[TrlcProviderInfo]
@@ -211,8 +212,9 @@ def _component_impl(ctx):
             req_lobster_transitive_files.append(req_target[ComponentRequirementsInfo].srcs)
         if FeatureRequirementsInfo in req_target:
             feat_req_lobster_files.append(req_target[FeatureRequirementsInfo].srcs)
+            asr_lobster_files.append(getattr(req_target[FeatureRequirementsInfo], "assumed_system_srcs", depset()))
         if AssumedSystemRequirementsInfo in req_target:
-            feat_req_lobster_files.append(req_target[AssumedSystemRequirementsInfo].srcs)
+            asr_lobster_files.append(req_target[AssumedSystemRequirementsInfo].srcs)
 
     # Bubble up requirement lobster files from nested components so
     # dependable_element sees the full tree, not just this component's own
@@ -227,6 +229,7 @@ def _component_impl(ctx):
     req_lobster_depset = depset(transitive = req_lobster_files)
     req_lobster_transitive_depset = depset(transitive = req_lobster_transitive_files)
     feat_req_lobster_depset = depset(transitive = feat_req_lobster_files)
+    asr_lobster_depset = depset(transitive = asr_lobster_files)
 
     # Collect nested components
     components_depset = depset(ctx.attr.components)
@@ -311,7 +314,8 @@ def _component_impl(ctx):
     # -------------------------------------------------------------------------
     comp_req_lobster_files = req_lobster_depset.to_list()
     feat_req_lobster_files_list = feat_req_lobster_depset.to_list()
-    all_lobster_inputs = list(comp_req_lobster_files) + feat_req_lobster_files_list
+    asr_lobster_files_list = asr_lobster_depset.to_list()
+    all_lobster_inputs = list(comp_req_lobster_files) + feat_req_lobster_files_list + asr_lobster_files_list
 
     if arch_lobster_file:
         all_lobster_inputs.append(arch_lobster_file)
@@ -323,6 +327,7 @@ def _component_impl(ctx):
         template = ctx.file._lobster_comp_template,
         output = lobster_config,
         substitutions = {
+            "{ASSUMED_SYSTEM_REQ_SOURCES}": format_lobster_sources(asr_lobster_files_list),
             "{FEAT_REQ_SOURCES}": format_lobster_sources(feat_req_lobster_files_list),
             "{COMP_REQ_SOURCES}": format_lobster_sources(comp_req_lobster_files),
             "{ARCH_SOURCES}": format_lobster_sources([arch_lobster_file] if arch_lobster_file else []),

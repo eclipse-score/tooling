@@ -53,6 +53,13 @@ def file_write_json(env, target, output_basename):
         return None
     return json.decode(action.content)
 
+def template_substitutions(env, target, output_basename):
+    """Returns the substitutions dict of the TemplateExpand action producing `output_basename`."""
+    action = find_action(env, target, "TemplateExpand", output_basename)
+    if action == None:
+        return {}
+    return action.substitutions
+
 def output_path(env, target, mnemonic, output_basename):
     """Returns the exec-root relative path of an action output."""
     action = find_action(env, target, mnemonic, output_basename)

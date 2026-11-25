@@ -24,3 +24,5 @@ conversion-rules:
     namespace: req
     version-field: version
     description-fields: description
+    tags:
+      - derived_from

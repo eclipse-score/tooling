@@ -1466,13 +1466,16 @@ def _dependable_element_index_impl(ctx):
 
     # Collect feature requirement .lobster files from requirements targets
     feat_req_lobster_files = []
+    asr_lobster_files = []
     for req_target in ctx.attr.requirements:
         if FeatureRequirementsInfo in req_target:
             feat_req_lobster_files.append(req_target[FeatureRequirementsInfo].srcs)
+            asr_lobster_files.append(getattr(req_target[FeatureRequirementsInfo], "assumed_system_srcs", depset()))
         if AssumedSystemRequirementsInfo in req_target:
-            feat_req_lobster_files.append(req_target[AssumedSystemRequirementsInfo].srcs)
+            asr_lobster_files.append(req_target[AssumedSystemRequirementsInfo].srcs)
 
     feat_req_lobster_depset = depset(transitive = feat_req_lobster_files)
+    asr_lobster_depset = depset(transitive = asr_lobster_files)
 
     comp_req_lobster_files = []
     comp_test_results = []
@@ -1603,6 +1606,7 @@ def _dependable_element_index_impl(ctx):
 
     # Build the DE-level lobster report if feature and component traces exist
     feat_req_list = feat_req_lobster_depset.to_list()
+    asr_list = asr_lobster_depset.to_list()
 
     comp_req_list = comp_req_lobster_depset.to_list()
     comp_arch_list = comp_arch_lobster_depset.to_list()
@@ -1702,6 +1706,7 @@ def _dependable_element_index_impl(ctx):
     # format_lobster_block). This keeps the report free of false "missing
     # reference" issues for levels a given dependable element does not use.
     has_any_lobster_input = any([
+        asr_list,
         feat_req_list,
         received_aou_list,
         comp_req_list,
@@ -1749,6 +1754,7 @@ def _dependable_element_index_impl(ctx):
         # target -- it does not itself become a checking level.
         strict = ctx.attr.maturity == "release"
 
+        has_asr = bool(asr_list)
         has_feat_req = bool(feat_req_list)
         has_comp_req = bool(comp_req_list)
         has_received_aou = bool(received_aou_list)
@@ -1757,13 +1763,36 @@ def _dependable_element_index_impl(ctx):
         has_rc = bool(rc_list) or strict
         has_own_aou = bool(own_aou_list)
 
+        # Release: ASRs with no Feature/Component Requirement would pass
+        # unchecked, so force-emit an empty Component Requirements level that
+        # reports them as uncovered.
+        asr_unchecked = strict and has_asr and not has_feat_req and not has_comp_req
+
         lobster_config = ctx.actions.declare_file(ctx.label.name + "/de_traceability_config")
 
         ctx.actions.expand_template(
             template = ctx.file._lobster_de_template,
             output = lobster_config,
             substitutions = {
-                "{FEAT_REQ_BLOCK}": format_lobster_block("requirements", "Feature Requirements", feat_req_list),
+                # Target level of both Feature and Component Requirements.
+                # With feature requirements present, an ASR is covered by a
+                # Feature Requirement or, when derived directly, by a
+                # Component Requirement.
+                "{ASSUMED_SYSTEM_REQ_BLOCK}": format_lobster_block(
+                    "requirements",
+                    "Assumed System Requirements",
+                    asr_list,
+                    requires = [_cond_names(
+                        (has_feat_req, "Feature Requirements"),
+                        (has_comp_req, "Component Requirements"),
+                    )] if has_feat_req else [],
+                ),
+                "{FEAT_REQ_BLOCK}": format_lobster_block(
+                    "requirements",
+                    "Feature Requirements",
+                    feat_req_list,
+                    trace_to = _cond_names((has_asr, "Assumed System Requirements")),
+                ),
                 # Target level: every item here must be covered, either by a
                 # Component Requirement (`derived_from`), by a Manual Analysis,
                 # or by being further chain-forwarded (Forwarded AoUs, below).
@@ -1802,8 +1831,10 @@ def _dependable_element_index_impl(ctx):
                     comp_req_list,
                     trace_to = _cond_names(
                         (has_feat_req, "Feature Requirements"),
-                        (has_received_aou, "Received AoUs"),
+                        (has_asr, "Assumed System Requirements"),
+                        (has_received_aou and not asr_unchecked, "Received AoUs"),
                     ),
+                    emit_empty = asr_unchecked,
                 ),
                 "{UNIT_TEST_BLOCK}": format_lobster_block(
                     "activity",
@@ -1875,7 +1906,7 @@ def _dependable_element_index_impl(ctx):
             },
         )
 
-        all_lobster_inputs = feat_req_list + comp_req_list + comp_arch_list + comp_test_list + interface_req_list + fm_list + rc_list + assessment_list + own_aou_list + received_aou_list + forwarded_aou_markers_list + coverage_lobster_files + manual_analysis_files
+        all_lobster_inputs = asr_list + feat_req_list + comp_req_list + comp_arch_list + comp_test_list + interface_req_list + fm_list + rc_list + assessment_list + own_aou_list + received_aou_list + forwarded_aou_markers_list + coverage_lobster_files + manual_analysis_files
         lobster_report_file = subrule_lobster_report(all_lobster_inputs, lobster_config)
         lobster_files = [lobster_config, lobster_report_file]
 

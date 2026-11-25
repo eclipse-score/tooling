@@ -1,3 +1,7 @@
+requirements "Assumed System Requirements" {
+{ASSUMED_SYSTEM_REQ_SOURCES}
+}
+
 requirements "Feature Requirements" {
 {FEAT_REQ_SOURCES}
 }

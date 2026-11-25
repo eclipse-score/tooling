@@ -22,18 +22,27 @@ load(
     "find_action",
     "flag_value",
     "output_path",
+    "template_substitutions",
 )
 load(
     "//lib:fixtures.bzl",
     "fixture_architectural_design",
     "fixture_asr",
     "fixture_component",
+    "fixture_component_requirements",
     "fixture_dependable_element",
+    "fixture_feature_requirements",
     "fixture_unit",
 )
 
 _VERBOSITY_FLAG = str(Label("@score_tooling//bazel/rules/rules_score:verbosity"))
 _VALIDATE = "DependableElementValidate"
+_ASR_LEVEL = 'requirements "Assumed System Requirements"'
+_ASR_TRACE = 'trace to: "Assumed System Requirements"'
+_FEAT_TRACE = 'trace to: "Feature Requirements"'
+
+def _traceability_blocks(env, target):
+    return template_substitutions(env, target, "de_traceability_config")
 
 def _fixture_label(target, subject_suffix, fixture_name):
     """Label of the fixture `fixture_name` created next to the subject `<prefix><subject_suffix>`."""
@@ -194,6 +203,76 @@ def _verbosity_test(name):
         config_settings = {_VERBOSITY_FLAG: "debug"},
     )
 
+def _asr_level_impl(env, target):
+    blocks = _traceability_blocks(env, target)
+    asr = blocks["{ASSUMED_SYSTEM_REQ_BLOCK}"]
+    env.expect.that_str(asr).contains(_ASR_LEVEL)
+    env.expect.that_str(asr).contains("asr.lobster")
+    env.expect.that_str(asr).contains('requires: "Feature Requirements" or "Component Requirements"')
+    env.expect.that_bool("asr.lobster" in blocks["{FEAT_REQ_BLOCK}"]).equals(False)
+    env.expect.that_str(blocks["{FEAT_REQ_BLOCK}"]).contains(_ASR_TRACE)
+    env.expect.that_str(blocks["{COMP_REQ_BLOCK}"]).contains(_FEAT_TRACE)
+    env.expect.that_str(blocks["{COMP_REQ_BLOCK}"]).contains(_ASR_TRACE)
+
+def _asr_level_test(name):
+    asr = fixture_asr(name + "_asr")
+    feat = fixture_feature_requirements(name + "_feat", deps = [asr])
+    comp_req = fixture_component_requirements(name + "_comp_req", deps = [asr, feat])
+    subject = fixture_dependable_element(
+        name + "_de",
+        maturity = "development",
+        requirements = [feat],
+        components = [fixture_component(name + "_component", requirements = [comp_req])],
+    )
+    analysis_test(name = name, impl = _asr_level_impl, target = subject)
+
+def _asr_direct_impl(env, target):
+    blocks = _traceability_blocks(env, target)
+    asr = blocks["{ASSUMED_SYSTEM_REQ_BLOCK}"]
+    comp = blocks["{COMP_REQ_BLOCK}"]
+    env.expect.that_str(asr).contains("asr.lobster")
+    env.expect.that_bool("requires:" in asr).equals(False)
+    env.expect.that_str(blocks["{FEAT_REQ_BLOCK}"]).equals("")
+    env.expect.that_str(comp).contains(_ASR_TRACE)
+    env.expect.that_bool(_FEAT_TRACE in comp).equals(False)
+
+def _asr_direct_test(name):
+    asr = fixture_asr(name + "_asr")
+    comp_req = fixture_component_requirements(name + "_comp_req", deps = [asr])
+    subject = fixture_dependable_element(
+        name + "_de",
+        maturity = "development",
+        requirements = [asr],
+        components = [fixture_component(name + "_component", requirements = [comp_req])],
+    )
+    analysis_test(name = name, impl = _asr_direct_impl, target = subject)
+
+def _asr_only_impl(env, target, expect_checking_level):
+    comp = _traceability_blocks(env, target)["{COMP_REQ_BLOCK}"]
+    if expect_checking_level:
+        env.expect.that_str(comp).contains('requirements "Component Requirements"')
+        env.expect.that_str(comp).contains(_ASR_TRACE)
+    else:
+        env.expect.that_str(comp).equals("")
+
+def _asr_only_release_impl(env, target):
+    _asr_only_impl(env, target, True)
+
+def _asr_only_release_test(name):
+    subject = fixture_dependable_element(name + "_de", requirements = [fixture_asr(name + "_asr")])
+    analysis_test(name = name, impl = _asr_only_release_impl, target = subject)
+
+def _asr_only_development_impl(env, target):
+    _asr_only_impl(env, target, False)
+
+def _asr_only_development_test(name):
+    subject = fixture_dependable_element(
+        name + "_de",
+        maturity = "development",
+        requirements = [fixture_asr(name + "_asr")],
+    )
+    analysis_test(name = name, impl = _asr_only_development_impl, target = subject)
+
 def dependable_element_test_suite(name):
     """Registers the dependable_element analysis tests as test suite `name`."""
     test_suite(
@@ -209,5 +288,9 @@ def dependable_element_test_suite(name):
             _integrity_violation_test,
             _integrity_violation_development_test,
             _verbosity_test,
+            _asr_level_test,
+            _asr_direct_test,
+            _asr_only_release_test,
+            _asr_only_development_test,
         ],
     )

@@ -23,12 +23,16 @@ load(
     "architectural_design",
     "assumed_system_requirements",
     "component",
+    "component_requirements",
     "dependable_element",
+    "feature_requirements",
     "unit",
     "unit_design",
 )
 
 _ASR_SRC = Label("//lib:fixtures/asr.trlc")
+_COMP_REQ_SRC = Label("//lib:fixtures/comp_req_direct_asr.trlc")
+_FEAT_SRC = Label("//lib:fixtures/feat.trlc")
 _COVERAGE_LOCK = Label("//lib:fixtures/test_case_coverage.lock.yaml")
 _DESIGN_SRC = Label("//lib:fixtures/design.puml")
 
@@ -50,6 +54,26 @@ def fixture_asr(name):
     )
     return ":" + name
 
+def fixture_feature_requirements(name, deps = []):
+    """feature_requirements deriving from the fixture ASR; `deps` are assumed_system_requirements labels."""
+    util.helper_target(
+        feature_requirements,
+        name = name,
+        srcs = [_FEAT_SRC],
+        deps = deps,
+    )
+    return ":" + name
+
+def fixture_component_requirements(name, deps = []):
+    """component_requirements deriving directly from the fixture ASR; `deps` are labels of requirements targets."""
+    util.helper_target(
+        component_requirements,
+        name = name,
+        srcs = [_COMP_REQ_SRC],
+        deps = deps,
+    )
+    return ":" + name
+
 def fixture_unit(name):
     """Empty unit with an empty unit_design."""
     util.helper_target(unit_design, name = name + "_design")
@@ -62,12 +86,13 @@ def fixture_unit(name):
     )
     return ":" + name
 
-def fixture_component(name, components = [], with_coverage_lock = False):
-    """Component of `components`, optionally with a test case coverage lock."""
+def fixture_component(name, components = [], requirements = [], with_coverage_lock = False):
+    """Component of `components` and `requirements`, optionally with a test case coverage lock."""
     util.helper_target(
         component,
         name = name,
         components = components,
+        requirements = requirements,
         tests = [],
         test_case_coverage_lock = _COVERAGE_LOCK if with_coverage_lock else None,
     )
