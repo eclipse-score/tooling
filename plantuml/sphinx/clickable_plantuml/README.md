@@ -165,9 +165,11 @@ the call links follow the sequence refinement rule of
   reference per alias that has a definer is linked.
 - **Call links** – A call links to the sequence diagrams that refine it, in
   any architectural design of the dependable element. Only refinements that
-  pass the zoom check (closed windows, boundary kept, no exit missing) are
-  linked; a call without such a refinement gets no link. Calls written in an
-  `!include` fragment get no link.
+  pass the refinement check are linked: synchronous windows must be closed,
+  asynchronous same-level windows must have end markers, and zoom details
+  must keep the boundary and exits. Automatic same-level matching may link
+  unrelated scenarios with identical calls. A call without such a refinement
+  gets no link. Calls written in an `!include` fragment get no link.
 
 ### Concrete example
 

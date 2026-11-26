@@ -18,6 +18,7 @@ filegroup(
     srcs = [
         "//validation/core/integration_test/dependable_element_zoom/negative_cross_design_exit_missing:case_data",
         "//validation/core/integration_test/dependable_element_zoom/positive_cross_design:case_data",
+        "//validation/core/integration_test/dependable_element_zoom/same_level:case_data",
     ],
 )
 

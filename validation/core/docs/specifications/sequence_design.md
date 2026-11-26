@@ -26,7 +26,7 @@ The related validators are specified in:
 - `sequence_internal_api.md` (methods, roles, coverage, gate messages)
 - `sequence_public_api.md` (actor calls and callbacks against the public API)
 - `class_design_sequence.md` (class lifelines and operations)
-- `sequence_refinement.md` (zoom into a SEooC, component or unit)
+- `sequence_refinement.md` (zoom and same-level sequence details)
 
 ## Lifelines
 
@@ -176,6 +176,18 @@ Every call the black box makes to its environment shall also appear in at
 least one detail. A detail shall not use architecture elements outside the
 refined element, except partners the overview shows. Reply with `-->` or
 `return` (or `deactivate`) so that the end of the call is clear.
+
+## Same-Level Detail
+
+A black-box call can also link to a detail that keeps the same sender,
+receiver, method and call kind, and adds calls originating from the receiver
+or its descendants. The detail call must lead its diagram; the overview window
+must contain no such calls. Synchronous windows must close; asynchronous
+windows require `ref over <receiver> : score-window-end` on every path.
+Unclosed windows are not linked and do not create same-level closure findings.
+Matching is automatic and can link unrelated scenarios with identical calls.
+Unlike zoom, the detail may call other architecture elements without showing
+them in the overview. Normal sequence and API validation still applies.
 
 ## Unit Design
 

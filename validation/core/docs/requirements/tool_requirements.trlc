@@ -205,13 +205,45 @@ section "Tool Requirements" {
                 SEooC, component or unit to a call with the same sender and
                 method, as the first call of a sequence diagram, to a direct
                 child of the callee, across the sequence diagrams of all
-                architectural designs of a dependable element. For each link
-                they shall report a participant of the refining diagram that
+                architectural designs of a dependable element. For each zoom
+                link they shall report a participant of the refining diagram that
                 is outside the callee, is not the sender, is no exit partner
                 and is not called by one, or is the callee itself; a call of
                 the callee to its environment that no refining diagram keeps;
                 and a synchronous call or refining diagram that no reply or
                 deactivation closes on every path.'''
+                derived_from = [UseCases.Validate_Architecture_Specification_Documents]
+                satisfied_by = Verifier
+            }
+
+            ToolQualification.ToolRequirement SequenceSameLevelRefinement {
+                description = '''The validator shall identify a same-level
+                refinement across the sequence diagrams of a dependable
+                element when a call into a SEooC, component or unit has no
+                calls originating in the callee or its descendants in its
+                window and the first call of a different diagram
+                has the same resolved or environmental sender, receiver,
+                non-empty method and synchronous or asynchronous kind, and
+                has at least one call originating in the callee or its
+                descendants in its window, provided both synchronous windows
+                are closed or both asynchronous windows are explicitly bounded.'''
+                derived_from = [UseCases.Validate_Architecture_Specification_Documents]
+                satisfied_by = Verifier
+            }
+
+            ToolQualification.ToolRequirement SequenceSameLevelWindowClosure {
+                description = '''The validator shall exclude a synchronous
+                entry or same-level detail from same-level matching if its
+                window is not closed on every path by a reply or deactivation.'''
+                derived_from = [UseCases.Validate_Architecture_Specification_Documents]
+                satisfied_by = Verifier
+            }
+
+            ToolQualification.ToolRequirement SequenceSameLevelAsyncBoundary {
+                description = '''For same-level matching, the validator shall
+                bound an asynchronous entry window with a score-window-end
+                reference over its receiver on every path, and report
+                unmatched references and overlapping entries to that receiver.'''
                 derived_from = [UseCases.Validate_Architecture_Specification_Documents]
                 satisfied_by = Verifier
             }

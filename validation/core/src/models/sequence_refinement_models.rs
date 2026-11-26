@@ -11,11 +11,11 @@
 // SPDX-License-Identifier: Apache-2.0
 // *******************************************************************************
 
-//! Zoom links between sequence diagrams.
+//! Refinement links between sequence diagrams.
 //!
 //! A call into an architecture element `C` (an entry) is refined by calls with
-//! the same sender and method into a direct child of `C` (its details). See
-//! `docs/specifications/sequence_refinement.md`.
+//! the same sender and method into a direct child of `C`, or by an expanded
+//! call into `C`. See `docs/specifications/sequence_refinement.md`.
 
 use std::collections::{HashMap, HashSet};
 
@@ -81,6 +81,9 @@ pub struct ZoomEntry {
     pub leads_diagram: bool,
 }
 
+/// Text of the `ref over <receiver>` that ends an asynchronous window.
+const WINDOW_END_MARKER: &str = "score-window-end";
+
 /// How the cases of a group continue the path through the diagram.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum Group {
@@ -100,6 +103,7 @@ enum Item {
     },
     Activate(Lifeline),
     Deactivate(Lifeline),
+    WindowEnd(Option<Lifeline>, SourceLocation),
     Open(Group),
     /// Start of the next case of the open group.
     Case,
@@ -110,10 +114,33 @@ enum Item {
 pub struct SequenceRefinementIndex {
     tree: ArchitectureTree,
     pub entries: Vec<ZoomEntry>,
-    /// Per entry: indices of its details.
+    /// Per entry: indices of its details, zoom and same-level.
     pub details: Vec<Vec<usize>>,
-    /// Per entry: it is the detail of another entry.
+    /// Per entry: it is a zoom detail of another entry.
     pub is_detail: Vec<bool>,
+    /// Per entry: indices of its zoom details.
+    zoom_details: Vec<Vec<usize>>,
+    /// Asynchronous entries that overlap another entry to the same receiver.
+    pub overlapping_async: Vec<usize>,
+    /// `score-window-end` references that end no asynchronous entry.
+    pub invalid_async_boundaries: Vec<InvalidWindowEnd>,
+}
+
+/// A `score-window-end` reference that ends no asynchronous entry.
+pub struct InvalidWindowEnd {
+    pub diagram: String,
+    pub source_location: SourceLocation,
+}
+
+/// An entry of one diagram, as needed to find overlapping asynchronous windows.
+struct DiagramEntry {
+    position: usize,
+    /// Index of the call among the items of the diagram.
+    start: usize,
+    /// Index of the last window end of the entry among the items.
+    end: Option<usize>,
+    /// Indices of calls into the container made by elements the window called.
+    callbacks: HashSet<usize>,
 }
 
 impl SequenceRefinementIndex {
@@ -135,6 +162,9 @@ impl SequenceRefinementIndex {
         };
 
         let mut entries = Vec::new();
+        let mut same_level_windows = Vec::new();
+        let mut overlapping_async = Vec::new();
+        let mut invalid_async_boundaries = Vec::new();
         // The same file may come with several architectural designs.
         let mut seen: HashSet<(&str, &str)> = HashSet::new();
         for diagram in diagrams {
@@ -149,6 +179,8 @@ impl SequenceRefinementIndex {
 
             let mut enclosing: Vec<Group> = Vec::new();
             let mut first_call = true;
+            let mut diagram_entries = Vec::new();
+            let mut used_boundaries = HashSet::new();
             for (index, item) in items.iter().enumerate() {
                 match item {
                     Item::Open(group) => enclosing.push(*group),
@@ -170,21 +202,71 @@ impl SequenceRefinementIndex {
                             container,
                             leads_diagram,
                         };
-                        entries.push(window(
-                            &tree,
-                            &entry,
-                            enclosing.clone(),
-                            &items[index + 1..],
-                        ));
+                        let following = &items[index + 1..];
+                        let normal = window(&tree, &entry, enclosing.clone(), following, false);
+                        let (same_level, boundaries, callbacks) = if call.asynchronous {
+                            let bounded = window(&tree, &entry, enclosing.clone(), following, true);
+                            (bounded.entry, bounded.boundaries, bounded.callbacks)
+                        } else {
+                            (normal.entry.clone(), Vec::new(), Vec::new())
+                        };
+                        let absolute = |offset: &usize| index + 1 + offset;
+                        used_boundaries.extend(boundaries.iter().map(absolute));
+                        diagram_entries.push(DiagramEntry {
+                            position: entries.len(),
+                            start: index,
+                            end: boundaries.iter().map(absolute).max(),
+                            callbacks: callbacks.iter().map(absolute).collect(),
+                        });
+                        entries.push(normal.entry);
+                        same_level_windows.push(same_level);
                     }
                     _ => {}
                 }
             }
+            for (position, item) in items.iter().enumerate() {
+                if let Item::WindowEnd(_, source) = item {
+                    if !used_boundaries.contains(&position) {
+                        invalid_async_boundaries.push(InvalidWindowEnd {
+                            diagram: name.to_string(),
+                            source_location: source.clone(),
+                        });
+                    }
+                }
+            }
+            for entry in &diagram_entries {
+                let Some(end) = entry.end else {
+                    continue;
+                };
+                let container = &entries[entry.position].container;
+                let inside: Vec<&DiagramEntry> = diagram_entries
+                    .iter()
+                    .filter(|other| {
+                        other.start > entry.start
+                            && other.start <= end
+                            && !entry.callbacks.contains(&other.start)
+                            && entries[other.position].container == *container
+                    })
+                    .collect();
+                if inside.is_empty() {
+                    continue;
+                }
+                overlapping_async.push(entry.position);
+                overlapping_async.extend(
+                    inside
+                        .iter()
+                        .filter(|other| entries[other.position].asynchronous)
+                        .map(|other| other.position),
+                );
+            }
         }
 
-        let details = details_of(&tree, &entries);
+        overlapping_async.sort_unstable();
+        overlapping_async.dedup();
+        let (details, zoom_details) =
+            details_of(&tree, &entries, &same_level_windows, &overlapping_async);
         let mut is_detail = vec![false; entries.len()];
-        for detail in details.iter().flatten() {
+        for detail in zoom_details.iter().flatten() {
             is_detail[*detail] = true;
         }
 
@@ -193,6 +275,9 @@ impl SequenceRefinementIndex {
             entries,
             details,
             is_detail,
+            zoom_details,
+            overlapping_async,
+            invalid_async_boundaries,
         }
     }
 
@@ -217,8 +302,13 @@ impl SequenceRefinementIndex {
         matches!(lifeline, Lifeline::Element(id) if self.tree.is_inside(id, container))
     }
 
+    /// The entry refines or is refined by a zoom detail.
     pub fn is_zoom_active(&self, entry: usize) -> bool {
-        self.is_detail[entry] || !self.details[entry].is_empty()
+        self.is_detail[entry] || !self.zoom_details[entry].is_empty()
+    }
+
+    pub fn zoom_details(&self, entry: usize) -> &[usize] {
+        &self.zoom_details[entry]
     }
 
     /// Calls of the window that leave the container for an architecture
@@ -237,11 +327,59 @@ impl SequenceRefinementIndex {
     }
 }
 
-/// Same sender and method, receiver is a direct child of the entry's container.
-/// Only a call that leads its diagram is a detail, and never of a call in the
-/// same diagram.
-fn details_of(tree: &ArchitectureTree, entries: &[ZoomEntry]) -> Vec<Vec<usize>> {
+/// Role of an entry window in same-level matching.
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum SameLevel {
+    /// Closed window without calls from the container or its descendants.
+    Overview,
+    /// Closed window with such calls.
+    Detail,
+    /// Unclosed or overlapping window.
+    Excluded,
+}
+
+fn same_level_role(
+    tree: &ArchitectureTree,
+    entry: &ZoomEntry,
+    window: &ZoomEntry,
+    overlapping: bool,
+) -> SameLevel {
+    if !window.closed || overlapping {
+        SameLevel::Excluded
+    } else if window
+        .calls
+        .iter()
+        .any(|call| within(tree, &call.from, &entry.container))
+    {
+        SameLevel::Detail
+    } else {
+        SameLevel::Overview
+    }
+}
+
+/// Find zoom and same-level details that lead a different diagram. Returns all
+/// details and the zoom details per entry.
+fn details_of(
+    tree: &ArchitectureTree,
+    entries: &[ZoomEntry],
+    same_level_windows: &[ZoomEntry],
+    overlapping_async: &[usize],
+) -> (Vec<Vec<usize>>, Vec<Vec<usize>>) {
+    let roles: Vec<SameLevel> = entries
+        .iter()
+        .enumerate()
+        .map(|(index, entry)| {
+            same_level_role(
+                tree,
+                entry,
+                &same_level_windows[index],
+                overlapping_async.binary_search(&index).is_ok(),
+            )
+        })
+        .collect();
+
     let mut by_parent: HashMap<(&Lifeline, &str, &str), Vec<usize>> = HashMap::new();
+    let mut by_receiver: HashMap<(&Lifeline, &str, &str, bool), Vec<usize>> = HashMap::new();
     for (index, entry) in entries.iter().enumerate() {
         if !entry.leads_diagram {
             continue;
@@ -252,12 +390,27 @@ fn details_of(tree: &ArchitectureTree, entries: &[ZoomEntry]) -> Vec<Vec<usize>>
                 .or_default()
                 .push(index);
         }
+        if roles[index] == SameLevel::Detail
+            && !entry.method.is_empty()
+            && !matches!(&entry.sender, Lifeline::Unresolved(_))
+        {
+            by_receiver
+                .entry((
+                    &entry.sender,
+                    &entry.method,
+                    &entry.container,
+                    entry.asynchronous,
+                ))
+                .or_default()
+                .push(index);
+        }
     }
 
-    entries
+    let pairs: Vec<_> = entries
         .iter()
-        .map(|entry| {
-            by_parent
+        .enumerate()
+        .map(|(index, entry)| {
+            let zoom: Vec<usize> = by_parent
                 .get(&(
                     &entry.sender,
                     entry.method.as_str(),
@@ -267,9 +420,27 @@ fn details_of(tree: &ArchitectureTree, entries: &[ZoomEntry]) -> Vec<Vec<usize>>
                 .flatten()
                 .copied()
                 .filter(|&detail| !same_diagram(entry, &entries[detail]))
-                .collect()
+                .collect();
+            let mut details = zoom.clone();
+            if roles[index] == SameLevel::Overview {
+                details.extend(
+                    by_receiver
+                        .get(&(
+                            &entry.sender,
+                            entry.method.as_str(),
+                            entry.container.as_str(),
+                            entry.asynchronous,
+                        ))
+                        .into_iter()
+                        .flatten()
+                        .copied()
+                        .filter(|&detail| !same_diagram(entry, &entries[detail])),
+                );
+            }
+            (details, zoom)
         })
-        .collect()
+        .collect();
+    pairs.into_iter().unzip()
 }
 
 fn same_diagram(a: &ZoomEntry, b: &ZoomEntry) -> bool {
@@ -360,6 +531,16 @@ fn flatten(
                 }
                 LifecycleAction::Create | LifecycleAction::Destroy => {}
             },
+            Node::Reference(reference)
+                if reference.text.as_deref().map(str::trim) == Some(WINDOW_END_MARKER) =>
+            {
+                let participant = (reference.participants.len() == 1)
+                    .then(|| lifeline(reference.participants.first()));
+                items.push(Item::WindowEnd(
+                    participant,
+                    reference.source_location.clone(),
+                ));
+            }
             Node::Reference(_) => {}
         }
     }
@@ -412,16 +593,26 @@ impl<'a> Frame<'a> {
     }
 }
 
-/// Follows the items after an entry until the container replied to the sender
-/// or was deactivated on every path. Synchronous calls into the container
-/// inside the window each need their own reply. `enclosing` are the groups the entry is
-/// in; the other cases of an enclosing `alt` are not part of the window.
+/// The window of an entry. `boundaries` and `callbacks` are offsets into the
+/// items after the entry.
+struct Window {
+    entry: ZoomEntry,
+    /// Window ends over the receiver (only with `async_boundary`).
+    boundaries: Vec<usize>,
+    /// Calls into the container from elements that the window called.
+    callbacks: Vec<usize>,
+}
+
+/// Follows an entry to its reply/deactivation, or with `async_boundary` to its
+/// `score-window-end`. Other cases of an enclosing `alt` are not part of the
+/// window.
 fn window(
     tree: &ArchitectureTree,
     entry: &Entry<'_>,
     mut enclosing: Vec<Group>,
     following: &[Item],
-) -> ZoomEntry {
+    async_boundary: bool,
+) -> Window {
     let container = entry.container;
     let receiver = &entry.call.to;
     let mut calls = Vec::new();
@@ -439,8 +630,11 @@ fn window(
     // `C --> Y --`: the `deactivate` that follows belongs to that call.
     let mut replied_activation: Option<&Lifeline> = None;
     let mut closed = false;
+    let mut boundaries = Vec::new();
+    let mut callbacks = Vec::new();
+    let mut called: Vec<&Lifeline> = Vec::new();
 
-    for item in following {
+    for (offset, item) in following.iter().enumerate() {
         if let Some(depth) = skipping.as_mut() {
             match item {
                 Item::Open(_) => *depth += 1,
@@ -483,6 +677,11 @@ fn window(
             _ if pending.is_empty() => {}
             Item::Call(call) => {
                 calls.push(call.clone());
+                if within(tree, &call.from, container) {
+                    called.push(&call.to);
+                } else if within(tree, &call.to, container) && called.contains(&&call.from) {
+                    callbacks.push(offset);
+                }
                 if !call.asynchronous
                     && within(tree, &call.to, container)
                     && !within(tree, &call.from, container)
@@ -498,6 +697,7 @@ fn window(
             Item::Reply { from, to } => {
                 if within(tree, from, container)
                     && pending.last().is_some_and(|call| call.caller == to)
+                    && (!async_boundary || pending.len() > 1)
                 {
                     if let Some(answered) = pending.pop().filter(|call| call.activated) {
                         replied_activation = Some(answered.callee);
@@ -519,12 +719,17 @@ fn window(
                 } else if participant == receiver && nested_activations > 0 {
                     nested_activations -= 1;
                 } else if let Some(index) = pending.iter().rposition(|c| c.callee == participant) {
-                    // Deactivating the entry's receiver ends the whole window.
-                    if index == 0 {
+                    if index == 0 && !async_boundary {
                         pending.clear();
-                    } else {
+                    } else if index != 0 {
                         pending.remove(index);
                     }
+                }
+            }
+            Item::WindowEnd(participant, _) => {
+                if async_boundary && participant.as_ref() == Some(receiver) {
+                    boundaries.push(offset);
+                    pending.clear();
                 }
             }
         }
@@ -535,16 +740,20 @@ fn window(
         }
     }
 
-    ZoomEntry {
-        diagram: entry.diagram.to_string(),
-        source: entry.source.map(str::to_string),
-        sender: entry.call.from.clone(),
-        container: container.to_string(),
-        method: entry.call.method.clone(),
-        asynchronous: entry.call.asynchronous,
-        source_location: entry.call.source_location.clone(),
-        calls,
-        closed,
-        leads_diagram: entry.leads_diagram,
+    Window {
+        entry: ZoomEntry {
+            diagram: entry.diagram.to_string(),
+            source: entry.source.map(str::to_string),
+            sender: entry.call.from.clone(),
+            container: container.to_string(),
+            method: entry.call.method.clone(),
+            asynchronous: entry.call.asynchronous,
+            source_location: entry.call.source_location.clone(),
+            calls,
+            closed,
+            leads_diagram: entry.leads_diagram,
+        },
+        boundaries,
+        callbacks,
     }
 }

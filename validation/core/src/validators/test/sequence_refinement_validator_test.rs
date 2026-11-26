@@ -16,7 +16,7 @@ use super::*;
 use crate::models::{ComponentDiagramArchitecture, SequenceDiagramInputs};
 use sequence_logic::{
     Block, Branch, BranchCase, EarlyExit, Interaction, LifecycleAction, Loop, MessageKind, Node,
-    Parallel, ParallelBranch, ParticipantLifecycle, SequenceParticipant, SequenceTree,
+    Parallel, ParallelBranch, ParticipantLifecycle, Reference, SequenceParticipant, SequenceTree,
 };
 use std::collections::BTreeSet;
 
@@ -28,6 +28,7 @@ enum S {
     Reply(&'static str, &'static str),
     Activate(&'static str),
     Deactivate(&'static str),
+    WindowEnd(&'static str),
     Alt(Vec<S>),
     AltElse(Vec<S>, Vec<S>),
     Loop(Vec<S>),
@@ -41,7 +42,7 @@ fn collect_uids(steps: &[S], uids: &mut BTreeSet<&'static str>) {
             S::Call(from, to, _) | S::Async(from, to, _) | S::Reply(from, to) => {
                 uids.extend([from, to]);
             }
-            S::Activate(uid) | S::Deactivate(uid) => {
+            S::Activate(uid) | S::Deactivate(uid) | S::WindowEnd(uid) => {
                 uids.insert(uid);
             }
             S::Alt(inner) | S::Loop(inner) | S::Break(inner) => collect_uids(inner, uids),
@@ -70,6 +71,11 @@ fn node(step: &S) -> Node {
         S::Reply(from, to) => interaction(from, to, "", MessageKind::Reply),
         S::Activate(uid) => lifecycle(uid, LifecycleAction::Activate),
         S::Deactivate(uid) => lifecycle(uid, LifecycleAction::Deactivate),
+        S::WindowEnd(uid) => Node::Reference(Reference {
+            participants: vec![uid.to_string().into()],
+            text: Some("score-window-end".to_string()),
+            source_location: dummy_source_location(),
+        }),
         S::Alt(inner) => Node::Branch(Branch {
             cases: vec![branch_case(inner)],
         }),
@@ -1000,4 +1006,614 @@ fn without_log_in_comp() -> SequenceTree {
         "no_log",
         vec![S::Call("app", "comp", "Get()"), S::Reply("comp", "app")],
     )
+}
+
+fn same_level_overview() -> SequenceTree {
+    diagram(
+        "overview",
+        vec![
+            S::Call("app", "comp", "Get(request)"),
+            S::Reply("comp", "app"),
+        ],
+    )
+}
+
+fn same_level_detail() -> SequenceTree {
+    diagram(
+        "detail",
+        vec![
+            S::Call("app", "comp", "Get(other)"),
+            S::Call("comp", "u9", "Fetch()"),
+            S::Reply("u9", "comp"),
+            S::Reply("comp", "app"),
+        ],
+    )
+}
+
+fn leading_position(index: &SequenceRefinementIndex, diagram: &str) -> usize {
+    index
+        .entries
+        .iter()
+        .position(|entry| entry.diagram == diagram && entry.leads_diagram)
+        .unwrap_or_else(|| panic!("no leading entry in {diagram}"))
+}
+
+#[test]
+fn same_level_detail_keeps_the_receiver_and_may_call_a_sibling() {
+    let index = index_of(vec![same_level_overview(), same_level_detail()]);
+    let overview = leading_position(&index, "overview");
+    let detail = leading_position(&index, "detail");
+    let check = check_sequence_refinement(&index);
+
+    assert_eq!(index.details[overview], [detail]);
+    assert!(index.details[detail].is_empty());
+    assert_findings(&check.result, &[]);
+    assert!(check.accepts(overview, detail));
+}
+
+#[test]
+fn same_level_matching_uses_canonical_architecture_ids() {
+    let overview = diagram(
+        "overview",
+        vec![S::Call("u9", "comp", "Get()"), S::Reply("comp", "u9")],
+    );
+    let detail = diagram(
+        "detail",
+        vec![
+            S::Call("sl.other.u9", "sl.comp", "Get()"),
+            S::Call("sl.comp", "u1", "Fetch()"),
+            S::Reply("sl.comp", "sl.other.u9"),
+        ],
+    );
+    let index = index_of(vec![overview, detail]);
+    let overview = leading_position(&index, "overview");
+    let detail = leading_position(&index, "detail");
+    let check = check_sequence_refinement(&index);
+
+    assert_eq!(index.details[overview], [detail]);
+    assert_findings(&check.result, &[]);
+    assert!(check.accepts(overview, detail));
+}
+
+#[test]
+fn same_level_detail_must_match_and_lead_its_diagram() {
+    let cases = [
+        (
+            "sender",
+            vec![
+                S::Call("platform", "comp", "Get()"),
+                S::Call("comp", "u9", "Fetch()"),
+                S::Reply("comp", "platform"),
+            ],
+        ),
+        (
+            "receiver",
+            vec![
+                S::Call("app", "other", "Get()"),
+                S::Call("other", "u9", "Fetch()"),
+                S::Reply("other", "app"),
+            ],
+        ),
+        (
+            "method",
+            vec![
+                S::Call("app", "comp", "Put()"),
+                S::Call("comp", "u9", "Fetch()"),
+                S::Reply("comp", "app"),
+            ],
+        ),
+        (
+            "call_kind",
+            vec![
+                S::Async("app", "comp", "Get()"),
+                S::Call("comp", "u9", "Fetch()"),
+                S::WindowEnd("comp"),
+            ],
+        ),
+        (
+            "not_first",
+            vec![
+                S::Call("app", "other", "Prepare()"),
+                S::Reply("other", "app"),
+                S::Call("app", "comp", "Get()"),
+                S::Call("comp", "u9", "Fetch()"),
+                S::Reply("comp", "app"),
+            ],
+        ),
+    ];
+
+    for (name, steps) in cases {
+        let index = index_of(vec![same_level_overview(), diagram(name, steps)]);
+        let overview = leading_position(&index, "overview");
+        assert!(index.details[overview].is_empty(), "{name}");
+    }
+}
+
+#[test]
+fn same_level_detail_requires_a_named_call_and_resolved_sender() {
+    for (sender, method) in [("app", ""), ("unknown", "Get()")] {
+        let overview = diagram(
+            "overview",
+            vec![S::Call(sender, "comp", method), S::Reply("comp", sender)],
+        );
+        let detail = diagram(
+            "detail",
+            vec![
+                S::Call(sender, "comp", method),
+                S::Call("comp", "u9", "Fetch()"),
+                S::Reply("comp", sender),
+            ],
+        );
+        let index = index_of(vec![overview, detail]);
+        let overview = leading_position(&index, "overview");
+        assert!(index.details[overview].is_empty(), "{sender}: {method}");
+    }
+}
+
+#[test]
+fn same_level_matching_only_expands_an_empty_window() {
+    let empty_detail = diagram(
+        "empty_detail",
+        vec![S::Call("app", "comp", "Get()"), S::Reply("comp", "app")],
+    );
+    let after_reply = diagram(
+        "after_reply",
+        vec![
+            S::Call("app", "comp", "Get()"),
+            S::Reply("comp", "app"),
+            S::Call("comp", "u9", "Fetch()"),
+        ],
+    );
+    let index = index_of(vec![same_level_overview(), empty_detail, after_reply]);
+    let overview = leading_position(&index, "overview");
+    assert!(index.details[overview].is_empty());
+
+    let another_detail = diagram(
+        "another_detail",
+        vec![
+            S::Call("app", "comp", "Get()"),
+            S::Call("comp", "u9", "Fetch()"),
+            S::Reply("comp", "app"),
+        ],
+    );
+    let index = index_of(vec![same_level_detail(), another_detail]);
+    assert!(index.details[leading_position(&index, "detail")].is_empty());
+    assert!(index.details[leading_position(&index, "another_detail")].is_empty());
+}
+
+#[test]
+fn same_level_window_excludes_other_alternative_cases() {
+    let detail = diagram(
+        "detail",
+        vec![S::AltElse(
+            vec![S::Call("app", "comp", "Get()"), S::Reply("comp", "app")],
+            vec![
+                S::Call("app", "comp", "Get()"),
+                S::Call("comp", "u9", "Fetch()"),
+                S::Reply("comp", "app"),
+            ],
+        )],
+    );
+    let index = index_of(vec![same_level_overview(), detail]);
+
+    assert!(index.details[leading_position(&index, "overview")].is_empty());
+}
+
+#[test]
+fn same_level_detail_never_links_to_its_own_diagram() {
+    let both = diagram(
+        "both",
+        vec![
+            S::Call("app", "comp", "Get()"),
+            S::Call("comp", "u9", "Fetch()"),
+            S::Reply("comp", "app"),
+            S::Call("app", "comp", "Get()"),
+            S::Reply("comp", "app"),
+        ],
+    );
+    let index = index_of(vec![both]);
+
+    assert!(index.details.iter().all(Vec::is_empty));
+}
+
+#[test]
+fn same_level_overview_call_need_not_lead_its_diagram() {
+    let overview = diagram(
+        "overview",
+        vec![
+            S::Call("app", "other", "Prepare()"),
+            S::Reply("other", "app"),
+            S::Call("app", "comp", "Get()"),
+            S::Reply("comp", "app"),
+        ],
+    );
+    let index = index_of(vec![overview, same_level_detail()]);
+    let overview = index
+        .entries
+        .iter()
+        .position(|entry| entry.diagram == "overview" && entry.method == "Get")
+        .unwrap();
+    let detail = leading_position(&index, "detail");
+
+    assert_eq!(index.details[overview], [detail]);
+    assert!(check_sequence_refinement(&index).accepts(overview, detail));
+}
+
+#[test]
+fn unclosed_same_level_windows_do_not_link_or_report_findings() {
+    let open_overview = diagram("overview", vec![S::Call("app", "comp", "Get()")]);
+    let open_detail = diagram(
+        "detail",
+        vec![
+            S::Call("app", "comp", "Get()"),
+            S::Call("comp", "u9", "Fetch()"),
+            S::Reply("u9", "comp"),
+        ],
+    );
+
+    for diagrams in [
+        vec![open_overview, same_level_detail()],
+        vec![same_level_overview(), open_detail],
+    ] {
+        let index = index_of(diagrams);
+        let overview = leading_position(&index, "overview");
+        let check = check_sequence_refinement(&index);
+
+        assert_findings(&check.result, &[]);
+        assert!(index.details[overview].is_empty());
+    }
+}
+
+#[test]
+fn same_level_detail_must_close_on_every_alternative() {
+    let detail = diagram(
+        "detail",
+        vec![
+            S::Call("app", "comp", "Get()"),
+            S::AltElse(
+                vec![S::Call("comp", "u9", "Fetch()"), S::Reply("comp", "app")],
+                vec![S::Call("comp", "u9", "Fetch()")],
+            ),
+        ],
+    );
+    let index = index_of(vec![same_level_overview(), detail]);
+    let overview = leading_position(&index, "overview");
+    let check = check_sequence_refinement(&index);
+
+    assert_findings(&check.result, &[]);
+    assert!(index.details[overview].is_empty());
+}
+
+#[test]
+fn same_level_asynchronous_windows_use_explicit_boundaries() {
+    let overview = diagram(
+        "overview",
+        vec![
+            S::Async("app", "comp", "Get()"),
+            S::WindowEnd("comp"),
+            S::Call("app", "other", "Later()"),
+        ],
+    );
+    let detail = diagram(
+        "detail",
+        vec![
+            S::Async("app", "comp", "Get()"),
+            S::Async("comp", "u9", "Fetch()"),
+            S::WindowEnd("comp"),
+            S::Call("app", "other", "Later()"),
+        ],
+    );
+    let index = index_of(vec![overview, detail]);
+    let overview = leading_position(&index, "overview");
+    let detail = leading_position(&index, "detail");
+    let check = check_sequence_refinement(&index);
+
+    assert_eq!(index.details[overview], [detail]);
+    assert_findings(&check.result, &[]);
+    assert!(check.accepts(overview, detail));
+}
+
+#[test]
+fn same_level_counts_only_calls_from_the_receiver_or_its_descendants() {
+    let overview = diagram(
+        "overview",
+        vec![
+            S::Call("app", "comp", "Get()"),
+            S::Call("app", "other", "Unrelated()"),
+            S::Reply("comp", "app"),
+        ],
+    );
+    let unrelated = diagram(
+        "unrelated",
+        vec![
+            S::Call("app", "comp", "Get()"),
+            S::Call("app", "other", "Unrelated()"),
+            S::Reply("comp", "app"),
+        ],
+    );
+    let detail = diagram(
+        "detail",
+        vec![
+            S::Call("app", "comp", "Get()"),
+            S::Call("u1", "u9", "Fetch()"),
+            S::Reply("comp", "app"),
+        ],
+    );
+    let index = index_of(vec![overview, unrelated, detail]);
+    let overview = leading_position(&index, "overview");
+    let detail = leading_position(&index, "detail");
+    assert_eq!(index.details[overview], [detail]);
+}
+
+#[test]
+fn asynchronous_same_level_requires_boundary_on_every_path() {
+    let make = |name, steps| diagram(name, steps);
+    let overview = || {
+        make(
+            "overview",
+            vec![S::Async("app", "comp", "Get()"), S::WindowEnd("comp")],
+        )
+    };
+    for ending in [
+        vec![],
+        vec![S::Alt(vec![S::WindowEnd("comp")])],
+        vec![S::AltElse(vec![S::WindowEnd("comp")], vec![])],
+    ] {
+        let mut steps = vec![
+            S::Async("app", "comp", "Get()"),
+            S::Async("comp", "u9", "Fetch()"),
+        ];
+        steps.extend(ending);
+        let index = index_of(vec![overview(), make("detail", steps)]);
+        assert!(index.details[leading_position(&index, "overview")].is_empty());
+        assert_findings(&check_sequence_refinement(&index).result, &[]);
+    }
+}
+
+#[test]
+fn async_boundary_on_every_alternative_closes_the_window() {
+    let overview = diagram(
+        "overview",
+        vec![S::Async("app", "comp", "Get()"), S::WindowEnd("comp")],
+    );
+    let detail = diagram(
+        "detail",
+        vec![
+            S::Async("app", "comp", "Get()"),
+            S::Reply("comp", "app"),
+            S::AltElse(
+                vec![S::Async("comp", "u9", "Fetch()"), S::WindowEnd("comp")],
+                vec![S::Async("comp", "u9", "Fetch()"), S::WindowEnd("comp")],
+            ),
+        ],
+    );
+    let index = index_of(vec![overview, detail]);
+    let overview = leading_position(&index, "overview");
+    let detail = leading_position(&index, "detail");
+    assert_eq!(index.details[overview], [detail]);
+    assert_findings(&check_sequence_refinement(&index).result, &[]);
+}
+
+#[test]
+fn async_overview_requires_its_own_boundary() {
+    let overview = diagram("overview", vec![S::Async("app", "comp", "Get()")]);
+    let detail = diagram(
+        "detail",
+        vec![
+            S::Async("app", "comp", "Get()"),
+            S::Async("comp", "u9", "Fetch()"),
+            S::WindowEnd("comp"),
+        ],
+    );
+    let index = index_of(vec![overview, detail]);
+    assert!(index.details[leading_position(&index, "overview")].is_empty());
+    assert_findings(&check_sequence_refinement(&index).result, &[]);
+}
+
+#[test]
+fn async_marker_does_not_change_zoom_window() {
+    let overview = diagram(
+        "overview",
+        vec![
+            S::Async("app", "comp", "Get()"),
+            S::WindowEnd("comp"),
+            S::Async("comp", "platform", "Log()"),
+        ],
+    );
+    let detail = diagram("detail", vec![S::Async("app", "u1", "Get()")]);
+    let index = index_of(vec![overview, detail]);
+    assert_findings(
+        &check_sequence_refinement(&index).result,
+        &["ZoomExitMissing"],
+    );
+}
+
+#[test]
+fn unmatched_or_malformed_async_boundary_is_reported() {
+    let mut unmatched = diagram(
+        "unmatched",
+        vec![
+            S::Async("app", "comp", "Get()"),
+            S::WindowEnd("other"),
+            S::WindowEnd("comp"),
+            S::WindowEnd("comp"),
+        ],
+    );
+    if let Node::Reference(reference) = &mut unmatched.root.items[1] {
+        reference.participants.push("comp".into());
+    }
+    let index = index_of(vec![unmatched]);
+    assert_findings(
+        &check_sequence_refinement(&index).result,
+        &[
+            "SameLevelAsyncWindowEndInvalid",
+            "SameLevelAsyncWindowEndInvalid",
+        ],
+    );
+}
+
+#[test]
+fn overlapping_asynchronous_windows_are_reported_and_not_linked() {
+    let overview = diagram(
+        "overview",
+        vec![
+            S::Async("app", "comp", "Get()"),
+            S::Async("platform", "comp", "Get()"),
+            S::WindowEnd("comp"),
+        ],
+    );
+    let detail = diagram(
+        "detail",
+        vec![
+            S::Async("app", "comp", "Get()"),
+            S::Async("comp", "u9", "Fetch()"),
+            S::WindowEnd("comp"),
+        ],
+    );
+    let index = index_of(vec![overview, detail]);
+    assert!(index.details[leading_position(&index, "overview")].is_empty());
+    assert_findings(
+        &check_sequence_refinement(&index).result,
+        &["SameLevelAsyncWindowOverlap", "SameLevelAsyncWindowOverlap"],
+    );
+}
+
+#[test]
+fn partially_bounded_async_window_cannot_hide_overlap() {
+    let overview = diagram(
+        "overview",
+        vec![
+            S::Async("platform", "comp", "Get()"),
+            S::AltElse(
+                vec![S::Async("app", "comp", "Get()"), S::WindowEnd("comp")],
+                vec![],
+            ),
+        ],
+    );
+    let detail = diagram(
+        "detail",
+        vec![
+            S::Async("app", "comp", "Get()"),
+            S::Async("comp", "u9", "Fetch()"),
+            S::WindowEnd("comp"),
+        ],
+    );
+    let index = index_of(vec![overview, detail]);
+    let inner = index
+        .entries
+        .iter()
+        .position(|entry| {
+            entry.diagram == "overview" && entry.sender == Lifeline::Environment("app".to_string())
+        })
+        .unwrap();
+    assert!(index.details[inner].is_empty());
+    assert_findings(
+        &check_sequence_refinement(&index).result,
+        &["SameLevelAsyncWindowOverlap", "SameLevelAsyncWindowOverlap"],
+    );
+}
+
+#[test]
+fn same_level_detail_is_independent_of_zoom_boundary_findings() {
+    let outside = diagram(
+        "outside",
+        vec![
+            S::Call("app", "u1", "Get()"),
+            S::Call("u1", "u9", "Fetch()"),
+            S::Reply("u1", "app"),
+        ],
+    );
+    let index = index_of(vec![same_level_overview(), same_level_detail(), outside]);
+    let overview = leading_position(&index, "overview");
+    let same_level = leading_position(&index, "detail");
+    let zoom = leading_position(&index, "outside");
+    let check = check_sequence_refinement(&index);
+
+    assert_eq!(
+        index.details[overview]
+            .iter()
+            .copied()
+            .collect::<BTreeSet<_>>(),
+        BTreeSet::from([zoom, same_level]),
+    );
+    assert_findings(&check.result, &["ZoomParticipantOutsideContainer"]);
+    assert!(check.accepts(overview, same_level));
+    assert!(!check.accepts(overview, zoom));
+}
+
+#[test]
+fn async_same_level_link_survives_a_zoom_exit_finding() {
+    let overview = diagram(
+        "overview",
+        vec![
+            S::Async("app", "comp", "Get()"),
+            S::WindowEnd("comp"),
+            S::Async("comp", "platform", "Log()"),
+        ],
+    );
+    let same_level = diagram(
+        "detail",
+        vec![
+            S::Async("app", "comp", "Get()"),
+            S::Async("comp", "u9", "Fetch()"),
+            S::WindowEnd("comp"),
+        ],
+    );
+    let zoom = diagram("zoom", vec![S::Async("app", "u1", "Get()")]);
+    let index = index_of(vec![overview, same_level, zoom]);
+    let overview = leading_position(&index, "overview");
+    let same_level = leading_position(&index, "detail");
+    let zoom = leading_position(&index, "zoom");
+    let check = check_sequence_refinement(&index);
+
+    assert_findings(&check.result, &["ZoomExitMissing", "ZoomExitMissing"]);
+    assert!(check.accepts(overview, same_level));
+    assert!(!check.accepts(overview, zoom));
+}
+
+#[test]
+fn callback_into_the_receiver_does_not_overlap_an_async_window() {
+    let callback = |name| {
+        diagram(
+            name,
+            vec![
+                S::Async("app", "comp", "Get()"),
+                S::Call("comp", "other", "Do()"),
+                S::Call("other", "comp", "OnDone()"),
+                S::Reply("comp", "other"),
+                S::Reply("other", "comp"),
+                S::WindowEnd("comp"),
+            ],
+        )
+    };
+    let index = index_of(vec![callback("callback")]);
+    assert_findings(&check_sequence_refinement(&index).result, &[]);
+
+    let foreign = diagram(
+        "foreign",
+        vec![
+            S::Async("app", "comp", "Get()"),
+            S::Call("platform", "comp", "Other()"),
+            S::Reply("comp", "platform"),
+            S::WindowEnd("comp"),
+        ],
+    );
+    let index = index_of(vec![foreign]);
+    assert_findings(
+        &check_sequence_refinement(&index).result,
+        &["SameLevelAsyncWindowOverlap"],
+    );
+}
+
+#[test]
+fn window_end_text_is_trimmed() {
+    let mut overview = diagram(
+        "overview",
+        vec![S::Async("app", "comp", "Get()"), S::WindowEnd("comp")],
+    );
+    if let Node::Reference(reference) = &mut overview.root.items[1] {
+        reference.text = Some(" score-window-end ".to_string());
+    }
+    let index = index_of(vec![overview]);
+    assert_findings(&check_sequence_refinement(&index).result, &[]);
 }

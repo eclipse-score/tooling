@@ -16,15 +16,15 @@
 ## Purpose
 
 A call into a SEooC, component or unit can be refined by a sequence diagram
-that opens it ("zoom"). This validator checks that the refining diagram keeps
-the boundary of the call it refines. It runs in the `dependable_element`
-profile on the sequence and component diagrams of all its architectural
-designs, so an overview and its detail may live in different designs. An
-architectural design alone is not checked for zoom.
+that opens it ("zoom") or shows additional interactions at the same level.
+This validator checks the call windows and, for zoom, the boundary. It runs in
+the `dependable_element` profile on the sequence and component diagrams of all
+its architectural designs, so an overview and its detail may live in different
+designs. An architectural design alone is not checked for refinement.
 
 Sequence diagrams are not merged. A refinement is a link between two calls,
-found by participant uid and the static architecture. No marker is needed in
-the diagram.
+found by participant uid and the static architecture. Asynchronous same-level
+windows require explicit end markers; other matching needs no marker.
 
 ## Terms
 
@@ -53,15 +53,21 @@ the diagram.
 - **Exit** of an entry: a call in its window from `C` to an architecture
   element outside `C`, to an actor or `<<external>>` participant, or to a
   gate. Replies, self calls and calls after the window are no exits.
-- **Detail** of an entry `X -> C : op()`: an entry `X -> u : op()` in any
-  sequence diagram of the dependable element where `u` is a **direct child** of `C`, with the same sender uid and
-  the same method name, and which is the **first call** of its diagram. Argument
-  text is ignored. An entry can have no, one or several details (variants). A
-  call that does not lead its diagram is no detail and is never linked, so a
-  diagram that starts with another call stays unlinked and unchecked. A call
-  is never refined by its own diagram: a detail in the diagram of the entry
-  is dropped. A diagram given more than once (same source and name) counts
-  once.
+- **Zoom detail** of an entry `X -> C : op()`: an entry `X -> u : op()`
+  where `u` is a **direct child** of `C`, with the same sender and method.
+- **Same-level detail**: an entry `X -> C : op()` with the same sender
+  (a resolved element or environment), receiver, non-empty method and
+  synchronous or asynchronous call kind. The overview window has no calls
+  from `C` or its descendants; the detail window has at least one such call.
+  Both synchronous windows must be closed; both asynchronous windows must
+  have an explicit end marker. An unresolved sender cannot form a same-level
+  refinement.
+
+Each detail is the **first call** of another sequence diagram of the dependable
+element. Argument text is ignored. An entry can have no, one or several
+details (variants). A call that does not lead its diagram is no detail. A
+call is never refined by its own diagram. A diagram given more than once
+(same source and name) counts once.
 
 Participants are matched by uid, never by alias. A participant that is not
 exactly one element of the component diagram is skipped. Such a participant is
@@ -72,7 +78,7 @@ misspelled uid in a detail is not found by this validation.
 
 A call without a detail stays a black box and is not checked.
 
-For every detail of an entry into `C`:
+For every zoom detail of an entry into `C`:
 
 - Each participant of the detail window is inside `C`, is the sender `X`, is
   an actor, `<<external>>` participant or gate, is an exit partner of the
@@ -86,10 +92,20 @@ For every detail of an entry into `C`:
 A detail may add exits to actors and `<<external>>` participants that the
 entry does not show, and calls between the children of `C`.
 
-The detail does not show `C` itself; it shows the children of `C`.
+A zoom detail does not show `C` itself; it shows the children of `C`.
 
-Every refined synchronous entry and every synchronous detail needs a closed
-window: a reply to the sender (`-->` or `return`) or a `deactivate`. A `return`
+A same-level detail keeps `C` and may call other architecture elements. Its
+interactions remain subject to the normal sequence and API validators when
+their inputs are provided. Same-level matching checks the window shape, not
+semantic equivalence: arguments and reply labels are not compared. Unrelated
+scenarios with matching calls can therefore link. Two windows with no calls
+from `C` or its descendants, or two with such calls, do not form a same-level
+refinement. Unclosed synchronous windows are not linked and do not produce a
+same-level finding. Findings of zoom details of the same entry (such as
+`ZoomExitMissing`) do not remove a same-level link.
+
+Every synchronous zoom entry and detail needs a closed window: a reply to the
+sender (`-->` or `return`) or a `deactivate`. A `return`
 replies only after a call with `++` or an `activate`; `autoactivate` is not
 evaluated. A reply written as `--> X --` (reply and deactivate in one message)
 ends one activation only. An asynchronous call (`->>`) needs no reply: its
@@ -97,10 +113,28 @@ window ends at a reply or `deactivate` if there is one, else at the end of the
 diagram, and the exits of that window are checked like those of any other. An
 asynchronous call into `C` inside a window needs no reply either.
 
-*(Requirement: {requirement:downstream-ref}`Tools.SequenceRefinement`)*
+For same-level matching only, an asynchronous window ends at
+`ref over C : score-window-end`, where `C` is the receiver's local reference.
+The marker is required on every path in both diagrams; replies and
+deactivations do not replace it. The marker appears as a reference box in the
+rendered diagram. A marker must name exactly one receiver and match an open
+asynchronous entry. A second entry into that receiver before the first window
+ends is ambiguous and reported; neither overlapping asynchronous entry is
+matched at the same level. A call into that receiver from an element that the
+window itself called (a callback) is no second entry. Overlap detection is
+conservative across branches:
+entries appearing between an entry and its final end marker are treated as
+overlapping even if they are in mutually exclusive alternatives. These markers
+do not change zoom windows.
 
-Because each link goes from `C` to a direct child, a chain of refinements
-always descends the architecture tree.
+*(Requirements: {requirement:downstream-ref}`Tools.SequenceRefinement`,
+{requirement:downstream-ref}`Tools.SequenceSameLevelRefinement`,
+{requirement:downstream-ref}`Tools.SequenceSameLevelWindowClosure`,
+{requirement:downstream-ref}`Tools.SequenceSameLevelAsyncBoundary`)*
+
+Zoom descends the architecture tree. Same-level links go only from a window
+without calls from `C` to one with such calls, so they cannot create a
+refinement cycle.
 
 The same links make the calls clickable in the documentation: each entry links
 to its details (`diagram_links.json`). Only details that pass this check are
@@ -109,7 +143,7 @@ linked: a detail that is rejected by a finding, or whose entry has a finding
 the design has findings (`validation_cli --links-only` writes them without
 validating or reporting).
 
-### Example
+### Zoom example
 
 ```text
 ' overview: 1 call, 1 exit
@@ -131,11 +165,49 @@ comp -> Platform : Log()
 comp --> App : value
 ```
 
+### Same-level example
+
+```text
+' overview: the call is a black box
+actor App
+participant "sl::comp" as Service
+App -> Service ++ : Get()
+return value
+```
+
+```text
+' detail: the same call shows a collaboration
+actor App
+participant "sl::comp" as Handler
+participant "sl::other::unit_2" as Helper
+App -> Handler ++ : Get()
+Handler -> Helper ++ : Fetch()
+return data
+return value
+```
+
+For an asynchronous call, bound the window in each diagram:
+
+```text
+App ->> Service : Get()
+ref over Service : score-window-end
+```
+
+```text
+App ->> Handler : Get()
+Handler ->> Helper : Fetch()
+ref over Handler : score-window-end
+```
+
 ## Failure Cases
 
 | Failure case | Finding |
 |---|---|
-| A detail uses an architecture element that is outside `C`, not the sender, no exit partner and not called by one | `ZoomParticipantOutsideContainer` |
-| No detail keeps an exit of the entry | `ZoomExitMissing` |
-| A detail shows the refined element `C` itself | `ZoomContainerInDetail` |
-| A synchronous refined entry or detail is neither replied to nor deactivated | `ZoomWindowNotClosed` |
+| A zoom detail uses an architecture element that is outside `C`, not the sender, no exit partner and not called by one | `ZoomParticipantOutsideContainer` |
+| No zoom detail keeps an exit of the entry | `ZoomExitMissing` |
+| A zoom detail shows the refined element `C` itself | `ZoomContainerInDetail` |
+| A synchronous zoom entry or detail is neither replied to nor deactivated | `ZoomWindowNotClosed` |
+| An asynchronous entry overlaps another entry to the same receiver before its end marker | `SameLevelAsyncWindowOverlap` |
+| An end marker names multiple receivers or does not match an open asynchronous entry | `SameLevelAsyncWindowEndInvalid` |
+
+`ZoomWindowNotClosed` retains its existing name for compatibility.

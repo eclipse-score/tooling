@@ -22,9 +22,12 @@ architectural_design(
         "dynamic_cast.puml",
         "dynamic_design.puml",
         "dynamic_polling.puml",
+        "get_data_async.puml",
+        "get_data_async_overview.puml",
         "get_number_component.puml",
         "get_number_seooc.puml",
         "get_number_unit.puml",
+        "get_number_unit_overview.puml",
         "subdiagrams/get_data.iuml",  # `.iuml`: fragment, `!include`d by scenarios
     ],
     internal_api = [
