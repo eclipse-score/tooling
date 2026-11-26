@@ -54,6 +54,9 @@ class ApiSurface:
     version: str = "1"
 
 
+# Kinds of friend functions and non-member operators of public types.
+FRIEND_KINDS = ("friend", "template_friend", "free_operator", "template_free_operator")
+
 # Namespace patterns considered internal (not public API)
 INTERNAL_NAMESPACE_PATTERNS = (
     "::detail::",
@@ -145,6 +148,20 @@ def extract_signature(node: dict) -> str:
     elif kind == "VarDecl":
         return f"{name} : {type_info}" if type_info else name
     return name
+
+
+def function_signature(node: dict, extern_c: bool = False) -> str:
+    """Signature of a FunctionDecl or FunctionTemplateDecl in the lock-file format."""
+    name = node.get("name", "")
+    target = node
+    if node.get("kind") == "FunctionTemplateDecl":
+        target = next(
+            (c for c in node.get("inner", []) if c.get("kind") in ("FunctionDecl", "CXXMethodDecl")),
+            node,
+        )
+    type_info = target.get("type", {}).get("qualType", "")
+    base_sig = f"{name} : {type_info}" if type_info else name
+    return enrich_signature(base_sig, target, extern_c)
 
 
 # Map clang attribute node kinds to their C++ standard attribute spelling.
@@ -399,11 +416,42 @@ def extract_from_ast(
                 return target
         return file_path
 
+    def add_friend(friend_decl: dict, ns_scope: list[str], extern_c: bool):
+        """Record a friend function (incl. hidden friends) of an exposed class."""
+        func = next(
+            (c for c in friend_decl.get("inner", []) if c.get("kind") in ("FunctionDecl", "FunctionTemplateDecl")),
+            None,
+        )
+        if func is None or func.get("isImplicit") or func.get("explicitlyDeleted"):
+            return
+        name = func.get("name", "")
+        func_file = get_node_file(func)
+        if not name or not is_in_target_files(func_file, target_files):
+            return
+        qualified = build_qualified_name(name, ns_scope)
+        if is_internal_name(qualified):
+            return
+        is_template = func.get("kind") == "FunctionTemplateDecl"
+        has_api, has_brief = get_comment_markers(find_comment(func) or find_comment(friend_decl))
+        symbols.append(
+            ApiSymbol(
+                name=name,
+                qualified_name=qualified,
+                kind="template_friend" if is_template else "friend",
+                signature=function_signature(func, extern_c),
+                file=make_relative(func_file),
+                line=get_line(func),
+                has_api_marker=has_api,
+                has_brief_doc=has_brief,
+            )
+        )
+
     def walk(
         node: dict,
         namespace_stack: list[str],
         access: str = "public",
         extern_c: bool = False,
+        scope_ns: Optional[list[str]] = None,
     ):
         kind = node.get("kind", "")
         name = node.get("name", "")
@@ -512,14 +560,25 @@ def extract_from_ast(
             # Walk class members
             member_access = "private" if node.get("tagUsed") == "class" else "public"
             new_stack = namespace_stack + [name] if name else namespace_stack
+            # Friend functions live in the innermost enclosing namespace, not in the class.
+            ns_scope = scope_ns if scope_ns is not None else namespace_stack
+            class_exposed = (
+                bool(name)
+                and access in ("public", "protected")
+                and not is_internal_name(build_qualified_name(name, namespace_stack))
+            )
             for child in node.get("inner", []):
                 child_kind = child.get("kind", "")
                 if child_kind == "AccessSpecDecl":
                     member_access = child.get("access", member_access)
                 elif child_kind == "CXXRecordDecl" and child.get("name") == name:
                     continue  # Skip injected-class-name
+                elif child_kind == "FriendDecl":
+                    # Friend access is independent of the section it is declared in.
+                    if class_exposed:
+                        add_friend(child, ns_scope, extern_c)
                 else:
-                    walk(child, new_stack, member_access, extern_c)
+                    walk(child, new_stack, member_access, extern_c, ns_scope)
             return
 
         # Handle ClassTemplateDecl
@@ -665,6 +724,8 @@ def extract_from_ast(
     # --- Follow type aliases to underlying classes ---
     # Build an index of all class/struct definitions by qualified name
     class_index: dict[str, dict] = {}  # qualified_name -> CXXRecordDecl node
+    class_qname_by_id: dict[int, str] = {}
+    ns_operators: dict[str, list[dict]] = {}  # namespace -> namespace-scope operator decls
     enum_index: dict[str, dict] = {}  # qualified_name -> EnumDecl node
 
     def index_classes(node: dict, ns_stack: list[str]):
@@ -680,6 +741,7 @@ def extract_from_ast(
         if kind == "CXXRecordDecl" and name and node.get("completeDefinition"):
             qualified = build_qualified_name(name, ns_stack)
             class_index[qualified] = node
+            class_qname_by_id[id(node)] = qualified
 
         if kind == "EnumDecl" and name and node.get("inner"):
             enum_index[build_qualified_name(name, ns_stack)] = node
@@ -690,6 +752,7 @@ def extract_from_ast(
             for child in node.get("inner", []):
                 if child.get("kind") == "CXXRecordDecl" and child.get("completeDefinition"):
                     class_index[qualified] = child
+                    class_qname_by_id[id(child)] = qualified
                     break
 
         for child in node.get("inner", []):
@@ -698,6 +761,28 @@ def extract_from_ast(
     for node in ast_root.get("inner", []):
         if not node.get("isImplicit"):
             index_classes(node, [])
+
+    def index_operators(node: dict, ns_stack: list[str]):
+        kind = node.get("kind", "")
+        name = node.get("name", "")
+        if kind == "NamespaceDecl":
+            new_stack = ns_stack + [name] if name else ns_stack
+            for child in node.get("inner", []):
+                index_operators(child, new_stack)
+        elif kind == "LinkageSpecDecl":
+            for child in node.get("inner", []):
+                index_operators(child, ns_stack)
+        elif (
+            kind in ("FunctionDecl", "FunctionTemplateDecl")
+            and name.startswith("operator")
+            and not node.get("isImplicit")
+            and not node.get("explicitlyDeleted")
+        ):
+            ns_operators.setdefault("::".join(ns_stack), []).append(node)
+
+    for node in ast_root.get("inner", []):
+        if not node.get("isImplicit"):
+            index_operators(node, [])
 
     # For each type alias that references a class, extract the class's public members
     alias_symbols = [s for s in symbols if s.kind in ("type_alias", "template_type_alias")]
@@ -775,6 +860,50 @@ def extract_from_ast(
 
         return members
 
+    def _get_friend_functions(class_node: dict, visited: Optional[set] = None) -> list[dict]:
+        """Friend functions of a class and of its public bases (found via ADL on the derived type)."""
+        if visited is None:
+            visited = set()
+        if id(class_node) in visited:
+            return []
+        visited.add(id(class_node))
+
+        friends = []
+        for child in class_node.get("inner", []):
+            if child.get("kind") != "FriendDecl":
+                continue
+            func = next(
+                (c for c in child.get("inner", []) if c.get("kind") in ("FunctionDecl", "FunctionTemplateDecl")),
+                None,
+            )
+            if func and func.get("name") and not func.get("isImplicit") and not func.get("explicitlyDeleted"):
+                friends.append(func)
+        for base in class_node.get("bases", []):
+            if base.get("access") != "public":
+                continue
+            base_node = _resolve_class_node(base.get("type", {}).get("qualType", ""))
+            if base_node:
+                friends.extend(_get_friend_functions(base_node, visited))
+        return friends
+
+    def _get_free_operators(class_node: dict) -> list[dict]:
+        """Non-member operators with a parameter of the class type, declared in the class's internal namespace."""
+        class_qname = class_qname_by_id.get(id(class_node), "")
+        class_ns, _, simple_name = class_qname.rpartition("::")
+        # Operators in public namespaces are already extracted as regular functions.
+        if not class_ns or not is_internal_name(class_ns + "::x"):
+            return []
+        pattern = re.compile(rf"\b{re.escape(simple_name)}\b")
+        result = []
+        for op in ns_operators.get(class_ns, []):
+            func = op
+            if op.get("kind") == "FunctionTemplateDecl":
+                func = next((c for c in op.get("inner", []) if c.get("kind") == "FunctionDecl"), op)
+            params = [c for c in func.get("inner", []) if c.get("kind") == "ParmVarDecl"]
+            if any(pattern.search(p.get("type", {}).get("qualType", "")) for p in params):
+                result.append(op)
+        return result
+
     for alias_sym in alias_symbols:
         # Find the original TypeAliasDecl/TypeAliasTemplateDecl node to get qualType
         underlying_type = _get_underlying_type_for_alias(ast_root, alias_sym.name, alias_sym.qualified_name)
@@ -811,6 +940,27 @@ def extract_from_ast(
         class_node = _resolve_class_node(underlying_type, alias_sym.qualified_name)
         if not class_node:
             continue
+
+        # Friends and non-member operators are found via ADL and are part of the
+        # public API of the aliased type; they live in the alias's namespace.
+        alias_ns = alias_sym.qualified_name.rpartition("::")[0]
+        for func, func_kind in [(f, "friend") for f in _get_friend_functions(class_node)] + [
+            (o, "free_operator") for o in _get_free_operators(class_node)
+        ]:
+            func_name = func["name"]
+            has_api, has_brief = get_comment_markers(find_comment(func))
+            followed_members.append(
+                ApiSymbol(
+                    name=func_name,
+                    qualified_name=build_qualified_name(func_name, alias_ns.split("::") if alias_ns else []),
+                    kind=("template_" if func.get("kind") == "FunctionTemplateDecl" else "") + func_kind,
+                    signature=function_signature(func),
+                    file=alias_sym.file,
+                    line=alias_sym.line,
+                    has_api_marker=has_api,
+                    has_brief_doc=has_brief,
+                )
+            )
 
         # Extract public members (including inherited)
         public_members = _get_public_members(class_node)
@@ -858,6 +1008,21 @@ def extract_from_ast(
 
     # Add followed members to the symbols list
     symbols.extend(followed_members)
+
+    # A friend that is also declared at namespace scope (or reached through several
+    # aliases) is reported once; the entry is documented if any declaration is.
+    unique: dict[tuple, ApiSymbol] = {}
+    kept: list[ApiSymbol] = []
+    for sym in sorted(symbols, key=lambda x: x.kind in FRIEND_KINDS):  # stable: regular symbols first
+        key = (sym.qualified_name, sym.signature)
+        if sym.kind in FRIEND_KINDS and key in unique:
+            existing = unique[key]
+            existing.has_api_marker = existing.has_api_marker or sym.has_api_marker
+            existing.has_brief_doc = existing.has_brief_doc or sym.has_brief_doc
+            continue
+        unique.setdefault(key, sym)
+        kept.append(sym)
+    symbols = kept
 
     # Sort for deterministic output
     symbols.sort(key=lambda s: (s.file, s.line, s.qualified_name))

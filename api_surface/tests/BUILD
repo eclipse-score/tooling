@@ -211,6 +211,12 @@ cc_library(
 )
 
 cc_library(
+    name = "friend_operators_lib",
+    srcs = ["friend_operators.cpp"],
+    hdrs = ["friend_operators.h"],
+)
+
+cc_library(
     name = "sfinae_lib",
     srcs = ["sfinae.cpp"],
     hdrs = ["sfinae.h"],
@@ -311,6 +317,13 @@ api_surface_test(
 )
 
 api_surface_test(
+    name = "friend_operators_api_test",
+    check_docs = False,
+    lock_file = "golden/friend_operators.lock.json",
+    target = ":friend_operators_lib",
+)
+
+api_surface_test(
     name = "private_changes_v2_api_test",
     check_docs = False,
     lock_file = "golden/private_changes_v2.lock.json",
@@ -338,6 +351,7 @@ py_test(
         ":extern_c_api_test_gen",
         ":extern_explicit_api_test_gen",
         ":forward_declared_api_test_gen",
+        ":friend_operators_api_test_gen",
         ":globals_api_test_gen",
         ":inheritance_api_test_gen",
         ":internal_namespace_api_test_gen",
