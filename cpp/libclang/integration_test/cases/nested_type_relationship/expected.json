@@ -26,7 +26,10 @@
       "variables": [
         {
           "name": "inner_",
-          "data_type": "demo::Outer::Inner",
+          "data_type": {
+            "raw_text": "Outer::Inner",
+            "expression": { "NamedType": { "segments": ["demo", "Outer", "Inner"] } }
+          },
           "is_static": false,
           "visibility": "private",
           "source_location": {

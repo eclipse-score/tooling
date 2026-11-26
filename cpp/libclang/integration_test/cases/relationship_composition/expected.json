@@ -26,7 +26,10 @@
       "variables": [
         {
           "name": "engine",
-          "data_type": "Engine",
+          "data_type": {
+            "raw_text": "Engine",
+            "expression": { "NamedType": { "segments": ["Engine"] } }
+          },
           "is_static": false,
           "visibility": "private",
           "source_location": {

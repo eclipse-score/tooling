@@ -14,12 +14,15 @@
             {
               "is_variadic": false,
               "name": "name",
-              "param_type": "const char *"
+              "param_type": {
+                "raw_text": "const char *",
+                "expression": { "Pointer": { "Const": { "Builtin": "char" } } }
+              }
             },
             {
               "is_variadic": false,
               "name": "doors",
-              "param_type": "int"
+              "param_type": { "raw_text": "int", "expression": { "Builtin": "int" } }
             }
           ],
           "modifiers": [
@@ -34,7 +37,7 @@
         },
         {
           "name": "start",
-          "return_type": "void",
+          "return_type": { "raw_text": "void", "expression": { "Builtin": "void" } },
           "parameters": [],
           "modifiers": [
             "Virtual",
@@ -49,7 +52,7 @@
         },
         {
           "name": "stop",
-          "return_type": "void",
+          "return_type": { "raw_text": "void", "expression": { "Builtin": "void" } },
           "parameters": [],
           "modifiers": [
             "Virtual",
@@ -64,7 +67,7 @@
         },
         {
           "name": "getDoors",
-          "return_type": "int",
+          "return_type": { "raw_text": "int", "expression": { "Builtin": "int" } },
           "parameters": [],
           "modifiers": ["Const"],
           "template_parameters": null,
@@ -76,7 +79,7 @@
         },
         {
           "name": "wheelCount",
-          "return_type": "int",
+          "return_type": { "raw_text": "int", "expression": { "Builtin": "int" } },
           "parameters": [],
           "modifiers": [
             "Virtual",
@@ -110,7 +113,7 @@
       "variables": [
         {
           "name": "m_doors",
-          "data_type": "int",
+          "data_type": { "raw_text": "int", "expression": { "Builtin": "int" } },
           "is_static": false,
           "visibility": "private",
           "source_location": {
@@ -148,7 +151,7 @@
         },
         {
           "name": "start",
-          "return_type": "void",
+          "return_type": { "raw_text": "void", "expression": { "Builtin": "void" } },
           "parameters": [],
           "modifiers": [
             "Virtual",
@@ -163,7 +166,7 @@
         },
         {
           "name": "stop",
-          "return_type": "void",
+          "return_type": { "raw_text": "void", "expression": { "Builtin": "void" } },
           "parameters": [],
           "modifiers": [
             "Virtual",
@@ -201,7 +204,10 @@
             {
               "is_variadic": false,
               "name": "name",
-              "param_type": "const char *"
+              "param_type": {
+                "raw_text": "const char *",
+                "expression": { "Pointer": { "Const": { "Builtin": "char" } } }
+              }
             }
           ],
           "modifiers": [
@@ -232,7 +238,7 @@
         },
         {
           "name": "wheelCount",
-          "return_type": "int",
+          "return_type": { "raw_text": "int", "expression": { "Builtin": "int" } },
           "parameters": [],
           "modifiers": [
             "Virtual",
@@ -248,7 +254,7 @@
         },
         {
           "name": "instanceCount",
-          "return_type": "int",
+          "return_type": { "raw_text": "int", "expression": { "Builtin": "int" } },
           "parameters": [],
           "modifiers": [
             "Static"
@@ -262,12 +268,18 @@
         },
         {
           "name": "create",
-          "return_type": "MyNamespace::MyNamespace2::VehicleBase *",
+          "return_type": {
+            "raw_text": "VehicleBase *",
+            "expression": { "Pointer": { "NamedType": { "segments": ["MyNamespace", "MyNamespace2", "VehicleBase"] } } }
+          },
           "parameters": [
             {
               "is_variadic": false,
               "name": "name",
-              "param_type": "const char *"
+              "param_type": {
+                "raw_text": "const char *",
+                "expression": { "Pointer": { "Const": { "Builtin": "char" } } }
+              }
             }
           ],
           "modifiers": [
@@ -300,7 +312,7 @@
       "variables": [
         {
           "name": "m_speed",
-          "data_type": "int",
+          "data_type": { "raw_text": "int", "expression": { "Builtin": "int" } },
           "is_static": false,
           "visibility": "protected",
           "source_location": {
@@ -310,7 +322,10 @@
         },
         {
           "name": "m_name",
-          "data_type": "const char *",
+          "data_type": {
+            "raw_text": "const char *",
+            "expression": { "Pointer": { "Const": { "Builtin": "char" } } }
+          },
           "is_static": false,
           "visibility": "private",
           "source_location": {
@@ -320,7 +335,10 @@
         },
         {
           "name": "m_id",
-          "data_type": "char *const",
+          "data_type": {
+            "raw_text": "char *const",
+            "expression": { "Const": { "Pointer": { "Builtin": "char" } } }
+          },
           "is_static": false,
           "visibility": "private",
           "source_location": {
@@ -330,7 +348,10 @@
         },
         {
           "name": "m_max_speed",
-          "data_type": "const int",
+          "data_type": {
+            "raw_text": "const int",
+            "expression": { "Const": { "Builtin": "int" } }
+          },
           "is_static": false,
           "visibility": "private",
           "source_location": {
@@ -340,7 +361,10 @@
         },
         {
           "name": "m_firmware",
-          "data_type": "const int *const",
+          "data_type": {
+            "raw_text": "const int *const",
+            "expression": { "Const": { "Pointer": { "Const": { "Builtin": "int" } } } }
+          },
           "is_static": false,
           "visibility": "private",
           "source_location": {
@@ -350,7 +374,10 @@
         },
         {
           "name": "m_ref",
-          "data_type": "const int &",
+          "data_type": {
+            "raw_text": "const int &",
+            "expression": { "Reference": { "Const": { "Builtin": "int" } } }
+          },
           "is_static": false,
           "visibility": "private",
           "source_location": {

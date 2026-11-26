@@ -26,7 +26,7 @@
                 },
                 {
                     "name": "Send",
-                    "return_type": "void",
+                    "return_type": { "raw_text": "void", "expression": { "Builtin": "void" } },
                     "visibility": "public",
                     "parameters": [],
                     "template_parameters": null,
@@ -41,7 +41,7 @@
                 },
                 {
                     "name": "Count",
-                    "return_type": "int",
+                    "return_type": { "raw_text": "int", "expression": { "Builtin": "int" } },
                     "visibility": "public",
                     "parameters": [],
                     "template_parameters": null,

@@ -11,7 +11,9 @@
 // SPDX-License-Identifier: Apache-2.0
 // *******************************************************************************
 
-//! Conversion and display rules for C++ types.
+//! Conversion rules for C++ types.
 
-pub(crate) mod renderer;
+mod converter;
 pub(crate) mod resolver;
+
+pub(crate) use converter::describe_type;

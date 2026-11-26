@@ -9,12 +9,12 @@
       "methods": [
         {
           "name": "setId",
-          "return_type": "void",
+          "return_type": { "raw_text": "void", "expression": { "Builtin": "void" } },
           "parameters": [
             {
               "is_variadic": false,
               "name": "id",
-              "param_type": "int"
+              "param_type": { "raw_text": "int", "expression": { "Builtin": "int" } }
             }
           ],
           "modifiers": [],
@@ -27,12 +27,15 @@
         },
         {
           "name": "setName",
-          "return_type": "void",
+          "return_type": { "raw_text": "void", "expression": { "Builtin": "void" } },
           "parameters": [
             {
               "is_variadic": false,
               "name": "name",
-              "param_type": "const char *"
+              "param_type": {
+                "raw_text": "const char *",
+                "expression": { "Pointer": { "Const": { "Builtin": "char" } } }
+              }
             }
           ],
           "modifiers": [],
@@ -45,12 +48,15 @@
         },
         {
           "name": "setIdRef",
-          "return_type": "void",
+          "return_type": { "raw_text": "void", "expression": { "Builtin": "void" } },
           "parameters": [
             {
               "is_variadic": false,
               "name": "id",
-              "param_type": "const int &"
+              "param_type": {
+                "raw_text": "const int &",
+                "expression": { "Reference": { "Const": { "Builtin": "int" } } }
+              }
             }
           ],
           "modifiers": [],
@@ -63,12 +69,15 @@
         },
         {
           "name": "setIdRValueRef",
-          "return_type": "void",
+          "return_type": { "raw_text": "void", "expression": { "Builtin": "void" } },
           "parameters": [
             {
               "is_variadic": false,
               "name": "id",
-              "param_type": "const int &&"
+              "param_type": {
+                "raw_text": "const int &&",
+                "expression": { "RValueReference": { "Const": { "Builtin": "int" } } }
+              }
             }
           ],
           "modifiers": [],
@@ -81,12 +90,15 @@
         },
         {
           "name": "setMutableBuffer",
-          "return_type": "void",
+          "return_type": { "raw_text": "void", "expression": { "Builtin": "void" } },
           "parameters": [
             {
               "is_variadic": false,
               "name": "buffer",
-              "param_type": "int *"
+              "param_type": {
+                "raw_text": "int *",
+                "expression": { "Pointer": { "Builtin": "int" } }
+              }
             }
           ],
           "modifiers": [],
@@ -99,12 +111,15 @@
         },
         {
           "name": "setPinnedBuffer",
-          "return_type": "void",
+          "return_type": { "raw_text": "void", "expression": { "Builtin": "void" } },
           "parameters": [
             {
               "is_variadic": false,
               "name": "buffer",
-              "param_type": "int *const"
+              "param_type": {
+                "raw_text": "int *const",
+                "expression": { "Const": { "Pointer": { "Builtin": "int" } } }
+              }
             }
           ],
           "modifiers": [],
@@ -117,12 +132,15 @@
         },
         {
           "name": "setConstBuffer",
-          "return_type": "void",
+          "return_type": { "raw_text": "void", "expression": { "Builtin": "void" } },
           "parameters": [
             {
               "is_variadic": false,
               "name": "buffer",
-              "param_type": "const int *const"
+              "param_type": {
+                "raw_text": "const int *const",
+                "expression": { "Const": { "Pointer": { "Const": { "Builtin": "int" } } } }
+              }
             }
           ],
           "modifiers": [],
@@ -135,12 +153,20 @@
         },
         {
           "name": "setHistory",
-          "return_type": "void",
+          "return_type": { "raw_text": "void", "expression": { "Builtin": "void" } },
           "parameters": [
             {
               "is_variadic": false,
               "name": "history",
-              "param_type": "std::vector<int>"
+              "param_type": {
+                "raw_text": "std::vector<int>",
+                "expression": {
+                  "Template": {
+                    "name": { "segments": ["std", "vector"] },
+                    "arguments": [{ "Builtin": "int" }]
+                  }
+                }
+              }
             }
           ],
           "modifiers": [],
@@ -153,12 +179,24 @@
         },
         {
           "name": "setNameList",
-          "return_type": "void",
+          "return_type": { "raw_text": "void", "expression": { "Builtin": "void" } },
           "parameters": [
             {
               "is_variadic": false,
               "name": "names",
-              "param_type": "const std::vector<const char *> &"
+              "param_type": {
+                "raw_text": "const std::vector<const char *> &",
+                "expression": {
+                  "Reference": {
+                    "Const": {
+                      "Template": {
+                        "name": { "segments": ["std", "vector"] },
+                        "arguments": [{ "Pointer": { "Const": { "Builtin": "char" } } }]
+                      }
+                    }
+                  }
+                }
+              }
             }
           ],
           "modifiers": [],
@@ -171,12 +209,27 @@
         },
         {
           "name": "setHistoryMatrix",
-          "return_type": "void",
+          "return_type": { "raw_text": "void", "expression": { "Builtin": "void" } },
           "parameters": [
             {
               "is_variadic": false,
               "name": "matrix",
-              "param_type": "std::vector<std::vector<int>>"
+              "param_type": {
+                "raw_text": "std::vector<std::vector<int>>",
+                "expression": {
+                  "Template": {
+                    "name": { "segments": ["std", "vector"] },
+                    "arguments": [
+                      {
+                        "Template": {
+                          "name": { "segments": ["std", "vector"] },
+                          "arguments": [{ "Builtin": "int" }]
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
             }
           ],
           "modifiers": [],
@@ -189,12 +242,27 @@
         },
         {
           "name": "setNameMatrix",
-          "return_type": "void",
+          "return_type": { "raw_text": "void", "expression": { "Builtin": "void" } },
           "parameters": [
             {
               "is_variadic": false,
               "name": "matrix",
-              "param_type": "std::vector<std::vector<const char *>>"
+              "param_type": {
+                "raw_text": "std::vector<std::vector<const char *>>",
+                "expression": {
+                  "Template": {
+                    "name": { "segments": ["std", "vector"] },
+                    "arguments": [
+                      {
+                        "Template": {
+                          "name": { "segments": ["std", "vector"] },
+                          "arguments": [{ "Pointer": { "Const": { "Builtin": "char" } } }]
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
             }
           ],
           "modifiers": [],
@@ -207,12 +275,28 @@
         },
         {
           "name": "setNameIndex",
-          "return_type": "void",
+          "return_type": { "raw_text": "void", "expression": { "Builtin": "void" } },
           "parameters": [
             {
               "is_variadic": false,
               "name": "index",
-              "param_type": "std::map<int, std::vector<const char *>>"
+              "param_type": {
+                "raw_text": "std::map<int, std::vector<const char *>>",
+                "expression": {
+                  "Template": {
+                    "name": { "segments": ["std", "map"] },
+                    "arguments": [
+                      { "Builtin": "int" },
+                      {
+                        "Template": {
+                          "name": { "segments": ["std", "vector"] },
+                          "arguments": [{ "Pointer": { "Const": { "Builtin": "char" } } }]
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
             }
           ],
           "modifiers": [],
@@ -225,12 +309,31 @@
         },
         {
           "name": "setHistoryLayerViews",
-          "return_type": "void",
+          "return_type": { "raw_text": "void", "expression": { "Builtin": "void" } },
           "parameters": [
             {
               "is_variadic": false,
               "name": "layers",
-              "param_type": "std::vector<const std::vector<int> *>"
+              "param_type": {
+                "raw_text": "std::vector<const std::vector<int> *>",
+                "expression": {
+                  "Template": {
+                    "name": { "segments": ["std", "vector"] },
+                    "arguments": [
+                      {
+                        "Pointer": {
+                          "Const": {
+                            "Template": {
+                              "name": { "segments": ["std", "vector"] },
+                              "arguments": [{ "Builtin": "int" }]
+                            }
+                          }
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
             }
           ],
           "modifiers": [],
@@ -243,12 +346,27 @@
         },
         {
           "name": "setConstPointerMatrix",
-          "return_type": "void",
+          "return_type": { "raw_text": "void", "expression": { "Builtin": "void" } },
           "parameters": [
             {
               "is_variadic": false,
               "name": "matrix",
-              "param_type": "std::vector<std::vector<const int *>>"
+              "param_type": {
+                "raw_text": "std::vector<std::vector<const int *>>",
+                "expression": {
+                  "Template": {
+                    "name": { "segments": ["std", "vector"] },
+                    "arguments": [
+                      {
+                        "Template": {
+                          "name": { "segments": ["std", "vector"] },
+                          "arguments": [{ "Pointer": { "Const": { "Builtin": "int" } } }]
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
             }
           ],
           "modifiers": [],

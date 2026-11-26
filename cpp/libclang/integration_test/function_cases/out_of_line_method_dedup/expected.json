@@ -47,7 +47,7 @@
       "methods": [
         {
           "name": "run",
-          "return_type": "void",
+          "return_type": { "raw_text": "void", "expression": { "Builtin": "void" } },
           "visibility": "public",
           "parameters": [],
           "template_parameters": null,
@@ -59,7 +59,7 @@
         },
         {
           "name": "run",
-          "return_type": "void",
+          "return_type": { "raw_text": "void", "expression": { "Builtin": "void" } },
           "visibility": "public",
           "parameters": [],
           "template_parameters": null,

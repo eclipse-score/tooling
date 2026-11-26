@@ -26,7 +26,7 @@
       "variables": [
         {
           "name": "cylinders",
-          "data_type": "int",
+          "data_type": { "raw_text": "int", "expression": { "Builtin": "int" } },
           "is_static": false,
           "visibility": "public",
           "source_location": {
@@ -36,7 +36,7 @@
         },
         {
           "name": "displacement",
-          "data_type": "double",
+          "data_type": { "raw_text": "double", "expression": { "Builtin": "double" } },
           "is_static": false,
           "visibility": "public",
           "source_location": {
@@ -46,7 +46,15 @@
         },
         {
           "name": "manufacturer",
-          "data_type": "char[32]",
+          "data_type": {
+            "raw_text": "char[32]",
+            "expression": {
+              "Array": {
+                "element": { "Builtin": "char" },
+                "size": "32"
+              }
+            }
+          },
           "is_static": false,
           "visibility": "public",
           "source_location": {
@@ -56,7 +64,10 @@
         },
         {
           "name": "model",
-          "data_type": "const char *",
+          "data_type": {
+            "raw_text": "const char *",
+            "expression": { "Pointer": { "Const": { "Builtin": "char" } } }
+          },
           "is_static": false,
           "visibility": "public",
           "source_location": {
@@ -66,7 +77,10 @@
         },
         {
           "name": "status",
-          "data_type": "volatile int",
+          "data_type": {
+            "raw_text": "volatile int",
+            "expression": { "Volatile": { "Builtin": "int" } }
+          },
           "is_static": false,
           "visibility": "public",
           "source_location": {
@@ -76,7 +90,10 @@
         },
         {
           "name": "vendor",
-          "data_type": "Manufacturer",
+          "data_type": {
+            "raw_text": "Manufacturer",
+            "expression": { "NamedType": { "segments": ["Manufacturer"] } }
+          },
           "is_static": false,
           "visibility": "public",
           "source_location": {
@@ -86,7 +103,21 @@
         },
         {
           "name": "start",
-          "data_type": "void (*)(Engine *)",
+          "data_type": {
+            "raw_text": "void (*)(struct Engine *)",
+            "expression": {
+              "Pointer": {
+                "Function": {
+                  "return_type": { "Builtin": "void" },
+                  "parameter_types": [
+                    { "Pointer": { "NamedType": { "segments": ["Engine"] } } }
+                  ],
+                  "is_variadic": false,
+                  "is_noexcept": false
+                }
+              }
+            }
+          },
           "is_static": false,
           "visibility": "public",
           "source_location": {
@@ -96,7 +127,22 @@
         },
         {
           "name": "stop",
-          "data_type": "int (*)(Engine *, int)",
+          "data_type": {
+            "raw_text": "int (*)(struct Engine *, int)",
+            "expression": {
+              "Pointer": {
+                "Function": {
+                  "return_type": { "Builtin": "int" },
+                  "parameter_types": [
+                    { "Pointer": { "NamedType": { "segments": ["Engine"] } } },
+                    { "Builtin": "int" }
+                  ],
+                  "is_variadic": false,
+                  "is_noexcept": false
+                }
+              }
+            }
+          },
           "is_static": false,
           "visibility": "public",
           "source_location": {
@@ -124,7 +170,10 @@
       "variables": [
         {
           "name": "name",
-          "data_type": "const char *",
+          "data_type": {
+            "raw_text": "const char *",
+            "expression": { "Pointer": { "Const": { "Builtin": "char" } } }
+          },
           "is_static": false,
           "visibility": "public",
           "source_location": {
@@ -134,7 +183,7 @@
         },
         {
           "name": "country_code",
-          "data_type": "int",
+          "data_type": { "raw_text": "int", "expression": { "Builtin": "int" } },
           "is_static": false,
           "visibility": "public",
           "source_location": {

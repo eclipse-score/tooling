@@ -4,11 +4,11 @@
     {
       "name": "local_function",
       "enclosing_namespace_id": null,
-      "return_type": "int",
+      "return_type": { "raw_text": "int", "expression": { "Builtin": "int" } },
       "parameters": [
         {
           "name": "value",
-          "param_type": "int",
+          "param_type": { "raw_text": "int", "expression": { "Builtin": "int" } },
           "is_variadic": false
         }
       ],

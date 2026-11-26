@@ -33,7 +33,8 @@ package vehicle {
         --
         + start(mode : int) : void
         + configure(mode : int, force : int) : void
-        + current_speed() : vehicle::Engine::Speed
+        ' temporary adapted, will be reverted once namespace validation finished
+        + current_speed() : Speed
         - calibrate() : void
         + {static} Reset() : void
     }

@@ -36,7 +36,10 @@
       "type_aliases": [
         {
           "alias": "MyEngine",
-          "original_type": "MyNamespace::Engine",
+          "original_type": {
+            "raw_text": "MyNamespace::Engine",
+            "expression": { "NamedType": { "segments": ["MyNamespace", "Engine"] } }
+          },
           "source_location": {
             "file": "",
             "line": 31
@@ -46,7 +49,10 @@
       "variables": [
         {
           "name": "engine1",
-          "data_type": "MyNamespace::Engine",
+          "data_type": {
+            "raw_text": "Engine",
+            "expression": { "NamedType": { "segments": ["MyNamespace", "Engine"] } }
+          },
           "is_static": false,
           "visibility": "public",
           "source_location": {
@@ -56,7 +62,10 @@
         },
         {
           "name": "engine2",
-          "data_type": "MyNamespace::Engine",
+          "data_type": {
+            "raw_text": "MyNamespace::Engine",
+            "expression": { "NamedType": { "segments": ["MyNamespace", "Engine"] } }
+          },
           "is_static": false,
           "visibility": "public",
           "source_location": {
@@ -66,7 +75,10 @@
         },
         {
           "name": "engine3",
-          "data_type": "MyNamespace::Engine *",
+          "data_type": {
+            "raw_text": "Engine *",
+            "expression": { "Pointer": { "NamedType": { "segments": ["MyNamespace", "Engine"] } } }
+          },
           "is_static": false,
           "visibility": "public",
           "source_location": {
@@ -76,7 +88,10 @@
         },
         {
           "name": "engine4",
-          "data_type": "MyNamespace::Engine &",
+          "data_type": {
+            "raw_text": "Engine &",
+            "expression": { "Reference": { "NamedType": { "segments": ["MyNamespace", "Engine"] } } }
+          },
           "is_static": false,
           "visibility": "public",
           "source_location": {
@@ -86,7 +101,15 @@
         },
         {
           "name": "engine5",
-          "data_type": "std::vector<MyNamespace::Engine>",
+          "data_type": {
+            "raw_text": "std::vector<Engine>",
+            "expression": {
+              "Template": {
+                "name": { "segments": ["std", "vector"] },
+                "arguments": [{ "NamedType": { "segments": ["MyNamespace", "Engine"] } }]
+              }
+            }
+          },
           "is_static": false,
           "visibility": "public",
           "source_location": {
@@ -96,7 +119,10 @@
         },
         {
           "name": "engine6",
-          "data_type": "MyNamespace::Engine",
+          "data_type": {
+            "raw_text": "MyEngine",
+            "expression": { "NamedType": { "segments": ["MyNamespace", "Engine"] } }
+          },
           "is_static": false,
           "visibility": "public",
           "source_location": {

@@ -14,10 +14,16 @@
             {
               "is_variadic": false,
               "name": "key",
-              "param_type": "const std::string &"
+              "param_type": {
+                "raw_text": "const std::string &",
+                "expression": { "Reference": { "Const": { "NamedType": { "segments": ["std", "string"] } } } }
+              }
             }
           ],
-          "return_type": "std::string_view",
+          "return_type": {
+            "raw_text": "std::string_view",
+            "expression": { "NamedType": { "segments": ["std", "string_view"] } }
+          },
           "source_location": {
             "file": "cpp/libclang/integration_test/cases/std_internal_namespace_rendering/transport.cpp",
             "line": 20
@@ -37,7 +43,10 @@
       "type_aliases": [],
       "variables": [
         {
-          "data_type": "std::string",
+          "data_type": {
+            "raw_text": "std::string",
+            "expression": { "NamedType": { "segments": ["std", "string"] } }
+          },
           "is_static": false,
           "name": "name_",
           "source_location": {
@@ -47,7 +56,18 @@
           "visibility": "private"
         },
         {
-          "data_type": "std::unordered_map<std::string, std::string_view>",
+          "data_type": {
+            "raw_text": "std::unordered_map<std::string, std::string_view>",
+            "expression": {
+              "Template": {
+                "name": { "segments": ["std", "unordered_map"] },
+                "arguments": [
+                  { "NamedType": { "segments": ["std", "string"] } },
+                  { "NamedType": { "segments": ["std", "string_view"] } }
+                ]
+              }
+            }
+          },
           "is_static": false,
           "name": "cache_",
           "source_location": {

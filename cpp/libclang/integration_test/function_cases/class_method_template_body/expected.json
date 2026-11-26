@@ -3,7 +3,7 @@
     {
       "name": "notify",
       "enclosing_namespace_id": null,
-      "return_type": "void",
+      "return_type": { "raw_text": "void", "expression": { "Builtin": "void" } },
       "parameters": [],
       "template_parameters": null,
       "source_location": {
@@ -65,11 +65,14 @@
       "methods": [
         {
           "name": "reset",
-          "return_type": "void",
+          "return_type": { "raw_text": "void", "expression": { "Builtin": "void" } },
           "parameters": [
             {
               "name": "value",
-              "param_type": "U &&",
+              "param_type": {
+                "raw_text": "U &&",
+                "expression": { "RValueReference": { "NamedType": { "segments": ["U"] } } }
+              },
               "is_variadic": false
             }
           ],

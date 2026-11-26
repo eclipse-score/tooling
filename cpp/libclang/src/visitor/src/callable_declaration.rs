@@ -16,10 +16,10 @@ use class_diagram::{FunctionArgument, TemplateParameter, TypeDescription};
 use cpp_semantics::ResolvedType;
 
 use crate::context::CallableArgumentKey;
-use crate::types::renderer::render_type_for_display;
+use crate::types::describe_type;
 use crate::types::resolver::{
-    declared_argument_display_name, resolve_declared_argument_type, resolve_declared_type,
-    resolve_type,
+    declared_argument_display_name, declared_type_display_name, resolve_declared_argument_type,
+    resolve_declared_type, resolve_signature_type,
 };
 
 /// Parameter data extracted once from a callable cursor.
@@ -65,14 +65,17 @@ pub(crate) fn parse_callable_parameters(entity: &Entity) -> ParsedCallableParame
         let resolved_type = argument_type
             .as_ref()
             .map(|ty| resolve_declared_argument_type(&argument, entity, ty));
-        let signature_type = argument_type
-            .as_ref()
-            .map(|ty| resolve_type(&ty.get_canonical_type()));
+        let signature_type = argument_type.as_ref().map(resolve_signature_type);
         let is_pack_expansion = raw_param_type.contains("...");
 
         parameters.push(FunctionArgument {
             name: argument.get_name().unwrap_or_default(),
-            param_type: Some(normalize_pack_expansion_type(&raw_param_type).into()),
+            param_type: Some(match &resolved_type {
+                Some(resolved) => {
+                    describe_type(normalize_pack_expansion_type(&raw_param_type), resolved)
+                }
+                None => normalize_pack_expansion_type(&raw_param_type).into(),
+            }),
             is_variadic: false,
             is_pack_expansion,
             direction: None,
@@ -118,7 +121,10 @@ pub(crate) fn parse_callable_parameters(entity: &Entity) -> ParsedCallableParame
 pub(crate) fn parse_callable_return_type(entity: &Entity) -> Option<TypeDescription> {
     entity.get_result_type().map(|return_type| {
         let resolved_type = resolve_declared_type(entity, &return_type);
-        render_type_for_display(&return_type, &resolved_type).into()
+        describe_type(
+            declared_type_display_name(entity, &return_type),
+            &resolved_type,
+        )
     })
 }
 

@@ -3,11 +3,14 @@
     {
       "name": "alias_fn",
       "enclosing_namespace_id": null,
-      "return_type": "void",
+      "return_type": { "raw_text": "void", "expression": { "Builtin": "void" } },
       "parameters": [
         {
           "name": "",
-          "param_type": "MyInt",
+          "param_type": {
+            "raw_text": "MyInt",
+            "expression": { "NamedType": { "segments": ["MyInt"] } }
+          },
           "is_variadic": false
         }
       ],
@@ -20,11 +23,14 @@
     {
       "name": "typedef_fn",
       "enclosing_namespace_id": null,
-      "return_type": "void",
+      "return_type": { "raw_text": "void", "expression": { "Builtin": "void" } },
       "parameters": [
         {
           "name": "",
-          "param_type": "OldInt",
+          "param_type": {
+            "raw_text": "OldInt",
+            "expression": { "NamedType": { "segments": ["OldInt"] } }
+          },
           "is_variadic": false
         }
       ],
@@ -37,11 +43,19 @@
     {
       "name": "arr_fn",
       "enclosing_namespace_id": null,
-      "return_type": "void",
+      "return_type": { "raw_text": "void", "expression": { "Builtin": "void" } },
       "parameters": [
         {
           "name": "",
-          "param_type": "int[5]",
+          "param_type": {
+            "raw_text": "int[5]",
+            "expression": {
+              "Array": {
+                "element": { "Builtin": "int" },
+                "size": "5"
+              }
+            }
+          },
           "is_variadic": false
         }
       ],
@@ -54,11 +68,19 @@
     {
       "name": "incomplete_arr_fn",
       "enclosing_namespace_id": null,
-      "return_type": "void",
+      "return_type": { "raw_text": "void", "expression": { "Builtin": "void" } },
       "parameters": [
         {
           "name": "",
-          "param_type": "int[]",
+          "param_type": {
+            "raw_text": "int[]",
+            "expression": {
+              "Array": {
+                "element": { "Builtin": "int" },
+                "size": null
+              }
+            }
+          },
           "is_variadic": false
         }
       ],
@@ -71,11 +93,23 @@
     {
       "name": "callback_fn",
       "enclosing_namespace_id": null,
-      "return_type": "void",
+      "return_type": { "raw_text": "void", "expression": { "Builtin": "void" } },
       "parameters": [
         {
           "name": "callback",
-          "param_type": "void (int)",
+          "param_type": {
+            "raw_text": "void (int)",
+            "expression": {
+              "Function": {
+                "return_type": { "Builtin": "void" },
+                "parameter_types": [
+                  { "Builtin": "int" }
+                ],
+                "is_variadic": false,
+                "is_noexcept": false
+              }
+            }
+          },
           "is_variadic": false
         }
       ],
@@ -88,11 +122,23 @@
     {
       "name": "callback_noexcept_identity",
       "enclosing_namespace_id": null,
-      "return_type": "void",
+      "return_type": { "raw_text": "void", "expression": { "Builtin": "void" } },
       "parameters": [
         {
           "name": "",
-          "param_type": "void (*)()",
+          "param_type": {
+            "raw_text": "void (*)()",
+            "expression": {
+              "Pointer": {
+                "Function": {
+                  "return_type": { "Builtin": "void" },
+                  "parameter_types": [],
+                  "is_variadic": false,
+                  "is_noexcept": false
+                }
+              }
+            }
+          },
           "is_variadic": false
         }
       ],
@@ -105,11 +151,23 @@
     {
       "name": "callback_noexcept_identity",
       "enclosing_namespace_id": null,
-      "return_type": "void",
+      "return_type": { "raw_text": "void", "expression": { "Builtin": "void" } },
       "parameters": [
         {
           "name": "",
-          "param_type": "void (*)() noexcept",
+          "param_type": {
+            "raw_text": "void (*)() noexcept",
+            "expression": {
+              "Pointer": {
+                "Function": {
+                  "return_type": { "Builtin": "void" },
+                  "parameter_types": [],
+                  "is_variadic": false,
+                  "is_noexcept": true
+                }
+              }
+            }
+          },
           "is_variadic": false
         }
       ],

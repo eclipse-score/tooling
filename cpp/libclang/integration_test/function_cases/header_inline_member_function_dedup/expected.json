@@ -11,7 +11,7 @@
       "methods": [
         {
           "name": "compute",
-          "return_type": "int",
+          "return_type": { "raw_text": "int", "expression": { "Builtin": "int" } },
           "visibility": "public",
           "parameters": [],
           "template_parameters": null,
@@ -35,7 +35,7 @@
     {
       "name": "ping",
       "enclosing_namespace_id": "util",
-      "return_type": "void",
+      "return_type": { "raw_text": "void", "expression": { "Builtin": "void" } },
       "parameters": [],
       "template_parameters": null,
       "source_location": {
@@ -46,7 +46,7 @@
     {
       "name": "first",
       "enclosing_namespace_id": null,
-      "return_type": "int",
+      "return_type": { "raw_text": "int", "expression": { "Builtin": "int" } },
       "parameters": [],
       "template_parameters": null,
       "source_location": {
@@ -57,7 +57,7 @@
     {
       "name": "second",
       "enclosing_namespace_id": null,
-      "return_type": "int",
+      "return_type": { "raw_text": "int", "expression": { "Builtin": "int" } },
       "parameters": [],
       "template_parameters": null,
       "source_location": {

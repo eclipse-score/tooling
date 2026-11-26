@@ -49,4 +49,12 @@ class Probe
     const volatile argument_positions::Owner<double>::Mixed<int, 3, float> nested_qualified();
 };
 
+template <bool Flag, unsigned long long Maximum, int* Pointer, typename Last>
+class ValueKinds
+{
+  public:
+    using Example = ValueKinds<true, 18446744073709551615ULL, nullptr, int>;
+    using Negative = Mixed<int, -3, float>;
+};
+
 }  // namespace argument_positions

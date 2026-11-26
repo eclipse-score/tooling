@@ -14,7 +14,7 @@
       },
       "kind": "StaticMethod",
       "return_type": {
-        "Dependent": "T"
+        "TemplateTypeParameter": "T"
       },
       "body": []
     }
@@ -31,12 +31,18 @@
       "methods": [
         {
           "name": "convert",
-          "return_type": "T",
+          "return_type": {
+            "raw_text": "T",
+            "expression": { "NamedType": { "segments": ["T"] } }
+          },
           "visibility": "public",
           "parameters": [
             {
               "name": "value",
-              "param_type": "T",
+              "param_type": {
+                "raw_text": "T",
+                "expression": { "NamedType": { "segments": ["T"] } }
+              },
               "is_variadic": false
             }
           ],

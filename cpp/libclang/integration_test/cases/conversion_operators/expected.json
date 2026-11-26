@@ -27,7 +27,10 @@
       "type_aliases": [
         {
           "alias": "pointer",
-          "original_type": "PointedType *",
+          "original_type": {
+            "raw_text": "PointedType *",
+            "expression": { "Pointer": { "NamedType": { "segments": ["PointedType"] } } }
+          },
           "source_location": {
             "file": "cpp/libclang/integration_test/cases/conversion_operators/conversion_operators.cpp",
             "line": 36
@@ -35,7 +38,12 @@
         },
         {
           "alias": "difference_type",
-          "original_type": "score::memory::shared::detail_offset_ptr::difference_type",
+          "original_type": {
+            "raw_text": "detail_offset_ptr::difference_type",
+            "expression": {
+              "NamedType": { "segments": ["score", "memory", "shared", "detail_offset_ptr", "difference_type"] }
+            }
+          },
           "source_location": {
             "file": "cpp/libclang/integration_test/cases/conversion_operators/conversion_operators.cpp",
             "line": 37
@@ -45,7 +53,12 @@
       "variables": [
         {
           "name": "offset_",
-          "data_type": "score::memory::shared::detail_offset_ptr::difference_type",
+          "data_type": {
+            "raw_text": "detail_offset_ptr::difference_type",
+            "expression": {
+              "NamedType": { "segments": ["score", "memory", "shared", "detail_offset_ptr", "difference_type"] }
+            }
+          },
           "visibility": "private",
           "is_static": false,
           "source_location": {
@@ -55,7 +68,10 @@
         },
         {
           "name": "memory_bounds_",
-          "data_type": "score::memory::shared::MemoryRegionBounds",
+          "data_type": {
+            "raw_text": "MemoryRegionBounds",
+            "expression": { "NamedType": { "segments": ["score", "memory", "shared", "MemoryRegionBounds"] } }
+          },
           "visibility": "private",
           "is_static": false,
           "source_location": {
@@ -68,7 +84,10 @@
         {
           "name": "operator score::memory::shared::OffsetPtr::pointer",
           "conversion_target": "score::memory::shared::OffsetPtr::pointer",
-          "return_type": "score::memory::shared::OffsetPtr::pointer",
+          "return_type": {
+            "raw_text": "pointer",
+            "expression": { "NamedType": { "segments": ["score", "memory", "shared", "OffsetPtr", "pointer"] } }
+          },
           "visibility": "public",
           "parameters": [],
           "template_parameters": [
@@ -96,7 +115,7 @@
         {
           "name": "operator bool",
           "conversion_target": "bool",
-          "return_type": "bool",
+          "return_type": { "raw_text": "bool", "expression": { "Builtin": "bool" } },
           "visibility": "public",
           "parameters": [],
           "template_parameters": null,
@@ -111,27 +130,50 @@
         },
         {
           "name": "GetPointerWithBoundsCheck",
-          "return_type": "score::memory::shared::OffsetPtr::pointer",
+          "return_type": {
+            "raw_text": "pointer",
+            "expression": { "NamedType": { "segments": ["score", "memory", "shared", "OffsetPtr", "pointer"] } }
+          },
           "visibility": "private",
           "parameters": [
             {
               "name": "offset_ptr_address",
-              "param_type": "const void *const",
+              "param_type": {
+                "raw_text": "const void *const",
+                "expression": { "Const": { "Pointer": { "Const": { "Builtin": "void" } } } }
+              },
               "is_variadic": false
             },
             {
               "name": "offset",
-              "param_type": "const difference_type",
+              "param_type": {
+                "raw_text": "const difference_type",
+                "expression": {
+                  "Const": {
+                    "NamedType": { "segments": ["score", "memory", "shared", "OffsetPtr", "difference_type"] }
+                  }
+                }
+              },
               "is_variadic": false
             },
             {
               "name": "offset_ptr_memory_bounds_when_not_in_shm",
-              "param_type": "const MemoryRegionBounds &",
+              "param_type": {
+                "raw_text": "const MemoryRegionBounds &",
+                "expression": {
+                  "Reference": {
+                    "Const": { "NamedType": { "segments": ["score", "memory", "shared", "MemoryRegionBounds"] } }
+                  }
+                }
+              },
               "is_variadic": false
             },
             {
               "name": "pointed_type_size",
-              "param_type": "const std::size_t",
+              "param_type": {
+                "raw_text": "const std::size_t",
+                "expression": { "Const": { "Builtin": "unsigned long" } }
+              },
               "is_variadic": false
             }
           ],

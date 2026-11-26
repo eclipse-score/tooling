@@ -3,16 +3,22 @@
     {
       "name": "operator==",
       "enclosing_namespace_id": "app",
-      "return_type": "bool",
+      "return_type": { "raw_text": "bool", "expression": { "Builtin": "bool" } },
       "parameters": [
         {
           "name": "",
-          "param_type": "const Token &",
+          "param_type": {
+            "raw_text": "const Token &",
+            "expression": { "Reference": { "Const": { "NamedType": { "segments": ["app", "Token"] } } } }
+          },
           "is_variadic": false
         },
         {
           "name": "",
-          "param_type": "const Token &",
+          "param_type": {
+            "raw_text": "const Token &",
+            "expression": { "Reference": { "Const": { "NamedType": { "segments": ["app", "Token"] } } } }
+          },
           "is_variadic": false
         }
       ],

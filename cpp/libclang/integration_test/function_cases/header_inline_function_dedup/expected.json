@@ -3,7 +3,7 @@
     {
       "name": "shared",
       "enclosing_namespace_id": null,
-      "return_type": "int",
+      "return_type": { "raw_text": "int", "expression": { "Builtin": "int" } },
       "parameters": [],
       "template_parameters": null,
       "source_location": {
@@ -14,7 +14,7 @@
     {
       "name": "first",
       "enclosing_namespace_id": null,
-      "return_type": "int",
+      "return_type": { "raw_text": "int", "expression": { "Builtin": "int" } },
       "parameters": [],
       "template_parameters": null,
       "source_location": {
@@ -25,7 +25,7 @@
     {
       "name": "second",
       "enclosing_namespace_id": null,
-      "return_type": "int",
+      "return_type": { "raw_text": "int", "expression": { "Builtin": "int" } },
       "parameters": [],
       "template_parameters": null,
       "source_location": {

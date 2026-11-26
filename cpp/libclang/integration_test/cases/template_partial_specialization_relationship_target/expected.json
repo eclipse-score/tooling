@@ -16,10 +16,10 @@
               "is_pack_expansion": true,
               "is_variadic": false,
               "name": "args",
-              "param_type": "const ArgTypes &"
+              "param_type": { "raw_text": "const ArgTypes &" }
             }
           ],
-          "return_type": "void",
+          "return_type": { "raw_text": "void", "expression": { "Builtin": "void" } },
           "template_parameters": null,
           "visibility": "public",
           "source_location": {
@@ -46,7 +46,7 @@
       "type_aliases": [],
       "variables": [
         {
-          "data_type": "int",
+          "data_type": { "raw_text": "int", "expression": { "Builtin": "int" } },
           "is_static": false,
           "name": "notification_count_",
           "source_location": {
@@ -111,7 +111,26 @@
       "type_aliases": [],
       "variables": [
         {
-          "data_type": "demo::Endpoint<void(int)>",
+          "data_type": {
+            "raw_text": "Endpoint<void (int)>",
+            "expression": {
+              "Template": {
+                "name": { "segments": ["demo", "Endpoint"] },
+                "arguments": [
+                  {
+                    "Function": {
+                      "return_type": { "Builtin": "void" },
+                      "parameter_types": [
+                        { "Builtin": "int" }
+                      ],
+                      "is_variadic": false,
+                      "is_noexcept": false
+                    }
+                  }
+                ]
+              }
+            }
+          },
           "is_static": false,
           "name": "endpoint_",
           "source_location": {

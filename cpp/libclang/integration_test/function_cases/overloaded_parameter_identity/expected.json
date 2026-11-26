@@ -3,11 +3,11 @@
     {
       "name": "choose",
       "enclosing_namespace_id": null,
-      "return_type": "void",
+      "return_type": { "raw_text": "void", "expression": { "Builtin": "void" } },
       "parameters": [
         {
           "name": "",
-          "param_type": "int",
+          "param_type": { "raw_text": "int", "expression": { "Builtin": "int" } },
           "is_variadic": false
         }
       ],
@@ -20,11 +20,11 @@
     {
       "name": "choose",
       "enclosing_namespace_id": null,
-      "return_type": "void",
+      "return_type": { "raw_text": "void", "expression": { "Builtin": "void" } },
       "parameters": [
         {
           "name": "",
-          "param_type": "double",
+          "param_type": { "raw_text": "double", "expression": { "Builtin": "double" } },
           "is_variadic": false
         }
       ],

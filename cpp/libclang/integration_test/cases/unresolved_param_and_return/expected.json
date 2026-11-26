@@ -11,12 +11,12 @@
             "methods": [
                 {
                     "name": "process",
-                    "return_type": "EventControl",
+                    "return_type": { "raw_text": "EventControl" },
                     "visibility": "public",
                     "parameters": [
                         {
                             "name": "request",
-                            "param_type": "const EventControl &",
+                            "param_type": { "raw_text": "const EventControl &" },
                             "is_variadic": false
                         }
                     ],

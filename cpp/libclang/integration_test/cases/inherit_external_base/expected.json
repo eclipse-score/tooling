@@ -14,7 +14,7 @@
       "variables": [
         {
           "name": "value",
-          "data_type": "int",
+          "data_type": { "raw_text": "int", "expression": { "Builtin": "int" } },
           "is_static": false,
           "visibility": "public",
           "source_location": {

@@ -10,7 +10,7 @@
       "variables": [
         {
           "name": "value",
-          "data_type": "int",
+          "data_type": { "raw_text": "int", "expression": { "Builtin": "int" } },
           "visibility": "public",
           "is_static": false,
           "source_location": {
