@@ -25,6 +25,7 @@ for safety related automotive software.
 | `feature_requirements` | `FeatureRequirementsInfo` |
 | `component_requirements` | `ComponentRequirementsInfo` |
 | `assumptions_of_use` | `AssumptionsOfUseInfo` |
+| `*_requirements_spn`, `assumptions_of_use_spn` | same as the TRLC counterpart |
 | `architectural_design` | `ArchitecturalDesignInfo` |
 | `unit` | `UnitInfo`, `CertifiedScope` |
 | `test_specification` | `TestSpecificationInfo` |
@@ -79,6 +80,42 @@ not reference a root cause; a `RootCauseAssessment` of the `safety_analysis`
 lists it as a measure.
 Tracing to feature/assumed-system requirements is established at the
 `dependable_element` level (via its own `requirements` attribute), not here.
+
+---
+
+## Requirements from Sphinx-Needs (`*_spn`)
+
+```starlark
+load(
+    "//bazel/rules/rules_score:rules_score.bzl",
+    "component_requirements_spn",
+    "feature_requirements_spn",
+)
+
+feature_requirements_spn(
+    name = "feat_reqs",
+    feat_id = "feat__my_feature",
+    needs = ["@score_platform//:needs_json_file"],
+)
+
+component_requirements_spn(
+    name = "comp_reqs",
+    comp_id = "comp__my_component",
+    needs = ["//my/component:docs"],  # score_docs_as_code docs_bundle
+)
+```
+
+**`bazel build`** — converts the Sphinx-Needs requirements of `needs.json`
+files (or of score_docs_as_code `docs_bundle` targets) with `lobster_sphinx_needs`
+into the same LOBSTER items as `lobster-trlc` produces for TRLC records, and
+renders a plain RST list page. `feature_requirements_spn`,
+`component_requirements_spn`, `assumed_system_requirements_spn` and
+`assumptions_of_use_spn` convert `feat_req`, `comp_req`, `stkh_req` and `aou_req`
+needs and emit the same domain provider as their TRLC counterpart, so `component`
+and `dependable_element` accept them unchanged. `feat_id` / `comp_id` keep only
+the needs whose `satisfied_by` link names that feature/component. The targets do
+not emit `TrlcProviderInfo` and cannot be `deps` of TRLC requirement targets.
+The conversion rules live in `lobster/config/lobster_sphinx_needs.yaml`.
 
 ---
 

@@ -63,6 +63,13 @@ load(
     _glossary = "glossary",
 )
 load(
+    "//bazel/rules/rules_score/private:requirements_spn.bzl",
+    _assumed_system_requirements_spn = "assumed_system_requirements_spn",
+    _assumptions_of_use_spn = "assumptions_of_use_spn",
+    _component_requirements_spn = "component_requirements_spn",
+    _feature_requirements_spn = "feature_requirements_spn",
+)
+load(
     "//bazel/rules/rules_score/private:rst_to_trlc.bzl",
     _rst_to_trlc = "rst_to_trlc",
 )
@@ -90,11 +97,15 @@ load(
 
 architectural_design = _architectural_design
 assumptions_of_use = _assumptions_of_use
+assumptions_of_use_spn = _assumptions_of_use_spn
 assumed_system_requirements = _assumed_system_requirements
+assumed_system_requirements_spn = _assumed_system_requirements_spn
 component_requirements = _component_requirements
+component_requirements_spn = _component_requirements_spn
 dependability_analysis = _dependability_analysis
 failure_modes = _failure_modes
 feature_requirements = _feature_requirements
+feature_requirements_spn = _feature_requirements_spn
 fault_trees = _fault_trees
 glossary = _glossary
 filter_execpath = _filter_execpath

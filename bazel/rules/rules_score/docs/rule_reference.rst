@@ -329,6 +329,84 @@ Conditions that the *integrating project* must fulfil when using this SEooC.
 
 **Generated targets:** ``<name>`` (documentation), ``<name>_test`` (TRLC validation)
 
+.. _rule-requirements-spn:
+
+Requirements from Sphinx-Needs (``*_spn``)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Counterparts of the requirement rules above that read Sphinx-Needs ``needs.json``
+instead of TRLC. ``lobster_sphinx_needs`` converts the needs into the same LOBSTER
+items as ``lobster-trlc``, so ``component`` and ``dependable_element`` accept the
+targets unchanged.
+
+.. code-block:: python
+
+   feature_requirements_spn(
+       name = "features",
+       feat_id = "feat__my_feature",
+       needs = ["@score_platform//:needs_json_file"],
+   )
+
+   component_requirements_spn(
+       name = "comp_reqs",
+       comp_id = "comp__my_component",
+       needs = ["//my/component:docs"],
+   )
+
+.. list-table::
+   :header-rows: 1
+   :widths: 34 16 50
+
+   * - Macro
+     - Need type
+     - Provides
+   * - ``feature_requirements_spn``
+     - ``feat_req``
+     - ``FeatureRequirementsInfo``, ``SphinxSourcesInfo``
+   * - ``component_requirements_spn``
+     - ``comp_req``
+     - ``ComponentRequirementsInfo``, ``SphinxSourcesInfo``
+   * - ``assumed_system_requirements_spn``
+     - ``stkh_req``
+     - ``AssumedSystemRequirementsInfo``, ``SphinxSourcesInfo``
+   * - ``assumptions_of_use_spn``
+     - ``aou_req``
+     - ``AssumptionsOfUseInfo``, ``SphinxSourcesInfo``
+
+.. list-table::
+   :header-rows: 1
+   :widths: 18 12 10 60
+
+   * - Attribute
+     - Type
+     - Required
+     - Description
+   * - ``name``
+     - string
+     - yes
+     - Target name
+   * - ``needs``
+     - label list
+     - yes
+     - ``needs.json`` files or score_docs_as_code ``docs_bundle`` targets (mapped to their ``.__internal__.needs_local`` export)
+   * - ``feat_id`` / ``comp_id``
+     - string
+     - yes (``feature_requirements_spn`` / ``component_requirements_spn`` only)
+     - Only needs whose ``satisfied_by`` link names this feature/component are converted
+   * - ``visibility``
+     - —
+     - no
+     - Bazel visibility
+
+Conversion (``lobster/config/lobster_sphinx_needs.yaml``): the need ``id`` and
+``version`` form the LOBSTER tag (``req <id>@<version>``), ``content`` becomes the
+text, ``derived_from`` / ``covers`` of ``comp_req`` become tracing targets
+(``id[version==N]`` -> ``id@N``), and needs with ``status: invalid`` are skipped.
+The targets do not emit ``TrlcProviderInfo`` and cannot be ``deps`` of TRLC
+requirement targets.
+
+**Generated targets:** ``<name>`` (LOBSTER file and RST list page)
+
 .. _rule-rst-to-trlc:
 
 rst_to_trlc
