@@ -17,6 +17,9 @@
 
 ### Added
 
+- `api_surface` lists friend functions (including hidden friends) and the
+  friends and non-member operators of aliased types as `friend` /
+  `free_operator` symbols. Existing lock files need regeneration.
 - `validation_cli --links-output` writes `diagram_links.json` (element links
   and call links) for the `dependable-element` profile. `--links-only` writes
   it without validation and without a report.

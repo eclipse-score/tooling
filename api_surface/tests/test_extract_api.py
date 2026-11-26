@@ -996,5 +996,106 @@ class TestNegativeExtraction(unittest.TestCase):
         self.assertIsNone(find_symbol(symbols, "test::DoesNotExist"))
 
 
+class TestFriendOperators(unittest.TestCase):
+    """Friend functions and non-member operators of public types are API symbols."""
+
+    @classmethod
+    def setUpClass(cls):
+        header = get_test_header("friend_operators.h")
+        cls.symbols = get_symbols(run_extract_api([header], [header]))
+
+    def _find(self, qualified_name: str, signature_part: str = "") -> dict:
+        for s in self.symbols:
+            if s["qualified_name"] == qualified_name and signature_part in s["signature"]:
+                return s
+        self.fail(f"{qualified_name} ({signature_part}) not found")
+
+    def test_hidden_friend_is_namespace_qualified(self):
+        """A hidden friend is reported in the enclosing namespace, not as a class member."""
+        sym = self._find("test::operator==", "const Value &")
+        self.assertEqual(sym["kind"], "friend")
+        self.assertEqual(sym["signature"], "operator== : bool (const Value &, const Value &) noexcept")
+        self.assertNotIn("test::Value::operator==", qualified_names(self.symbols))
+
+    def test_friend_attributes_are_part_of_signature(self):
+        self.assertTrue(self._find("test::operator<")["signature"].endswith("[[nodiscard]]"))
+
+    def test_friend_in_private_section_is_extracted(self):
+        self.assertEqual(self._find("test::swap")["kind"], "friend")
+
+    def test_friend_template(self):
+        self.assertEqual(self._find("test::Convert")["kind"], "template_friend")
+
+    def test_access_granting_friend_is_not_a_symbol(self):
+        self.assertNotIn("test::MakeValue", qualified_names(self.symbols))
+
+    def test_friend_class_is_not_a_symbol(self):
+        self.assertNotIn("friend class Printer", [s["signature"] for s in self.symbols])
+        self.assertEqual(self._find("test::Printer")["kind"], "forward_class")
+
+    def test_friend_of_nested_class_uses_namespace_scope(self):
+        self.assertEqual(self._find("test::operator==", "const Inner &")["kind"], "friend")
+
+    def test_friend_in_internal_namespace_is_excluded(self):
+        self.assertFalse([s for s in self.symbols if "Hidden" in s["signature"]])
+
+    def test_non_member_operator_is_extracted(self):
+        self.assertEqual(self._find("test::operator!=")["kind"], "function")
+
+    def test_redeclared_friend_is_reported_once(self):
+        result = _extract_source(
+            """
+            #pragma once
+            namespace test {
+            class Value {
+              public:
+                /// \\api
+                friend bool operator==(const Value&, const Value&);
+            };
+            bool operator==(const Value&, const Value&);
+            }  // namespace test
+            """
+        )
+        matches = [s for s in get_symbols(result) if s["qualified_name"] == "test::operator=="]
+        self.assertEqual(len(matches), 1)
+        # The documentation of any declaration counts.
+        self.assertEqual([s["qualified_name"] for s in result["symbols"]], ["test::operator=="])
+
+    def test_operators_of_aliased_type_are_followed(self):
+        """Operators of an internal class re-exported via `using` stay part of the API."""
+        result = _extract_source(
+            """
+            #pragma once
+            namespace test {
+            namespace impl {
+            template <typename T>
+            class Ptr {
+              public:
+                friend bool operator<(const Ptr& lhs, const Ptr& rhs) noexcept { return false; }
+                friend bool operator==(const Ptr&, const Ptr&) noexcept = delete;
+                friend Ptr MakePtr(int);
+              private:
+                friend void Hidden(Ptr&);
+            };
+            template <typename T>
+            bool operator==(const Ptr<T>&, const Ptr<T>&) noexcept;
+            template <typename T>
+            bool operator!=(const Ptr<T>&, const Ptr<T>&) noexcept;
+            bool operator!=(int, int) noexcept;
+            }  // namespace impl
+            template <typename T>
+            using Ptr = impl::Ptr<T>;
+            }  // namespace test
+            """
+        )
+        by_name = {(s["qualified_name"], s["kind"]): s for s in get_symbols(result)}
+        self.assertIn(("test::operator<", "friend"), by_name)
+        self.assertIn(("test::operator==", "template_free_operator"), by_name)
+        self.assertIn(("test::operator!=", "template_free_operator"), by_name)
+        self.assertEqual(len([k for k in by_name if k[0] == "test::operator!="]), 1)
+        self.assertTrue(all("impl" not in k[0] for k in by_name))
+        self.assertNotIn("test::MakePtr", {k[0] for k in by_name})
+
+
 if __name__ == "__main__":
     unittest.main()

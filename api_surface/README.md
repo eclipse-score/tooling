@@ -119,6 +119,15 @@ The tool tracks:
   `protected_` kind prefix so public vs protected is distinguishable)
 - Member function templates
 - Ref-qualified overloads (`void f() &;` vs `void f() &&;`)
+- Friend functions with a parameter of the class type (callable via ADL), including
+  hidden friends defined in-class and friends declared in a private section, as
+  `friend` / `template_friend`. They are qualified with the enclosing namespace
+  of the class (e.g. `ns::operator<`), not the class
+- Friends and non-member operators of a class re-exported through a `using`
+  alias are followed like its members and listed in the alias's namespace
+  (`friend`, or `free_operator` for non-member operators declared in an
+  internal namespace such as `impl`). Non-member operators in public namespaces
+  stay regular `function` entries
 - Explicit `extern template` instantiations, as `extern_template`
 - Template variants of all the above
 
@@ -132,7 +141,8 @@ Symbols in `detail`, `internal`, or `impl` namespaces are automatically excluded
 
 ## Documentation Enforcement
 
-When `check_docs = True`, the tool verifies that every public symbol has:
+When `check_docs = True`, the tool verifies that every public symbol, friend functions and
+operators included, has:
 - A `\api` (or `@api`) doxygen marker
 - A `\brief` (or `@brief`) description
 

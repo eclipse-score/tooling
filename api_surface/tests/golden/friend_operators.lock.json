@@ -1,0 +1,98 @@
+{
+  "target": ":friend_operators_lib",
+  "symbols": [
+    {
+      "name": "Convert",
+      "qualified_name": "test::Convert",
+      "kind": "template_friend",
+      "signature": "Convert : T (const Value &)"
+    },
+    {
+      "name": "operator+",
+      "qualified_name": "test::operator+",
+      "kind": "friend",
+      "signature": "operator+ : Value (const Value &, const Value &)"
+    },
+    {
+      "name": "swap",
+      "qualified_name": "test::swap",
+      "kind": "friend",
+      "signature": "swap : void (Value &, Value &) noexcept"
+    },
+    {
+      "name": "Value",
+      "qualified_name": "test::Value",
+      "kind": "class",
+      "signature": "class Value"
+    },
+    {
+      "name": "operator==",
+      "qualified_name": "test::operator==",
+      "kind": "friend",
+      "signature": "operator== : bool (const Value &, const Value &) noexcept"
+    },
+    {
+      "name": "operator<",
+      "qualified_name": "test::operator<",
+      "kind": "friend",
+      "signature": "operator< : bool (const Value &, const Value &) [[nodiscard]]"
+    },
+    {
+      "name": "operator!=",
+      "qualified_name": "test::operator!=",
+      "kind": "function",
+      "signature": "operator!= : bool (const Value &, const Value &) noexcept"
+    },
+    {
+      "name": "operator>",
+      "qualified_name": "test::operator>",
+      "kind": "template_function",
+      "signature": "operator> : bool (const T &, const Value &)"
+    }
+  ],
+  "undocumented_symbols": [
+    {
+      "name": "Printer",
+      "qualified_name": "test::Printer",
+      "kind": "forward_class",
+      "signature": "class Printer"
+    },
+    {
+      "name": "Value",
+      "qualified_name": "test::Value::Value",
+      "kind": "constructor",
+      "signature": "Value : void ()"
+    },
+    {
+      "name": "Undocumented",
+      "qualified_name": "test::Undocumented",
+      "kind": "class",
+      "signature": "class Undocumented"
+    },
+    {
+      "name": "operator==",
+      "qualified_name": "test::operator==",
+      "kind": "friend",
+      "signature": "operator== : bool (const Undocumented &, const Undocumented &)"
+    },
+    {
+      "name": "Outer",
+      "qualified_name": "test::Outer",
+      "kind": "class",
+      "signature": "class Outer"
+    },
+    {
+      "name": "Inner",
+      "qualified_name": "test::Outer::Inner",
+      "kind": "class",
+      "signature": "class Inner"
+    },
+    {
+      "name": "operator==",
+      "qualified_name": "test::operator==",
+      "kind": "friend",
+      "signature": "operator== : bool (const Inner &, const Inner &)"
+    }
+  ],
+  "version": "1"
+}
