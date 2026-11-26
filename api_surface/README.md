@@ -119,9 +119,10 @@ The tool tracks:
   `protected_` kind prefix so public vs protected is distinguishable)
 - Member function templates
 - Ref-qualified overloads (`void f() &;` vs `void f() &&;`)
-- Friend functions, including hidden friends defined in-class and friends declared
-  in a private section, as `friend` / `template_friend`. They are qualified with
-  the enclosing namespace of the class (e.g. `ns::operator<`), not the class
+- Friend functions with a parameter of the class type (callable via ADL), including
+  hidden friends defined in-class and friends declared in a private section, as
+  `friend` / `template_friend`. They are qualified with the enclosing namespace
+  of the class (e.g. `ns::operator<`), not the class
 - Friends and non-member operators of a class re-exported through a `using`
   alias are followed like its members and listed in the alias's namespace
   (`friend`, or `free_operator` for non-member operators declared in an

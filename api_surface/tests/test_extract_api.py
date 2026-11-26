@@ -1026,6 +1026,9 @@ class TestFriendOperators(unittest.TestCase):
     def test_friend_template(self):
         self.assertEqual(self._find("test::Convert")["kind"], "template_friend")
 
+    def test_access_granting_friend_is_not_a_symbol(self):
+        self.assertNotIn("test::MakeValue", qualified_names(self.symbols))
+
     def test_friend_class_is_not_a_symbol(self):
         self.assertNotIn("friend class Printer", [s["signature"] for s in self.symbols])
         self.assertEqual(self._find("test::Printer")["kind"], "forward_class")
@@ -1070,6 +1073,7 @@ class TestFriendOperators(unittest.TestCase):
               public:
                 friend bool operator<(const Ptr& lhs, const Ptr& rhs) noexcept { return false; }
                 friend bool operator==(const Ptr&, const Ptr&) noexcept = delete;
+                friend Ptr MakePtr(int);
               private:
                 friend void Hidden(Ptr&);
             };
@@ -1090,6 +1094,7 @@ class TestFriendOperators(unittest.TestCase):
         self.assertIn(("test::operator!=", "template_free_operator"), by_name)
         self.assertEqual(len([k for k in by_name if k[0] == "test::operator!="]), 1)
         self.assertTrue(all("impl" not in k[0] for k in by_name))
+        self.assertNotIn("test::MakePtr", {k[0] for k in by_name})
 
 
 if __name__ == "__main__":

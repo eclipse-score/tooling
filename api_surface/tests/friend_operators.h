@@ -48,6 +48,9 @@ class Value
     template <typename T>
     friend T Convert(const Value& value);
 
+    // A friend without a Value parameter only grants access and is not API.
+    friend Value MakeValue(int state);
+
     // A friend class is not a function and is not part of the API surface.
     friend class Printer;
 

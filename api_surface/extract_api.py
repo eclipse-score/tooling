@@ -150,6 +150,18 @@ def extract_signature(node: dict) -> str:
     return name
 
 
+def takes_type(func: dict, type_name: str) -> bool:
+    """Whether a function (or function template) has a parameter mentioning `type_name`."""
+    if func.get("kind") == "FunctionTemplateDecl":
+        func = next((c for c in func.get("inner", []) if c.get("kind") == "FunctionDecl"), func)
+    pattern = re.compile(rf"\b{re.escape(type_name)}\b")
+    return any(
+        pattern.search(p.get("type", {}).get("qualType", ""))
+        for p in func.get("inner", [])
+        if p.get("kind") == "ParmVarDecl"
+    )
+
+
 def function_signature(node: dict, extern_c: bool = False) -> str:
     """Signature of a FunctionDecl or FunctionTemplateDecl in the lock-file format."""
     name = node.get("name", "")
@@ -416,8 +428,12 @@ def extract_from_ast(
                 return target
         return file_path
 
-    def add_friend(friend_decl: dict, ns_scope: list[str], extern_c: bool):
-        """Record a friend function (incl. hidden friends) of an exposed class."""
+    def add_friend(friend_decl: dict, class_name: str, ns_scope: list[str], extern_c: bool):
+        """Record a friend function (incl. hidden friends) of an exposed class.
+
+        Only friends with a parameter of the class type are callable by users (via ADL);
+        others merely grant access to internals and are not API.
+        """
         func = next(
             (c for c in friend_decl.get("inner", []) if c.get("kind") in ("FunctionDecl", "FunctionTemplateDecl")),
             None,
@@ -426,7 +442,7 @@ def extract_from_ast(
             return
         name = func.get("name", "")
         func_file = get_node_file(func)
-        if not name or not is_in_target_files(func_file, target_files):
+        if not name or not is_in_target_files(func_file, target_files) or not takes_type(func, class_name):
             return
         qualified = build_qualified_name(name, ns_scope)
         if is_internal_name(qualified):
@@ -576,7 +592,7 @@ def extract_from_ast(
                 elif child_kind == "FriendDecl":
                     # Friend access is independent of the section it is declared in.
                     if class_exposed:
-                        add_friend(child, ns_scope, extern_c)
+                        add_friend(child, name, ns_scope, extern_c)
                 else:
                     walk(child, new_stack, member_access, extern_c, ns_scope)
             return
@@ -861,7 +877,7 @@ def extract_from_ast(
         return members
 
     def _get_friend_functions(class_node: dict, visited: Optional[set] = None) -> list[dict]:
-        """Friend functions of a class and of its public bases (found via ADL on the derived type)."""
+        """ADL-callable friend functions of a class and of its public bases."""
         if visited is None:
             visited = set()
         if id(class_node) in visited:
@@ -876,7 +892,13 @@ def extract_from_ast(
                 (c for c in child.get("inner", []) if c.get("kind") in ("FunctionDecl", "FunctionTemplateDecl")),
                 None,
             )
-            if func and func.get("name") and not func.get("isImplicit") and not func.get("explicitlyDeleted"):
+            if (
+                func
+                and func.get("name")
+                and not func.get("isImplicit")
+                and not func.get("explicitlyDeleted")
+                and takes_type(func, class_node.get("name", ""))
+            ):
                 friends.append(func)
         for base in class_node.get("bases", []):
             if base.get("access") != "public":
