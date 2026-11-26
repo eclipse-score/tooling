@@ -405,7 +405,7 @@ _api_surface_update_rule = rule(
 
 # --- Public macros ---
 
-def api_surface_test(name, lock_file, target, check_docs = True, cc_toolchain = DEFAULT_CC_TOOLCHAIN, tags = [], **kwargs):
+def api_surface_test(name, lock_file, target, check_docs = True, cc_toolchain = DEFAULT_CC_TOOLCHAIN, tags = [], target_compatible_with = [], **kwargs):
     """Verifies the public C++ API surface hasn't changed.
 
     Also creates an implicit `<name>.update` runnable target that regenerates
@@ -423,9 +423,13 @@ def api_surface_test(name, lock_file, target, check_docs = True, cc_toolchain = 
         cc_toolchain: Hermetic LLVM cc_toolchain label used to run clang. Defaults to
             `@llvm_toolchain//:cc-clang-x86_64-linux`, resolved in the calling repository.
         tags: Additional tags for the test target.
+        target_compatible_with: Additional constraints (a list or a `select()`) that the generation, test and
+            `<name>.update` targets must satisfy on top of the Linux-only constraint. If they are not satisfied, the
+            targets are incompatible and skipped, e.g. by `bazel test //...`. Use this if the public API depends on
+            the build configuration and is only guaranteed in some of them.
         **kwargs: Additional parameters forwarded to the underlying test target.
     """
-    _linux_only = ["@platforms//os:linux"]
+    _compatible_with = ["@platforms//os:linux"] + target_compatible_with
 
     gen_name = name + "_gen"
     _api_surface_gen(
@@ -434,7 +438,7 @@ def api_surface_test(name, lock_file, target, check_docs = True, cc_toolchain = 
         target_label = target,
         cc_toolchain = cc_toolchain,
         tags = tags,
-        target_compatible_with = _linux_only,
+        target_compatible_with = _compatible_with,
     )
 
     _api_surface_compare_test(
@@ -443,7 +447,7 @@ def api_surface_test(name, lock_file, target, check_docs = True, cc_toolchain = 
         lock_file = lock_file,
         check_docs = check_docs,
         tags = tags,
-        target_compatible_with = _linux_only,
+        target_compatible_with = _compatible_with,
         **kwargs
     )
 
@@ -452,5 +456,5 @@ def api_surface_test(name, lock_file, target, check_docs = True, cc_toolchain = 
         generated = ":" + gen_name,
         lock_file_path = native.package_name() + "/" + lock_file,
         tags = tags,
-        target_compatible_with = _linux_only,
+        target_compatible_with = _compatible_with,
     )
