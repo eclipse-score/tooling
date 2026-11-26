@@ -11,9 +11,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // *******************************************************************************
 
-//! Validation: a sequence diagram that opens a black box (zoom detail) keeps
-//! the boundary of the call it refines. See
-//! `docs/specifications/sequence_refinement.md`.
+//! Validation of sequence refinement windows and zoom boundaries.
 
 use std::collections::HashSet;
 
@@ -26,23 +24,16 @@ use crate::ValidationResult;
 #[derive(Default)]
 pub struct RefinementCheck {
     pub result: ValidationResult,
-    /// Synchronous refined entries whose window is never closed.
-    unclosed: HashSet<usize>,
-    /// Entries with an exit that no detail keeps.
-    exit_missing: HashSet<usize>,
-    /// `(entry, detail)` where the detail leaves the boundary of the entry.
+    /// `(entry, detail)` that a finding rules out.
     rejected: HashSet<(usize, usize)>,
 }
 
 impl RefinementCheck {
-    /// The detail passes the check of the entry it refines: both windows are
-    /// closed, no exit of the entry is missing and the detail keeps the
-    /// boundary.
+    /// The detail passes the check of the entry it refines. A zoom detail needs
+    /// closed windows, no missing exit of the entry and the boundary kept; a
+    /// same-level detail is not affected by zoom findings.
     pub fn accepts(&self, entry: usize, detail: usize) -> bool {
-        !self.unclosed.contains(&entry)
-            && !self.unclosed.contains(&detail)
-            && !self.exit_missing.contains(&entry)
-            && !self.rejected.contains(&(entry, detail))
+        !self.rejected.contains(&(entry, detail))
     }
 }
 
@@ -50,24 +41,45 @@ pub fn validate_sequence_refinement(index: &SequenceRefinementIndex) -> Validati
     check_sequence_refinement(index).result
 }
 
-/// A call without a detail is not checked. For each detail of a call into
+/// A call without a detail is not checked. For each zoom detail of a call into
 /// `C`:
 /// - its lifelines are inside `C`, the sender, an exit partner (or an element it
 ///   calls) or environment;
 /// - together, the details of a call keep every exit of `C`.
 ///
-/// Every window of a synchronous zoomed call is closed by a reply or a
-/// deactivation.
+/// Synchronous zoom windows must close. Same-level links require closed or
+/// explicitly bounded windows and do not introduce closure findings.
 pub fn check_sequence_refinement(index: &SequenceRefinementIndex) -> RefinementCheck {
     let mut check = RefinementCheck::default();
 
+    for &position in &index.overlapping_async {
+        check
+            .result
+            .add_failure(overlapping_async_error(&index.entries[position]));
+    }
+    for invalid in &index.invalid_async_boundaries {
+        let (source_file, source_line) = invalid.source_location.display();
+        check.result.add_failure(
+            ErrorBuilder::new(ErrorCategory::Design)
+                .title("asynchronous window end does not match an open entry".to_string())
+                .field("finding", "SameLevelAsyncWindowEndInvalid")
+                .field("sequence diagram", format!("\"{}\"", invalid.diagram))
+                .field("sequence source file", format!("\"{source_file}\""))
+                .field("sequence source line", source_line.to_string())
+                .fix("use `ref over <receiver> : score-window-end` after an asynchronous entry to that receiver")
+                .build(),
+        );
+    }
+
+    let mut unclosed = HashSet::new();
+    let mut exit_missing = HashSet::new();
     for (position, entry) in index.entries.iter().enumerate() {
         if index.is_zoom_active(position) && !entry.closed && !entry.asynchronous {
             check.result.add_failure(window_not_closed_error(entry));
-            check.unclosed.insert(position);
+            unclosed.insert(position);
         }
 
-        let details = &index.details[position];
+        let details = index.zoom_details(position);
         if details.is_empty() {
             continue;
         }
@@ -97,12 +109,38 @@ pub fn check_sequence_refinement(index: &SequenceRefinementIndex) -> RefinementC
                 check
                     .result
                     .add_failure(exit_missing_error(entry, exit, details, index));
-                check.exit_missing.insert(position);
+                exit_missing.insert(position);
+            }
+        }
+    }
+
+    for position in 0..index.entries.len() {
+        for &detail in index.zoom_details(position) {
+            if unclosed.contains(&position)
+                || unclosed.contains(&detail)
+                || exit_missing.contains(&position)
+            {
+                check.rejected.insert((position, detail));
             }
         }
     }
 
     check
+}
+
+fn overlapping_async_error(entry: &ZoomEntry) -> String {
+    let (source_file, source_line) = entry.source_location.display();
+    ErrorBuilder::new(ErrorCategory::Design)
+        .title(format!(
+            "asynchronous sequence call {} overlaps another entry to the same receiver",
+            describe(entry)
+        ))
+        .field("finding", "SameLevelAsyncWindowOverlap")
+        .field("sequence diagram", diagram_name(entry))
+        .field("sequence source file", format!("\"{source_file}\""))
+        .field("sequence source line", source_line.to_string())
+        .fix("end each asynchronous window with `ref over <receiver> : score-window-end` before another call into that receiver")
+        .build()
 }
 
 /// `false` if the detail has a participant outside the boundary of `entry`.

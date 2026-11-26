@@ -341,6 +341,11 @@ Full guide: `validation/core/docs/specifications/sequence_design.md`.
   reply
   (`validation/core/docs/specifications/sequence_refinement.md`). In the docs the call label links to
   the refining diagram.
+- **Same-level detail**: an entry without calls from its receiver or descendants links to another
+  diagram's first call with the same resolved sender, receiver, non-empty method and call kind if
+  that detail has such a call. Both synchronous windows must close; asynchronous windows need
+  `ref over Receiver : score-window-end` on every path. Automatic matching can link unrelated
+  scenarios. The receiver stays visible; normal sequence/API validation still applies.
 
 ---
 

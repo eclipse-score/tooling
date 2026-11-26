@@ -71,7 +71,7 @@ The CLI accepts a validation profile and a JSON input bundle:
 - `--links-output`: optional; writes the diagram links (`diagram_links.json`)
   for clickable diagrams in the docs. Only with `dependable-element`; the file
   is written even when validation fails. Call links lead only to refinements
-  that pass the zoom check.
+  that pass the refinement check.
 - `--links-only`: optional; with `--links-output`, writes the links without
   validating and without a report. It conflicts with `--output` and
   `--warn-on-errors`.
@@ -91,7 +91,7 @@ Profile validators:
 
 `dependable-element`:
 - `validate_bazel_component`
-- `validate_sequence_refinement` (zoom across all architectural designs)
+- `validate_sequence_refinement` (zoom and same-level detail across designs)
 - `validate_component_class` (pending)
 
 `unit`:

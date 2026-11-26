@@ -32,7 +32,7 @@ carry no marker; the validation links them by participant uid.
 | Component | `App -> component_example : GetNumber()` | `component_example -> unit_1 : GetNumber()` |
 | Unit | `App -> unit_1 : GetNumber()` | `unit_1 -> unit_2 : GetData()` |
 
-The `architectural_design` validation checks that:
+The `dependable_element` validation checks that:
 
 - every call the black box makes to its environment (`Log()` to `Platform`)
   appears in at least one deeper diagram; the component and the unit level keep
@@ -48,5 +48,34 @@ Removing `unit_1 -> Platform : Log()` from `get_number_unit.puml` fails the
 build with `ZoomExitMissing`. A call without a deeper diagram stays a black box
 and is not checked.
 
-In the rendered pages the label `GetNumber()` of the SEooC and component
-diagrams is a link to the next deeper diagram; the unit level has none.
+In the rendered pages, the SEooC call links to the component diagram. The
+component call links to both unit diagrams as zoom alternatives, because
+`get_number_unit_overview` is also a call into a child of the component.
+
+## Show more detail at the same level
+
+A call can also link to a diagram of the same element that adds interactions:
+
+| Overview | Detail | What the detail adds |
+|----------|--------|----------------------|
+| `get_number_unit_overview` | `get_number_unit` | `unit_1 -> unit_2 : GetData()` and `unit_1 -> Platform : Log()` |
+| `get_data_async_overview` | `get_data_async` | `unit_2 ->> Platform : Log()` |
+
+Both diagrams start with the same call: same sender, receiver, method and
+call kind. The overview window has no calls from the receiver (or its
+descendants), the detail window has at least one. The receiver stays visible,
+unlike in a zoom. Arguments are not compared, so the match is by call shape
+only.
+
+A synchronous window is closed by a reply (`return`) or a `deactivate`. An
+asynchronous call has no reply, so each diagram ends its window with
+`ref over unit_2 : score-window-end` over the receiver. Without the marker
+there is no link; a marker that matches no asynchronous call, or a second
+call into the same receiver before the marker, is reported
+(`SameLevelAsyncWindowEndInvalid`, `SameLevelAsyncWindowOverlap`). A call into
+the receiver from an element that the window called is a callback and does not
+count as a second call.
+
+In the rendered pages, the `get_number_unit_overview` call links to
+`get_number_unit` and the `get_data_async_overview` call links to
+`get_data_async`; the detail diagrams have no further link.

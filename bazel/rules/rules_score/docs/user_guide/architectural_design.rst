@@ -597,6 +597,53 @@ clickable, and a call from an ``!include`` fragment gets no link. A zooming diag
 pass these rules is reported and not linked. The ``dependable_element`` computes the links into
 ``diagram_links.json``.
 
+Show More Detail at the Same Level
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+A call with no calls from its receiver or descendants in its window can link to another diagram that repeats the same sender,
+receiver, non-empty method and synchronous or asynchronous call kind as its first call, and
+adds calls from the receiver or its descendants inside that window:
+
+.. code-block:: text
+
+    ' overview
+    App -> unit_1 ++ : GetNumber()
+    return number
+
+    ' detail
+    App -> unit_1 ++ : GetNumber()
+    unit_1 -> unit_2 ++ : GetData()
+    return data
+    return number
+
+Participants are matched by identity, not alias; argument text is ignored, so unrelated
+scenarios with identical calls may link. Synchronous windows must close in both diagrams;
+unclosed windows are not linked and do not cause same-level closure findings. The detailed
+receiver stays visible and may call other architecture elements; normal sequence and API checks
+still apply. Two windows without receiver-originated calls or two with such calls are not linked at
+the same level. Zoom findings of the same call do not remove a same-level link.
+
+An asynchronous call (``->>``) has no reply, so each diagram ends its window with
+``ref over Receiver : score-window-end`` on every path; replies and ``deactivate`` do not replace
+it. The reference box appears in the rendered diagram:
+
+.. code-block:: text
+
+    ' overview
+    unit_1 ->> unit_2 : GetData()
+    ref over unit_2 : score-window-end
+
+    ' detail
+    unit_1 ->> unit_2 : GetData()
+    unit_2 ->> Platform : Log()
+    ref over unit_2 : score-window-end
+
+A second call into the receiver before the marker, and a marker that ends no asynchronous call or
+names more than one receiver, are reported (``SameLevelAsyncWindowOverlap``,
+``SameLevelAsyncWindowEndInvalid``). A call into the receiver from an element that the window
+called is a callback and does not count as a second call. The sample SEooC contains both
+examples (``get_number_unit_overview.puml`` and ``get_data_async_overview.puml``).
+
 Reusing Diagram Parts
 ~~~~~~~~~~~~~~~~~~~~~~
 

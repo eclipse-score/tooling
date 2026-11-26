@@ -42,6 +42,8 @@ Several files of one view describe one design; read them together.
 | `internal_api` | `internal_api.puml`, `internal_api_detail.puml` | `InternalInterface` is a reference in the first file, its operations are in the second |
 | `dynamic` | `dynamic_cast.puml`, `dynamic_design.puml` | The cast declares the participants, the scenario uses their names |
 | `dynamic` (zoom) | `get_number_seooc.puml`, `get_number_component.puml`, `get_number_unit.puml` | One call, `GetNumber()` from `App`, shown at SEooC, component and unit level; each level is a call into a direct child of the previous callee |
+| `dynamic` (same level) | `get_number_unit_overview.puml`, `get_number_unit.puml` | The same unit-level call, without and with interactions |
+| `dynamic` (same level, async) | `get_data_async_overview.puml`, `get_data_async.puml` | An asynchronous call whose window ends at `score-window-end`, without and with interactions |
 
 
 ## Assumptions of Use

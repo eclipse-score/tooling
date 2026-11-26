@@ -124,6 +124,21 @@ fn links_of(index: &SequenceRefinementIndex) -> Vec<CallLink> {
     call_links(index, &check_sequence_refinement(index))
 }
 
+fn expanded_diagram(source: &str, replies: bool) -> SequenceTree {
+    let mut result = diagram_with_replies(source, &[("comp", "Get()", None)], replies);
+    result.root.items.insert(
+        1,
+        Node::Interaction(Interaction {
+            sender: Some("comp".to_string().into()),
+            receiver: Some("comp".to_string().into()),
+            message: Some("Fetch()".to_string()),
+            kind: MessageKind::SynchCall,
+            source_location: SourceLocation::new(source, 3),
+        }),
+    );
+    result
+}
+
 #[test]
 fn refined_call_links_to_its_sorted_details() {
     let index = index_of(vec![
@@ -195,6 +210,39 @@ fn unclosed_refined_call_has_no_link() {
     let index = index_of(vec![
         unclosed,
         diagram("d/l1.puml", &[("comp", "Get()", None)]),
+    ]);
+
+    assert!(links_of(&index).is_empty());
+}
+
+#[test]
+fn same_level_call_links_to_sorted_closed_details_only() {
+    let index = index_of(vec![
+        diagram("d/overview.puml", &[("comp", "Get(x)", None)]),
+        expanded_diagram("d/detail_b.puml", true),
+        expanded_diagram("d/detail_bad.puml", false),
+        expanded_diagram("d/detail_a.puml", true),
+    ]);
+
+    assert_eq!(
+        links_of(&index),
+        [CallLink {
+            source: "d/overview.puml".to_string(),
+            line: 2,
+            method: "Get".to_string(),
+            targets: vec!["d/detail_a.puml".to_string(), "d/detail_b.puml".to_string()],
+        }]
+    );
+}
+
+#[test]
+fn same_level_call_written_in_a_fragment_has_no_link() {
+    let index = index_of(vec![
+        diagram(
+            "d/overview.puml",
+            &[("comp", "Get()", Some("d/fragment.iuml"))],
+        ),
+        expanded_diagram("d/detail.puml", true),
     ]);
 
     assert!(links_of(&index).is_empty());
