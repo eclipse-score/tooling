@@ -1,0 +1,15 @@
+# case	cmd	target	expect	regex
+release_green	build	//release_green/...	pass	-
+release_green	test	//release_green/...	pass	-
+arch_undeclared_unit	build	//arch_undeclared_unit/...	fail	Unit "ghostunit" from the PlantUML component diagram not found in Bazel
+unit_design_mismatch	build	//unit_design_mismatch/...	fail	Method "ghost\(\)" from entity "MyUnit" in the unit design not found
+scope_outside_dependency	build	//scope_outside_dependency/...	fail	is not in any certified scope
+coverage_lock_drift	build	//coverage_lock_drift/...	fail	Coverage lock file is out of date
+lobster_uncovered_compreq	build	//lobster_uncovered_compreq/...	pass	-
+lobster_uncovered_compreq	test	//lobster_uncovered_compreq/...	fail	lobster error: missing reference to Test Case Coverage
+dev_lock_drift	build	//dev_lock_drift/...	pass	Coverage lock file is out of date
+dev_lock_drift	test	//dev_lock_drift/...	pass	-
+lock_update	build	//workflow_lock_update/...	fail	Coverage lock file is out of date
+lock_update	run	//workflow_lock_update:SampleComponent.update	pass	-
+lock_update	build	//workflow_lock_update/...	pass	-
+lock_update	test	//workflow_lock_update/...	pass	-

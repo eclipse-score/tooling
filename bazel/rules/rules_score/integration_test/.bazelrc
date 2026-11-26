@@ -12,4 +12,9 @@ common --http_connector_attempts=10
 common --http_connector_retry_max_timeout=1s
 common --http_timeout_scaling=2.0
 
+test --test_output=errors
+
+# Each nested Bazel uses about 5 GB; raise on larger machines.
+test --local_test_jobs=2
+
 try-import %workspace%/user.bazelrc

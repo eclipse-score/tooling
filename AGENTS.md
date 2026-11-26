@@ -52,7 +52,8 @@ README, conventions and tests; nested `AGENTS.md` files refine this one.
 - Directories with their own `MODULE.bazel` (`bazel/rules/rules_score/test`,
   `bazel/rules/rules_score/examples/*`, `python_basics/integration_tests`,
   `starpls/integration_tests`, `cr_checker/tests`) are separate module roots, not covered by
-  root `bazel test`. `cd` into them and run `bazel test //...`; CI does this (`.github/workflows/tests.yml`).
+  root `bazel test`. CI runs selected example roots separately and tests consumer composition,
+  variants, failures, and workflows through the `rules_score` L4 suite (`.github/workflows/tests.yml`).
 - Rust crates are also checked with `bazel build //<pkg>/... --config=clippy`.
 - Python lint: `--config=lint` (ruff, ty); line length 120 (`pyproject.toml`).
 - After changing `MODULE.bazel`, run `bazel mod deps` and commit `MODULE.bazel.lock`;

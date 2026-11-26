@@ -53,6 +53,9 @@ runs:
         )
         PY
 
+        # The L4 integration tests run a nested Bazel without user.bazelrc; the runner reads this variable instead.
+        echo "L4_DOWNLOADER_CONFIG=${DOWNLOADER_CONFIG}" >> "${GITHUB_ENV}"
+
         # Nested modules are separate Bazel roots; each needs its own user.bazelrc.
         while IFS= read -r module_file; do
           echo "common --downloader_config=${DOWNLOADER_CONFIG}" >> "${GITHUB_WORKSPACE}/$(dirname "${module_file}")/user.bazelrc"

@@ -45,6 +45,8 @@ load(
 load("@score_tooling//manual_analysis:context_from_cc_library.bzl", "manual_analysis_context_from_cc_library")
 load("@score_tooling//manual_analysis:context_from_filegroup.bzl", "manual_analysis_context_from_filegroup")
 
+exports_files(["MODULE.bazel"])
+
 cc_library(
     name = "integrator_lib",
     srcs = [],

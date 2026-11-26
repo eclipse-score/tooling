@@ -18,6 +18,8 @@ load(
     "dependable_element",
 )
 
+exports_files(["MODULE.bazel"])
+
 cc_library(
     name = "sample_library",
     visibility = ["//visibility:public"],

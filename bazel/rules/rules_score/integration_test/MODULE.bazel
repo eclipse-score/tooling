@@ -20,10 +20,41 @@ module(
 
 bazel_dep(name = "rules_bazel_integration_test", version = "0.37.1")
 bazel_dep(name = "bazel_skylib", version = "1.8.2")
+bazel_dep(name = "rules_shell", version = "0.6.1")
 bazel_dep(name = "score_tooling", version = "0.0.0")
 local_path_override(
     module_name = "score_tooling",
     path = "../../../..",
+)
+
+bazel_dep(name = "minimal_requirements", version = "0.0.0")
+local_path_override(
+    module_name = "minimal_requirements",
+    path = "../examples/minimal",
+)
+
+bazel_dep(name = "some_other_library", version = "0.0.0")
+local_path_override(
+    module_name = "some_other_library",
+    path = "../examples/some_other_library",
+)
+
+bazel_dep(name = "seooc", version = "0.0.0")
+local_path_override(
+    module_name = "seooc",
+    path = "../examples/seooc",
+)
+
+bazel_dep(name = "integrator", version = "0.0.0")
+local_path_override(
+    module_name = "integrator",
+    path = "../examples/integrator",
+)
+
+bazel_dep(name = "failure_cases", version = "0.0.0")
+local_path_override(
+    module_name = "failure_cases",
+    path = "failure_cases",
 )
 
 bazel_binaries = use_extension(

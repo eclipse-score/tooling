@@ -48,9 +48,16 @@ Architecture map: [docs/tooling_architecture.rst](docs/tooling_architecture.rst)
 ```bash
 cd bazel/rules/rules_score/test && bazel test //...
 cd bazel/rules/rules_score/integration_test && bazel test //...
+L4_CACHE_DIR=/path/to/cache bazel test //:seooc_example_test --test_output=streamed
 cd bazel/rules/rules_score/examples/<name> && bazel build //... && bazel test //...
 bazel test -- //bazel/rules/rules_score/... -//bazel/rules/rules_score/examples/...   # from repo root
 ```
+
+For L4 timing or cache reuse, set `L4_CACHE_DIR` to a writable directory; the runner uses its `repo/`
+and `disk/` subdirectories and leaves them intact between runs. The caches save downloads and
+actions; each nested Bazel still re-evaluates module extensions (about 5 min on 4 cores).
+`integration_test/.bazelrc` runs 2 L4 tests at a time (about 5 GB each); raise
+`--local_test_jobs` on larger machines.
 
 Run the narrow target first, and the examples when a rule's behavior or attrs change.
 Add `--config=info` or `--config=debug` (root `.bazelrc`) for verbose rule output.
