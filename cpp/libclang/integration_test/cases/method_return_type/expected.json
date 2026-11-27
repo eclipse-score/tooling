@@ -8,7 +8,10 @@
       "methods": [
         {
           "name": "getName",
-          "return_type": "const char *",
+          "return_type": {
+            "raw_text": "const char *",
+            "expression": { "Pointer": { "Const": { "Builtin": "char" } } }
+          },
           "parameters": [],
           "modifiers": [],
           "template_parameters": null,
@@ -20,7 +23,10 @@
         },
         {
           "name": "getIdRef",
-          "return_type": "const int &",
+          "return_type": {
+            "raw_text": "const int &",
+            "expression": { "Reference": { "Const": { "Builtin": "int" } } }
+          },
           "parameters": [],
           "modifiers": ["Const"],
           "template_parameters": null,
@@ -32,7 +38,10 @@
         },
         {
           "name": "getIdRValueRef",
-          "return_type": "const int &&",
+          "return_type": {
+            "raw_text": "const int &&",
+            "expression": { "RValueReference": { "Const": { "Builtin": "int" } } }
+          },
           "parameters": [],
           "modifiers": ["Const"],
           "template_parameters": null,
@@ -44,7 +53,10 @@
         },
         {
           "name": "getMutableIdPtr",
-          "return_type": "int *",
+          "return_type": {
+            "raw_text": "int *",
+            "expression": { "Pointer": { "Builtin": "int" } }
+          },
           "parameters": [],
           "modifiers": [],
           "template_parameters": null,
@@ -56,7 +68,10 @@
         },
         {
           "name": "getPinnedIdPtr",
-          "return_type": "const int *const",
+          "return_type": {
+            "raw_text": "const int *const",
+            "expression": { "Const": { "Pointer": { "Const": { "Builtin": "int" } } } }
+          },
           "parameters": [],
           "modifiers": ["Const"],
           "template_parameters": null,
@@ -68,7 +83,15 @@
         },
         {
           "name": "getHistory",
-          "return_type": "std::vector<int>",
+          "return_type": {
+            "raw_text": "std::vector<int>",
+            "expression": {
+              "Template": {
+                "name": { "segments": ["std", "vector"] },
+                "arguments": [{ "Builtin": "int" }]
+              }
+            }
+          },
           "parameters": [],
           "modifiers": ["Const"],
           "template_parameters": null,
@@ -80,7 +103,15 @@
         },
         {
           "name": "getNames",
-          "return_type": "std::vector<const char *>",
+          "return_type": {
+            "raw_text": "std::vector<const char *>",
+            "expression": {
+              "Template": {
+                "name": { "segments": ["std", "vector"] },
+                "arguments": [{ "Pointer": { "Const": { "Builtin": "char" } } }]
+              }
+            }
+          },
           "parameters": [],
           "modifiers": ["Const"],
           "template_parameters": null,
@@ -92,7 +123,22 @@
         },
         {
           "name": "getConstPointerMatrix",
-          "return_type": "std::vector<std::vector<const int *>>",
+          "return_type": {
+            "raw_text": "std::vector<std::vector<const int *>>",
+            "expression": {
+              "Template": {
+                "name": { "segments": ["std", "vector"] },
+                "arguments": [
+                  {
+                    "Template": {
+                      "name": { "segments": ["std", "vector"] },
+                      "arguments": [{ "Pointer": { "Const": { "Builtin": "int" } } }]
+                    }
+                  }
+                ]
+              }
+            }
+          },
           "parameters": [],
           "modifiers": ["Const"],
           "template_parameters": null,
@@ -104,7 +150,23 @@
         },
         {
           "name": "getNameIndex",
-          "return_type": "std::map<int, std::vector<const char *>>",
+          "return_type": {
+            "raw_text": "std::map<int, std::vector<const char *>>",
+            "expression": {
+              "Template": {
+                "name": { "segments": ["std", "map"] },
+                "arguments": [
+                  { "Builtin": "int" },
+                  {
+                    "Template": {
+                      "name": { "segments": ["std", "vector"] },
+                      "arguments": [{ "Pointer": { "Const": { "Builtin": "char" } } }]
+                    }
+                  }
+                ]
+              }
+            }
+          },
           "parameters": [],
           "modifiers": ["Const"],
           "template_parameters": null,
@@ -116,7 +178,18 @@
         },
         {
           "name": "getRouteInfoById",
-          "return_type": "std::map<int, external_types::RouteInfo>",
+          "return_type": {
+            "raw_text": "std::map<int, RouteInfo>",
+            "expression": {
+              "Template": {
+                "name": { "segments": ["std", "map"] },
+                "arguments": [
+                  { "Builtin": "int" },
+                  { "NamedType": { "segments": ["external_types", "RouteInfo"] } }
+                ]
+              }
+            }
+          },
           "parameters": [],
           "modifiers": ["Const"],
           "template_parameters": null,
@@ -164,7 +237,7 @@
       "variables": [
         {
           "name": "route_id",
-          "data_type": "int",
+          "data_type": { "raw_text": "int", "expression": { "Builtin": "int" } },
           "is_static": false,
           "visibility": "public",
           "source_location": {

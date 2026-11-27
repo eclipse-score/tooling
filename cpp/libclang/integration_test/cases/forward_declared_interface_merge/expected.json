@@ -26,7 +26,7 @@
                 },
                 {
                     "name": "run",
-                    "return_type": "void",
+                    "return_type": { "raw_text": "void", "expression": { "Builtin": "void" } },
                     "visibility": "public",
                     "parameters": [],
                     "template_parameters": null,
@@ -53,11 +53,14 @@
         {
             "name": "use_thing",
             "enclosing_namespace_id": null,
-            "return_type": "void",
+            "return_type": { "raw_text": "void", "expression": { "Builtin": "void" } },
             "parameters": [
                 {
                     "name": "thing",
-                    "param_type": "IThing *",
+                    "param_type": {
+                      "raw_text": "IThing *",
+                      "expression": { "Pointer": { "NamedType": { "segments": ["IThing"] } } }
+                    },
                     "is_variadic": false
                 }
             ],

@@ -10,7 +10,7 @@
             "variables": [
                 {
                     "name": "event_control",
-                    "data_type": "EventControl &",
+                    "data_type": { "raw_text": "EventControl &" },
                     "visibility": "public",
                     "is_static": false,
                     "source_location": {

@@ -13,8 +13,9 @@
 
 use class_diagram::{
     ClassDiagram, ClassTemplateKind, EntityType, EnumLiteral, FreeFunctionDecl, FunctionArgument,
-    MemberVariable, Method, MethodModifier, ParameterDirection, RelationType, Relationship,
-    SimpleEntity, SourceLocation, TemplateParameter, TypeAlias, Visibility,
+    MemberVariable, Method, MethodModifier, ParameterDirection, QualifiedTypeName, RelationType,
+    Relationship, SimpleEntity, SourceLocation, TemplateParameter, TypeAlias, TypeArgument,
+    TypeDescription, TypeExpr, TypeNameSegment, Visibility,
 };
 use class_fbs::class_metamodel as fb;
 use flatbuffers::FlatBufferBuilder;
@@ -153,12 +154,210 @@ impl ClassSerializer {
         )
     }
 
+    fn serialize_type_description<'a>(
+        builder: &mut FlatBufferBuilder<'a>,
+        description: &TypeDescription,
+    ) -> flatbuffers::WIPOffset<fb::TypeDescription<'a>> {
+        let raw_text = builder.create_string(&description.raw_text);
+        let expression = description
+            .expression
+            .as_ref()
+            .map(|expression| Self::serialize_type_expr(builder, expression));
+        fb::TypeDescription::create(
+            builder,
+            &fb::TypeDescriptionArgs {
+                raw_text: Some(raw_text),
+                expression,
+            },
+        )
+    }
+
+    fn serialize_type_expr<'a>(
+        builder: &mut FlatBufferBuilder<'a>,
+        expression: &TypeExpr,
+    ) -> flatbuffers::WIPOffset<fb::TypeExpr<'a>> {
+        let (value_type, value) = match expression {
+            TypeExpr::Builtin(name) => {
+                let name = builder.create_string(name);
+                let value =
+                    fb::BuiltinType::create(builder, &fb::BuiltinTypeArgs { name: Some(name) });
+                (fb::TypeExprValue::BuiltinType, value.as_union_value())
+            }
+            TypeExpr::NamedType(name) => {
+                let name = Self::serialize_qualified_type_name(builder, name);
+                let value = fb::NamedType::create(builder, &fb::NamedTypeArgs { name: Some(name) });
+                (fb::TypeExprValue::NamedType, value.as_union_value())
+            }
+            TypeExpr::Template { name, arguments } => {
+                let name = Self::serialize_qualified_type_name(builder, name);
+                let arguments = Self::serialize_type_arguments(builder, arguments);
+                let value = fb::TemplateType::create(
+                    builder,
+                    &fb::TemplateTypeArgs {
+                        name: Some(name),
+                        arguments: Some(arguments),
+                    },
+                );
+                (fb::TypeExprValue::TemplateType, value.as_union_value())
+            }
+            TypeExpr::Array { element, size } => {
+                let element = Self::serialize_type_expr(builder, element);
+                let size = size.as_ref().map(|size| builder.create_string(size));
+                let value = fb::ArrayType::create(
+                    builder,
+                    &fb::ArrayTypeArgs {
+                        element: Some(element),
+                        size,
+                    },
+                );
+                (fb::TypeExprValue::ArrayType, value.as_union_value())
+            }
+            TypeExpr::Function {
+                return_type,
+                parameter_types,
+                is_variadic,
+                is_noexcept,
+            } => {
+                let return_type = Self::serialize_type_expr(builder, return_type);
+                let parameter_offsets: Vec<_> = parameter_types
+                    .iter()
+                    .map(|ty| Self::serialize_type_expr(builder, ty))
+                    .collect();
+                let parameter_types = builder.create_vector(&parameter_offsets);
+                let value = fb::FunctionType::create(
+                    builder,
+                    &fb::FunctionTypeArgs {
+                        return_type: Some(return_type),
+                        parameter_types: Some(parameter_types),
+                        is_variadic: *is_variadic,
+                        is_noexcept: *is_noexcept,
+                    },
+                );
+                (fb::TypeExprValue::FunctionType, value.as_union_value())
+            }
+            TypeExpr::Pointer(inner) => {
+                let inner = Self::serialize_type_expr(builder, inner);
+                let value =
+                    fb::PointerType::create(builder, &fb::PointerTypeArgs { inner: Some(inner) });
+                (fb::TypeExprValue::PointerType, value.as_union_value())
+            }
+            TypeExpr::Reference(inner) => {
+                let inner = Self::serialize_type_expr(builder, inner);
+                let value = fb::ReferenceType::create(
+                    builder,
+                    &fb::ReferenceTypeArgs { inner: Some(inner) },
+                );
+                (fb::TypeExprValue::ReferenceType, value.as_union_value())
+            }
+            TypeExpr::RValueReference(inner) => {
+                let inner = Self::serialize_type_expr(builder, inner);
+                let value = fb::RValueReferenceType::create(
+                    builder,
+                    &fb::RValueReferenceTypeArgs { inner: Some(inner) },
+                );
+                (
+                    fb::TypeExprValue::RValueReferenceType,
+                    value.as_union_value(),
+                )
+            }
+            TypeExpr::Const(inner) => {
+                let inner = Self::serialize_type_expr(builder, inner);
+                let value =
+                    fb::ConstType::create(builder, &fb::ConstTypeArgs { inner: Some(inner) });
+                (fb::TypeExprValue::ConstType, value.as_union_value())
+            }
+            TypeExpr::Volatile(inner) => {
+                let inner = Self::serialize_type_expr(builder, inner);
+                let value =
+                    fb::VolatileType::create(builder, &fb::VolatileTypeArgs { inner: Some(inner) });
+                (fb::TypeExprValue::VolatileType, value.as_union_value())
+            }
+        };
+        fb::TypeExpr::create(
+            builder,
+            &fb::TypeExprArgs {
+                value_type,
+                value: Some(value),
+            },
+        )
+    }
+
+    fn serialize_qualified_type_name<'a>(
+        builder: &mut FlatBufferBuilder<'a>,
+        name: &QualifiedTypeName,
+    ) -> flatbuffers::WIPOffset<fb::QualifiedTypeName<'a>> {
+        let segment_offsets: Vec<_> = name
+            .segments
+            .iter()
+            .map(|segment| {
+                let (name, arguments) = match segment {
+                    TypeNameSegment::Identifier(name) => (name, None),
+                    TypeNameSegment::Template { name, arguments } => (
+                        name,
+                        Some(Self::serialize_type_arguments(builder, arguments)),
+                    ),
+                };
+                let name = builder.create_string(name);
+                fb::TypeNameSegment::create(
+                    builder,
+                    &fb::TypeNameSegmentArgs {
+                        name: Some(name),
+                        arguments,
+                    },
+                )
+            })
+            .collect();
+        let segments = builder.create_vector(&segment_offsets);
+        fb::QualifiedTypeName::create(
+            builder,
+            &fb::QualifiedTypeNameArgs {
+                segments: Some(segments),
+                is_global: name.is_global,
+            },
+        )
+    }
+
+    fn serialize_type_arguments<'a>(
+        builder: &mut FlatBufferBuilder<'a>,
+        arguments: &[TypeArgument],
+    ) -> flatbuffers::WIPOffset<
+        flatbuffers::Vector<'a, flatbuffers::ForwardsUOffset<fb::TypeArgument<'a>>>,
+    > {
+        let offsets: Vec<_> = arguments
+            .iter()
+            .map(|argument| {
+                let (value_type, value) = match argument {
+                    TypeArgument::Type(expression) => (
+                        fb::TypeArgumentValue::TypeExpr,
+                        Self::serialize_type_expr(builder, expression).as_union_value(),
+                    ),
+                    TypeArgument::Value(text) => {
+                        let text = builder.create_string(text);
+                        let value = fb::TemplateValue::create(
+                            builder,
+                            &fb::TemplateValueArgs { text: Some(text) },
+                        );
+                        (fb::TypeArgumentValue::TemplateValue, value.as_union_value())
+                    }
+                };
+                fb::TypeArgument::create(
+                    builder,
+                    &fb::TypeArgumentArgs {
+                        value_type,
+                        value: Some(value),
+                    },
+                )
+            })
+            .collect();
+        builder.create_vector(&offsets)
+    }
+
     fn serialize_type_alias<'a>(
         builder: &mut FlatBufferBuilder<'a>,
         type_alias: &TypeAlias,
     ) -> flatbuffers::WIPOffset<fb::TypeAlias<'a>> {
         let alias_offset = builder.create_string(&type_alias.alias);
-        let original_type_offset = builder.create_string(&type_alias.original_type.raw_text);
+        let original_type = Self::serialize_type_description(builder, &type_alias.original_type);
         let source_location_offset =
             Self::serialize_source_location(builder, &type_alias.source_location);
 
@@ -166,7 +365,7 @@ impl ClassSerializer {
             builder,
             &fb::TypeAliasArgs {
                 alias: Some(alias_offset),
-                original_type: Some(original_type_offset),
+                original_type: Some(original_type),
                 source_location: Some(source_location_offset),
             },
         )
@@ -177,10 +376,10 @@ impl ClassSerializer {
         variable: &MemberVariable,
     ) -> flatbuffers::WIPOffset<fb::MemberVariable<'a>> {
         let name_offset = builder.create_string(&variable.name);
-        let data_type_offset = variable
+        let data_type = variable
             .data_type
             .as_ref()
-            .map(|data_type| builder.create_string(&data_type.raw_text));
+            .map(|data_type| Self::serialize_type_description(builder, data_type));
         let source_location_offset =
             Self::serialize_source_location(builder, &variable.source_location);
 
@@ -188,7 +387,7 @@ impl ClassSerializer {
             builder,
             &fb::MemberVariableArgs {
                 name: Some(name_offset),
-                data_type: data_type_offset,
+                data_type,
                 visibility: Self::map_visibility(variable.visibility),
                 is_static: variable.is_static,
                 source_location: Some(source_location_offset),
@@ -201,10 +400,10 @@ impl ClassSerializer {
         method: &Method,
     ) -> flatbuffers::WIPOffset<fb::Method<'a>> {
         let name_offset = builder.create_string(&method.name);
-        let return_type_offset = method
+        let return_type = method
             .return_type
             .as_ref()
-            .map(|return_type| builder.create_string(&return_type.raw_text));
+            .map(|return_type| Self::serialize_type_description(builder, return_type));
         let return_multiplicity_offset = method
             .return_multiplicity
             .as_ref()
@@ -243,7 +442,7 @@ impl ClassSerializer {
             &fb::MethodArgs {
                 name: Some(name_offset),
                 conversion_target: conversion_target_offset,
-                return_type: return_type_offset,
+                return_type,
                 return_multiplicity: return_multiplicity_offset,
                 visibility: Self::map_visibility(method.visibility),
                 parameters: Some(parameters_offset),
@@ -263,10 +462,10 @@ impl ClassSerializer {
             .enclosing_namespace_id
             .as_ref()
             .map(|namespace| builder.create_string(namespace));
-        let return_type_offset = function
+        let return_type = function
             .return_type
             .as_ref()
-            .map(|return_type| builder.create_string(&return_type.raw_text));
+            .map(|return_type| Self::serialize_type_description(builder, return_type));
         let return_multiplicity_offset = function
             .return_multiplicity
             .as_ref()
@@ -294,7 +493,7 @@ impl ClassSerializer {
             &fb::FreeFunctionDeclArgs {
                 name: Some(name_offset),
                 enclosing_namespace_id: enclosing_namespace_id_offset,
-                return_type: return_type_offset,
+                return_type,
                 return_multiplicity: return_multiplicity_offset,
                 parameters: Some(parameters_offset),
                 template_parameters: template_parameters_offset,
@@ -308,10 +507,10 @@ impl ClassSerializer {
         param: &FunctionArgument,
     ) -> flatbuffers::WIPOffset<fb::FunctionArgument<'a>> {
         let name_offset = builder.create_string(&param.name);
-        let param_type_offset = param
+        let param_type = param
             .param_type
             .as_ref()
-            .map(|param_type| builder.create_string(&param_type.raw_text));
+            .map(|param_type| Self::serialize_type_description(builder, param_type));
         let multiplicity_offset = param
             .multiplicity
             .as_ref()
@@ -321,7 +520,7 @@ impl ClassSerializer {
             builder,
             &fb::FunctionArgumentArgs {
                 name: Some(name_offset),
-                param_type: param_type_offset,
+                param_type,
                 is_variadic: param.is_variadic,
                 is_pack_expansion: param.is_pack_expansion,
                 direction: Self::map_parameter_direction(param.direction),

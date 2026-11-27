@@ -15,9 +15,31 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct QualifiedTypeName {
-    pub segments: Vec<String>,
+    pub segments: Vec<TypeNameSegment>,
     #[serde(default, skip_serializing_if = "is_false")]
     pub is_global: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(untagged)]
+pub enum TypeNameSegment {
+    Identifier(String),
+    Template {
+        name: String,
+        arguments: Vec<TypeArgument>,
+    },
+}
+
+impl From<String> for TypeNameSegment {
+    fn from(name: String) -> Self {
+        Self::Identifier(name)
+    }
+}
+
+impl From<&str> for TypeNameSegment {
+    fn from(name: &str) -> Self {
+        Self::Identifier(name.to_string())
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]

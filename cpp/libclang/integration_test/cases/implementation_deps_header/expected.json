@@ -10,7 +10,7 @@
       "variables": [
         {
           "name": "slot_count",
-          "data_type": "int",
+          "data_type": { "raw_text": "int", "expression": { "Builtin": "int" } },
           "visibility": "public",
           "is_static": false,
           "source_location": {
@@ -38,7 +38,10 @@
       "variables": [
         {
           "name": "event_control",
-          "data_type": "EventControl &",
+          "data_type": {
+            "raw_text": "EventControl &",
+            "expression": { "Reference": { "NamedType": { "segments": ["EventControl"] } } }
+          },
           "visibility": "public",
           "is_static": false,
           "source_location": {

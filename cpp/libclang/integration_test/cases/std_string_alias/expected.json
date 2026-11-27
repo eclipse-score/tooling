@@ -9,12 +9,20 @@
             "methods": [
                 {
                     "name": "get",
-                    "return_type": "std::string",
+                    "return_type": {
+                      "raw_text": "std::string",
+                      "expression": { "NamedType": { "segments": ["std", "string"] } }
+                    },
                     "parameters": [
                         {
                             "is_variadic": false,
                             "name": "key",
-                            "param_type": "const std::string &"
+                            "param_type": {
+                              "raw_text": "const std::string &",
+                              "expression": {
+                                "Reference": { "Const": { "NamedType": { "segments": ["std", "string"] } } }
+                              }
+                            }
                         }
                     ],
                     "modifiers": ["Const"],
@@ -27,17 +35,27 @@
                 },
                 {
                     "name": "set",
-                    "return_type": "void",
+                    "return_type": { "raw_text": "void", "expression": { "Builtin": "void" } },
                     "parameters": [
                         {
                             "is_variadic": false,
                             "name": "key",
-                            "param_type": "const std::string &"
+                            "param_type": {
+                              "raw_text": "const std::string &",
+                              "expression": {
+                                "Reference": { "Const": { "NamedType": { "segments": ["std", "string"] } } }
+                              }
+                            }
                         },
                         {
                             "is_variadic": false,
                             "name": "value",
-                            "param_type": "const std::string &"
+                            "param_type": {
+                              "raw_text": "const std::string &",
+                              "expression": {
+                                "Reference": { "Const": { "NamedType": { "segments": ["std", "string"] } } }
+                              }
+                            }
                         }
                     ],
                     "modifiers": [],
@@ -56,7 +74,10 @@
             "variables": [
                 {
                     "name": "name_",
-                    "data_type": "std::string",
+                    "data_type": {
+                      "raw_text": "std::string",
+                      "expression": { "NamedType": { "segments": ["std", "string"] } }
+                    },
                     "is_static": false,
                     "visibility": "public",
                     "source_location": {
@@ -66,7 +87,18 @@
                 },
                 {
                     "name": "store_",
-                    "data_type": "std::unordered_map<std::string, std::string>",
+                    "data_type": {
+                      "raw_text": "std::unordered_map<std::string, std::string>",
+                      "expression": {
+                        "Template": {
+                          "name": { "segments": ["std", "unordered_map"] },
+                          "arguments": [
+                            { "NamedType": { "segments": ["std", "string"] } },
+                            { "NamedType": { "segments": ["std", "string"] } }
+                          ]
+                        }
+                      }
+                    },
                     "is_static": false,
                     "visibility": "public",
                     "source_location": {

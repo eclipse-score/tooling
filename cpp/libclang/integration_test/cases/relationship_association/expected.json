@@ -9,11 +9,14 @@
       "methods": [
         {
           "name": "setDriver",
-          "return_type": "void",
+          "return_type": { "raw_text": "void", "expression": { "Builtin": "void" } },
           "parameters": [
             {
               "name": "driver",
-              "param_type": "Driver",
+              "param_type": {
+                "raw_text": "Driver",
+                "expression": { "NamedType": { "segments": ["Driver"] } }
+              },
               "is_variadic": false
             }
           ],
@@ -57,7 +60,10 @@
       "methods": [
         {
           "name": "makeDriver",
-          "return_type": "Driver",
+          "return_type": {
+            "raw_text": "Driver",
+            "expression": { "NamedType": { "segments": ["Driver"] } }
+          },
           "parameters": [],
           "modifiers": [],
           "template_parameters": null,
@@ -99,7 +105,15 @@
       "methods": [
         {
           "name": "allDrivers",
-          "return_type": "std::vector<Driver>",
+          "return_type": {
+            "raw_text": "std::vector<Driver>",
+            "expression": {
+              "Template": {
+                "name": { "segments": ["std", "vector"] },
+                "arguments": [{ "NamedType": { "segments": ["Driver"] } }]
+              }
+            }
+          },
           "parameters": [],
           "modifiers": [],
           "template_parameters": null,

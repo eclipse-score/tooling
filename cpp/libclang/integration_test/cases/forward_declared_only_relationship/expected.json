@@ -10,7 +10,10 @@
             "variables": [
                 {
                     "name": "peer",
-                    "data_type": "svc::Peer *",
+                    "data_type": {
+                        "raw_text": "Peer *",
+                        "expression": { "Pointer": { "NamedType": { "segments": ["svc", "Peer"] } } }
+                    },
                     "visibility": "public",
                     "is_static": false,
                     "source_location": {
@@ -20,7 +23,10 @@
                 },
                 {
                     "name": "tag",
-                    "data_type": "svc::Tag *",
+                    "data_type": {
+                        "raw_text": "Tag *",
+                        "expression": { "Pointer": { "NamedType": { "segments": ["svc", "Tag"] } } }
+                    },
                     "visibility": "public",
                     "is_static": false,
                     "source_location": {
@@ -30,14 +36,24 @@
                 },
                 {
                     "name": "box",
-                    "data_type": "svc::Box<int> *",
+                    "data_type": {
+                        "raw_text": "Box<int> *",
+                        "expression": {
+                            "Pointer": {
+                                "Template": {
+                                    "name": { "segments": ["svc", "Box"] },
+                                    "arguments": [{ "Builtin": "int" }]
+                                }
+                            }
+                        }
+                    },
                     "visibility": "public",
                     "is_static": false,
                     "source_location": {
                         "file": "cpp/libclang/integration_test/cases/forward_declared_only_relationship/owner.h",
                         "line": 25
                     }
-                }
+        }
             ],
             "methods": [],
             "template_parameters": null,

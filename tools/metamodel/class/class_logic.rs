@@ -15,7 +15,7 @@ use serde::{Deserialize, Serialize};
 pub use source_location::SourceLocation;
 
 mod type_expr;
-pub use type_expr::{QualifiedTypeName, TypeArgument, TypeDescription, TypeExpr};
+pub use type_expr::{QualifiedTypeName, TypeArgument, TypeDescription, TypeExpr, TypeNameSegment};
 
 /// Represents a complete class diagram model containing all resolved entities
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
@@ -430,7 +430,7 @@ mod tests {
                 data_type: Some(TypeDescription {
                     raw_text: "string".to_string(),
                     expression: Some(TypeExpr::NamedType(QualifiedTypeName {
-                        segments: vec!["string".to_string()],
+                        segments: vec!["string".into()],
                         is_global: false,
                     })),
                 }),

@@ -22,7 +22,7 @@
     {
       "name": "first",
       "enclosing_namespace_id": null,
-      "return_type": "bool",
+      "return_type": { "raw_text": "bool", "expression": { "Builtin": "bool" } },
       "parameters": [],
       "template_parameters": null,
       "source_location": {
@@ -33,7 +33,7 @@
     {
       "name": "second",
       "enclosing_namespace_id": null,
-      "return_type": "bool",
+      "return_type": { "raw_text": "bool", "expression": { "Builtin": "bool" } },
       "parameters": [],
       "template_parameters": null,
       "source_location": {
@@ -44,7 +44,7 @@
     {
       "name": "third",
       "enclosing_namespace_id": null,
-      "return_type": "bool",
+      "return_type": { "raw_text": "bool", "expression": { "Builtin": "bool" } },
       "parameters": [],
       "template_parameters": null,
       "source_location": {
@@ -55,7 +55,7 @@
     {
       "name": "handle_and",
       "enclosing_namespace_id": null,
-      "return_type": "void",
+      "return_type": { "raw_text": "void", "expression": { "Builtin": "void" } },
       "parameters": [],
       "template_parameters": null,
       "source_location": {
@@ -66,7 +66,7 @@
     {
       "name": "handle_or",
       "enclosing_namespace_id": null,
-      "return_type": "void",
+      "return_type": { "raw_text": "void", "expression": { "Builtin": "void" } },
       "parameters": [],
       "template_parameters": null,
       "source_location": {
@@ -77,7 +77,7 @@
     {
       "name": "handle_mixed",
       "enclosing_namespace_id": null,
-      "return_type": "void",
+      "return_type": { "raw_text": "void", "expression": { "Builtin": "void" } },
       "parameters": [],
       "template_parameters": null,
       "source_location": {
@@ -88,7 +88,7 @@
     {
       "name": "handle_alternative",
       "enclosing_namespace_id": null,
-      "return_type": "void",
+      "return_type": { "raw_text": "void", "expression": { "Builtin": "void" } },
       "parameters": [],
       "template_parameters": null,
       "source_location": {
@@ -99,7 +99,7 @@
     {
       "name": "handle_template_operand",
       "enclosing_namespace_id": null,
-      "return_type": "void",
+      "return_type": { "raw_text": "void", "expression": { "Builtin": "void" } },
       "parameters": [],
       "template_parameters": null,
       "source_location": {
@@ -110,7 +110,7 @@
     {
       "name": "handle_operator_function",
       "enclosing_namespace_id": null,
-      "return_type": "void",
+      "return_type": { "raw_text": "void", "expression": { "Builtin": "void" } },
       "parameters": [],
       "template_parameters": null,
       "source_location": {
@@ -121,7 +121,7 @@
     {
       "name": "check_template",
       "enclosing_namespace_id": null,
-      "return_type": "bool",
+      "return_type": { "raw_text": "bool", "expression": { "Builtin": "bool" } },
       "parameters": [],
       "template_parameters": [
         {
@@ -140,7 +140,10 @@
     {
       "name": "first_flag",
       "enclosing_namespace_id": null,
-      "return_type": "Flag",
+      "return_type": {
+        "raw_text": "Flag",
+        "expression": { "NamedType": { "segments": ["Flag"] } }
+      },
       "parameters": [],
       "template_parameters": null,
       "source_location": {
@@ -151,7 +154,10 @@
     {
       "name": "second_flag",
       "enclosing_namespace_id": null,
-      "return_type": "Flag",
+      "return_type": {
+        "raw_text": "Flag",
+        "expression": { "NamedType": { "segments": ["Flag"] } }
+      },
       "parameters": [],
       "template_parameters": null,
       "source_location": {
@@ -162,16 +168,22 @@
     {
       "name": "operator&&",
       "enclosing_namespace_id": null,
-      "return_type": "bool",
+      "return_type": { "raw_text": "bool", "expression": { "Builtin": "bool" } },
       "parameters": [
         {
           "name": "",
-          "param_type": "Flag",
+          "param_type": {
+            "raw_text": "Flag",
+            "expression": { "NamedType": { "segments": ["Flag"] } }
+          },
           "is_variadic": false
         },
         {
           "name": "",
-          "param_type": "Flag",
+          "param_type": {
+            "raw_text": "Flag",
+            "expression": { "NamedType": { "segments": ["Flag"] } }
+          },
           "is_variadic": false
         }
       ],
@@ -184,7 +196,7 @@
     {
       "name": "guard_associativity",
       "enclosing_namespace_id": "flow",
-      "return_type": "void",
+      "return_type": { "raw_text": "void", "expression": { "Builtin": "void" } },
       "parameters": [],
       "template_parameters": null,
       "source_location": {

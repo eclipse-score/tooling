@@ -9,11 +9,14 @@
       "methods": [
         {
           "name": "log",
-          "return_type": "void",
+          "return_type": { "raw_text": "void", "expression": { "Builtin": "void" } },
           "parameters": [
             {
               "name": "logger",
-              "param_type": "Logger *",
+              "param_type": {
+                "raw_text": "Logger *",
+                "expression": { "Pointer": { "NamedType": { "segments": ["Logger"] } } }
+              },
               "is_variadic": false
             }
           ],
@@ -57,11 +60,14 @@
       "methods": [
         {
           "name": "logRef",
-          "return_type": "void",
+          "return_type": { "raw_text": "void", "expression": { "Builtin": "void" } },
           "parameters": [
             {
               "name": "logger",
-              "param_type": "Logger &",
+              "param_type": {
+                "raw_text": "Logger &",
+                "expression": { "Reference": { "NamedType": { "segments": ["Logger"] } } }
+              },
               "is_variadic": false
             }
           ],
@@ -105,7 +111,10 @@
       "methods": [
         {
           "name": "getLogger",
-          "return_type": "Logger *",
+          "return_type": {
+            "raw_text": "Logger *",
+            "expression": { "Pointer": { "NamedType": { "segments": ["Logger"] } } }
+          },
           "parameters": [],
           "modifiers": [],
           "template_parameters": null,
@@ -147,7 +156,10 @@
       "methods": [
         {
           "name": "getLoggerRef",
-          "return_type": "Logger &",
+          "return_type": {
+            "raw_text": "Logger &",
+            "expression": { "Reference": { "NamedType": { "segments": ["Logger"] } } }
+          },
           "parameters": [],
           "modifiers": [],
           "template_parameters": null,

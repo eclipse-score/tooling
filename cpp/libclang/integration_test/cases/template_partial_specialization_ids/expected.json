@@ -16,10 +16,13 @@
               "is_pack_expansion": true,
               "is_variadic": false,
               "name": "args",
-              "param_type": "const ArgTypes &"
+              "param_type": { "raw_text": "const ArgTypes &" }
             }
           ],
-          "return_type": "ReturnType",
+          "return_type": {
+            "raw_text": "ReturnType",
+            "expression": { "NamedType": { "segments": ["ReturnType"] } }
+          },
           "template_parameters": null,
           "visibility": "public",
           "source_location": {
@@ -52,7 +55,7 @@
       "type_aliases": [],
       "variables": [
         {
-          "data_type": "int",
+          "data_type": { "raw_text": "int", "expression": { "Builtin": "int" } },
           "is_static": false,
           "name": "parameter_count_",
           "source_location": {
@@ -78,10 +81,10 @@
               "is_pack_expansion": true,
               "is_variadic": false,
               "name": "args",
-              "param_type": "const ArgTypes &"
+              "param_type": { "raw_text": "const ArgTypes &" }
             }
           ],
-          "return_type": "void",
+          "return_type": { "raw_text": "void", "expression": { "Builtin": "void" } },
           "template_parameters": null,
           "visibility": "public",
           "source_location": {
@@ -108,7 +111,7 @@
       "type_aliases": [],
       "variables": [
         {
-          "data_type": "int",
+          "data_type": { "raw_text": "int", "expression": { "Builtin": "int" } },
           "is_static": false,
           "name": "notification_count_",
           "source_location": {

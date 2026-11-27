@@ -4,11 +4,11 @@
         {
             "name": "fixed_width",
             "enclosing_namespace_id": null,
-            "return_type": "void",
+            "return_type": { "raw_text": "void", "expression": { "Builtin": "void" } },
             "parameters": [
                 {
                     "name": "",
-                    "param_type": "std::int32_t",
+                    "param_type": { "raw_text": "std::int32_t", "expression": { "Builtin": "int" } },
                     "is_variadic": false
                 }
             ],
@@ -21,11 +21,11 @@
         {
             "name": "fixed_width",
             "enclosing_namespace_id": null,
-            "return_type": "void",
+            "return_type": { "raw_text": "void", "expression": { "Builtin": "void" } },
             "parameters": [
                 {
                     "name": "",
-                    "param_type": "std::uint32_t",
+                    "param_type": { "raw_text": "std::uint32_t", "expression": { "Builtin": "unsigned int" } },
                     "is_variadic": false
                 }
             ],
@@ -38,11 +38,11 @@
         {
             "name": "size_vs_long",
             "enclosing_namespace_id": null,
-            "return_type": "void",
+            "return_type": { "raw_text": "void", "expression": { "Builtin": "void" } },
             "parameters": [
                 {
                     "name": "",
-                    "param_type": "long",
+                    "param_type": { "raw_text": "long", "expression": { "Builtin": "long" } },
                     "is_variadic": false
                 }
             ],
@@ -55,11 +55,11 @@
         {
             "name": "size_vs_long",
             "enclosing_namespace_id": null,
-            "return_type": "void",
+            "return_type": { "raw_text": "void", "expression": { "Builtin": "void" } },
             "parameters": [
                 {
                     "name": "",
-                    "param_type": "std::size_t",
+                    "param_type": { "raw_text": "std::size_t", "expression": { "Builtin": "unsigned long" } },
                     "is_variadic": false
                 }
             ],

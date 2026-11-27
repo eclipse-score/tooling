@@ -9,7 +9,15 @@
       "methods": [
         {
           "name": "getNameOffset",
-          "return_type": "flatbuffers::Offset<flatbuffers::String>",
+          "return_type": {
+            "raw_text": "flatbuffers::Offset<flatbuffers::String>",
+            "expression": {
+              "Template": {
+                "name": { "segments": ["flatbuffers", "Offset"] },
+                "arguments": [{ "NamedType": { "segments": ["flatbuffers", "String"] } }]
+              }
+            }
+          },
           "parameters": [],
           "modifiers": ["Const"],
           "template_parameters": null,
@@ -21,7 +29,10 @@
         },
         {
           "name": "createBuilder",
-          "return_type": "flatbuffers::FlatBufferBuilder",
+          "return_type": {
+            "raw_text": "flatbuffers::FlatBufferBuilder",
+            "expression": { "NamedType": { "segments": ["flatbuffers", "FlatBufferBuilder"] } }
+          },
           "parameters": [],
           "modifiers": [],
           "template_parameters": null,
@@ -39,7 +50,7 @@
       "variables": [
         {
           "name": "m_doors",
-          "data_type": "std::uint64_t",
+          "data_type": { "raw_text": "std::uint64_t", "expression": { "Builtin": "unsigned long" } },
           "is_static": false,
           "visibility": "public",
           "source_location": {
@@ -49,7 +60,15 @@
         },
         {
           "name": "m_windows",
-          "data_type": "std::vector<int>",
+          "data_type": {
+            "raw_text": "std::vector<int>",
+            "expression": {
+              "Template": {
+                "name": { "segments": ["std", "vector"] },
+                "arguments": [{ "Builtin": "int" }]
+              }
+            }
+          },
           "is_static": false,
           "visibility": "public",
           "source_location": {
@@ -59,7 +78,10 @@
         },
         {
           "name": "m_builder",
-          "data_type": "flatbuffers::FlatBufferBuilder",
+          "data_type": {
+            "raw_text": "flatbuffers::FlatBufferBuilder",
+            "expression": { "NamedType": { "segments": ["flatbuffers", "FlatBufferBuilder"] } }
+          },
           "is_static": false,
           "visibility": "public",
           "source_location": {
@@ -69,7 +91,22 @@
         },
         {
           "name": "m_name_offsets",
-          "data_type": "std::vector<flatbuffers::Offset<flatbuffers::String>>",
+          "data_type": {
+            "raw_text": "std::vector<flatbuffers::Offset<flatbuffers::String>>",
+            "expression": {
+              "Template": {
+                "name": { "segments": ["std", "vector"] },
+                "arguments": [
+                  {
+                    "Template": {
+                      "name": { "segments": ["flatbuffers", "Offset"] },
+                      "arguments": [{ "NamedType": { "segments": ["flatbuffers", "String"] } }]
+                    }
+                  }
+                ]
+              }
+            }
+          },
           "is_static": false,
           "visibility": "protected",
           "source_location": {
@@ -79,7 +116,15 @@
         },
         {
           "name": "m_offsets",
-          "data_type": "std::vector<flatbuffers::uoffset_t>",
+          "data_type": {
+            "raw_text": "std::vector<flatbuffers::uoffset_t>",
+            "expression": {
+              "Template": {
+                "name": { "segments": ["std", "vector"] },
+                "arguments": [{ "NamedType": { "segments": ["flatbuffers", "uoffset_t"] } }]
+              }
+            }
+          },
           "is_static": false,
           "visibility": "private",
           "source_location": {

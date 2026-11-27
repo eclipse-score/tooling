@@ -71,7 +71,10 @@
       "variables": [
         {
           "name": "alpha_engine",
-          "data_type": "Alpha::Engine",
+          "data_type": {
+            "raw_text": "Alpha::Engine",
+            "expression": { "NamedType": { "segments": ["Alpha", "Engine"] } }
+          },
           "is_static": false,
           "visibility": "public",
           "source_location": {
@@ -81,7 +84,10 @@
         },
         {
           "name": "beta_engine",
-          "data_type": "Beta::Engine",
+          "data_type": {
+            "raw_text": "Beta::Engine",
+            "expression": { "NamedType": { "segments": ["Beta", "Engine"] } }
+          },
           "is_static": false,
           "visibility": "public",
           "source_location": {

@@ -66,6 +66,96 @@ enum TemplateParameterKind : byte {
     Template = 2
 }
 
+table BuiltinType {
+    name: string (required);
+}
+
+table TemplateValue {
+    text: string (required);
+}
+
+union TypeArgumentValue {
+    TypeExpr,
+    TemplateValue
+}
+
+table TypeArgument {
+    value: TypeArgumentValue;
+}
+
+table TypeNameSegment {
+    name: string (required);
+    arguments: [TypeArgument];
+}
+
+table QualifiedTypeName {
+    segments: [TypeNameSegment];
+    is_global: bool = false;
+}
+
+table NamedType {
+    name: QualifiedTypeName (required);
+}
+
+table TemplateType {
+    name: QualifiedTypeName (required);
+    arguments: [TypeArgument];
+}
+
+table ArrayType {
+    element: TypeExpr (required);
+    size: string;
+}
+
+table FunctionType {
+    return_type: TypeExpr (required);
+    parameter_types: [TypeExpr];
+    is_variadic: bool = false;
+    is_noexcept: bool = false;
+}
+
+table PointerType {
+    inner: TypeExpr (required);
+}
+
+table ReferenceType {
+    inner: TypeExpr (required);
+}
+
+table RValueReferenceType {
+    inner: TypeExpr (required);
+}
+
+table ConstType {
+    inner: TypeExpr (required);
+}
+
+table VolatileType {
+    inner: TypeExpr (required);
+}
+
+union TypeExprValue {
+    BuiltinType,
+    NamedType,
+    TemplateType,
+    ArrayType,
+    FunctionType,
+    PointerType,
+    ReferenceType,
+    RValueReferenceType,
+    ConstType,
+    VolatileType
+}
+
+table TypeExpr {
+    value: TypeExprValue;
+}
+
+table TypeDescription {
+    raw_text: string (required);
+    expression: TypeExpr;
+}
+
 table TemplateParameter {
     kind: TemplateParameterKind = Type;
     name: string (required);
@@ -76,7 +166,7 @@ table TemplateParameter {
 
 table TypeAlias {
     alias: string (required);
-    original_type: string (required);
+    original_type: TypeDescription (required);
     source_location: SourceLocation (required);
 }
 
@@ -89,7 +179,7 @@ enum ParameterDirection : byte {
 
 table FunctionArgument {
     name: string (required);
-    param_type: string;
+    param_type: TypeDescription;
     is_variadic: bool = false;
     is_pack_expansion: bool = false;
     direction: ParameterDirection = Unspecified;
@@ -98,7 +188,7 @@ table FunctionArgument {
 
 table MemberVariable {
     name: string (required);
-    data_type: string;
+    data_type: TypeDescription;
     visibility: Visibility = Public;
     is_static: bool = false;
     source_location: SourceLocation (required);
@@ -106,7 +196,7 @@ table MemberVariable {
 
 table Method {
     name: string (required);
-    return_type: string;
+    return_type: TypeDescription;
     visibility: Visibility = Public;
     parameters: [FunctionArgument];
     template_parameters: [TemplateParameter];
@@ -150,7 +240,7 @@ table SimpleEntity {
 table FreeFunctionDecl {
     name: string (required);
     enclosing_namespace_id: string;
-    return_type: string;
+    return_type: TypeDescription;
     parameters: [FunctionArgument];
     template_parameters: [TemplateParameter];
     source_location: SourceLocation (required);

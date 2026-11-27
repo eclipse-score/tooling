@@ -1,0 +1,369 @@
+{
+  "types": {
+    "qualified_names::Owner": {
+      "id": "qualified_names::Owner",
+      "name": "Owner",
+      "enclosing_namespace_id": "qualified_names",
+      "stereotypes": [],
+      "entity_type": "Class",
+      "template_kind": "Primary",
+      "type_aliases": [],
+      "variables": [],
+      "methods": [],
+      "template_parameters": [
+        { "Type": { "name": "T", "is_pack": false } }
+      ],
+      "enum_literals": [],
+      "relationships": [],
+      "source_location": {
+        "file": "cpp/libclang/integration_test/cases/qualified_template_types/qualified_template_types.cpp",
+        "line": 19
+      }
+    },
+    "qualified_names::Owner::Inner": {
+      "id": "qualified_names::Owner::Inner",
+      "name": "Inner",
+      "enclosing_namespace_id": "qualified_names",
+      "stereotypes": [],
+      "entity_type": "Class",
+      "template_kind": "Primary",
+      "type_aliases": [],
+      "variables": [],
+      "methods": [],
+      "template_parameters": [
+        { "Type": { "name": "U", "is_pack": false } },
+        { "NonType": { "name": "Count", "value_type": "int", "is_pack": false } }
+      ],
+      "enum_literals": [],
+      "relationships": [],
+      "source_location": {
+        "file": "cpp/libclang/integration_test/cases/qualified_template_types/qualified_template_types.cpp",
+        "line": 37
+      }
+    },
+    "qualified_names::Owner::Inner::Deep": {
+      "id": "qualified_names::Owner::Inner::Deep",
+      "name": "Deep",
+      "enclosing_namespace_id": "qualified_names",
+      "stereotypes": [],
+      "entity_type": "Class",
+      "template_kind": "Primary",
+      "type_aliases": [],
+      "variables": [],
+      "methods": [],
+      "template_parameters": [
+        { "Type": { "name": "V", "is_pack": false } }
+      ],
+      "enum_literals": [],
+      "relationships": [],
+      "source_location": {
+        "file": "cpp/libclang/integration_test/cases/qualified_template_types/qualified_template_types.cpp",
+        "line": 41
+      }
+    },
+    "qualified_names::Owner::Inner::Deep::Leaf": {
+      "id": "qualified_names::Owner::Inner::Deep::Leaf",
+      "name": "Leaf",
+      "enclosing_namespace_id": "qualified_names",
+      "stereotypes": [],
+      "entity_type": "Class",
+      "type_aliases": [],
+      "variables": [],
+      "methods": [],
+      "template_parameters": null,
+      "enum_literals": [],
+      "relationships": [],
+      "source_location": {
+        "file": "cpp/libclang/integration_test/cases/qualified_template_types/qualified_template_types.cpp",
+        "line": 44
+      }
+    },
+    "qualified_names::Owner::Kind": {
+      "id": "qualified_names::Owner::Kind",
+      "name": "Kind",
+      "enclosing_namespace_id": "qualified_names",
+      "stereotypes": [],
+      "entity_type": "Enum",
+      "type_aliases": [],
+      "variables": [],
+      "methods": [],
+      "template_parameters": null,
+      "enum_literals": [
+        {
+          "name": "Item",
+          "value": 0,
+          "source_location": {
+            "file": "cpp/libclang/integration_test/cases/qualified_template_types/qualified_template_types.cpp",
+            "line": 33
+          }
+        }
+      ],
+      "relationships": [],
+      "source_location": {
+        "file": "cpp/libclang/integration_test/cases/qualified_template_types/qualified_template_types.cpp",
+        "line": 31
+      }
+    },
+    "qualified_names::Owner::Mixed": {
+      "id": "qualified_names::Owner::Mixed",
+      "name": "Mixed",
+      "enclosing_namespace_id": "qualified_names",
+      "stereotypes": [],
+      "entity_type": "Class",
+      "template_kind": "Primary",
+      "type_aliases": [],
+      "variables": [],
+      "methods": [],
+      "template_parameters": [
+        { "Type": { "name": "First", "is_pack": false } },
+        { "NonType": { "name": "Count", "value_type": "int", "is_pack": false } },
+        { "Type": { "name": "Last", "is_pack": false } }
+      ],
+      "enum_literals": [],
+      "relationships": [],
+      "source_location": {
+        "file": "cpp/libclang/integration_test/cases/qualified_template_types/qualified_template_types.cpp",
+        "line": 23
+      }
+    },
+    "qualified_names::Owner::Nested": {
+      "id": "qualified_names::Owner::Nested",
+      "name": "Nested",
+      "enclosing_namespace_id": "qualified_names",
+      "stereotypes": [],
+      "entity_type": "Class",
+      "type_aliases": [],
+      "variables": [],
+      "methods": [],
+      "template_parameters": null,
+      "enum_literals": [],
+      "relationships": [],
+      "source_location": {
+        "file": "cpp/libclang/integration_test/cases/qualified_template_types/qualified_template_types.cpp",
+        "line": 27
+      }
+    },
+    "qualified_names::Probe": {
+      "id": "qualified_names::Probe",
+      "name": "Probe",
+      "enclosing_namespace_id": "qualified_names",
+      "stereotypes": [],
+      "entity_type": "Class",
+      "type_aliases": [],
+      "variables": [],
+      "methods": [
+        {
+          "name": "nested",
+          "return_type": {
+            "raw_text": "qualified_names::Owner<double>::Mixed<int, 3, float>",
+            "expression": {
+              "NamedType": {
+                "segments": [
+                  "qualified_names",
+                  { "name": "Owner", "arguments": [{ "Builtin": "double" }] },
+                  {
+                    "name": "Mixed",
+                    "arguments": [
+                      { "Builtin": "int" },
+                      "3",
+                      { "Builtin": "float" }
+                    ]
+                  }
+                ]
+              }
+            }
+          },
+          "visibility": "public",
+          "parameters": [],
+          "template_parameters": null,
+          "modifiers": [],
+          "source_location": {
+            "file": "cpp/libclang/integration_test/cases/qualified_template_types/qualified_template_types.cpp",
+            "line": 55
+          }
+        },
+        {
+          "name": "nested_qualified",
+          "return_type": {
+            "raw_text": "const volatile qualified_names::Owner<double>::Mixed<int, 3, float>",
+            "expression": {
+              "Volatile": {
+                "Const": {
+                  "NamedType": {
+                    "segments": [
+                      "qualified_names",
+                      { "name": "Owner", "arguments": [{ "Builtin": "double" }] },
+                      {
+                        "name": "Mixed",
+                        "arguments": [
+                          { "Builtin": "int" },
+                          "3",
+                          { "Builtin": "float" }
+                        ]
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          },
+          "visibility": "public",
+          "parameters": [],
+          "template_parameters": null,
+          "modifiers": [],
+          "source_location": {
+            "file": "cpp/libclang/integration_test/cases/qualified_template_types/qualified_template_types.cpp",
+            "line": 56
+          }
+        },
+        {
+          "name": "ordinary_double",
+          "return_type": {
+            "raw_text": "Owner<double>::Nested",
+            "expression": {
+              "NamedType": {
+                "segments": [
+                  "qualified_names",
+                  { "name": "Owner", "arguments": [{ "Builtin": "double" }] },
+                  "Nested"
+                ]
+              }
+            }
+          },
+          "visibility": "public",
+          "parameters": [],
+          "template_parameters": null,
+          "modifiers": [],
+          "source_location": {
+            "file": "cpp/libclang/integration_test/cases/qualified_template_types/qualified_template_types.cpp",
+            "line": 59
+          }
+        },
+        {
+          "name": "ordinary_int",
+          "return_type": {
+            "raw_text": "Owner<int>::Nested",
+            "expression": {
+              "NamedType": {
+                "segments": [
+                  "qualified_names",
+                  { "name": "Owner", "arguments": [{ "Builtin": "int" }] },
+                  "Nested"
+                ]
+              }
+            }
+          },
+          "visibility": "public",
+          "parameters": [],
+          "template_parameters": null,
+          "modifiers": [],
+          "source_location": {
+            "file": "cpp/libclang/integration_test/cases/qualified_template_types/qualified_template_types.cpp",
+            "line": 60
+          }
+        },
+        {
+          "name": "kind",
+          "return_type": {
+            "raw_text": "Owner<double>::Kind",
+            "expression": {
+              "NamedType": {
+                "segments": [
+                  "qualified_names",
+                  { "name": "Owner", "arguments": [{ "Builtin": "double" }] },
+                  "Kind"
+                ]
+              }
+            }
+          },
+          "visibility": "public",
+          "parameters": [],
+          "template_parameters": null,
+          "modifiers": [],
+          "source_location": {
+            "file": "cpp/libclang/integration_test/cases/qualified_template_types/qualified_template_types.cpp",
+            "line": 63
+          }
+        },
+        {
+          "name": "leaf",
+          "return_type": {
+            "raw_text": "Owner<double>::Inner<int, 7>::Deep<long>::Leaf",
+            "expression": {
+              "NamedType": {
+                "segments": [
+                  "qualified_names",
+                  { "name": "Owner", "arguments": [{ "Builtin": "double" }] },
+                  { "name": "Inner", "arguments": [{ "Builtin": "int" }, "7"] },
+                  { "name": "Deep", "arguments": [{ "Builtin": "long" }] },
+                  "Leaf"
+                ]
+              }
+            }
+          },
+          "visibility": "public",
+          "parameters": [],
+          "template_parameters": null,
+          "modifiers": [],
+          "source_location": {
+            "file": "cpp/libclang/integration_test/cases/qualified_template_types/qualified_template_types.cpp",
+            "line": 66
+          }
+        }
+      ],
+      "template_parameters": null,
+      "enum_literals": [],
+      "relationships": [
+        {
+          "source": "qualified_names::Probe",
+          "target": "qualified_names::Owner::Mixed",
+          "relation_type": "Association",
+          "source_multiplicity": null,
+          "target_multiplicity": null,
+          "source_location": {
+            "file": "cpp/libclang/integration_test/cases/qualified_template_types/qualified_template_types.cpp",
+            "line": 55
+          }
+        },
+        {
+          "source": "qualified_names::Probe",
+          "target": "qualified_names::Owner::Nested",
+          "relation_type": "Association",
+          "source_multiplicity": null,
+          "target_multiplicity": null,
+          "source_location": {
+            "file": "cpp/libclang/integration_test/cases/qualified_template_types/qualified_template_types.cpp",
+            "line": 59
+          }
+        },
+        {
+          "source": "qualified_names::Probe",
+          "target": "qualified_names::Owner::Kind",
+          "relation_type": "Association",
+          "source_multiplicity": null,
+          "target_multiplicity": null,
+          "source_location": {
+            "file": "cpp/libclang/integration_test/cases/qualified_template_types/qualified_template_types.cpp",
+            "line": 63
+          }
+        },
+        {
+          "source": "qualified_names::Probe",
+          "target": "qualified_names::Owner::Inner::Deep::Leaf",
+          "relation_type": "Association",
+          "source_multiplicity": null,
+          "target_multiplicity": null,
+          "source_location": {
+            "file": "cpp/libclang/integration_test/cases/qualified_template_types/qualified_template_types.cpp",
+            "line": 66
+          }
+        }
+      ],
+      "source_location": {
+        "file": "cpp/libclang/integration_test/cases/qualified_template_types/qualified_template_types.cpp",
+        "line": 51
+      }
+    }
+  },
+  "functions": []
+}

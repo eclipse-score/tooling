@@ -17,4 +17,4 @@ mod resolved_type;
 
 pub use callable::{FunctionDef, FunctionId, FunctionKind, Scope};
 pub use control_flow::{BodyItem, BranchCase, GuardExpression, LoopKind};
-pub use resolved_type::{EntityId, ResolvedType};
+pub use resolved_type::{EntityId, ResolvedNameSegment, ResolvedTemplateArgument, ResolvedType};

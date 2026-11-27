@@ -175,7 +175,7 @@ impl FunctionVisitor {
         let method = Method {
             name: id.name.clone(),
             conversion_target: if Self::is_conversion(entity) {
-                parse_callable_return_type(entity).map(|ty| ty.raw_text)
+                Self::conversion_target(entity)
             } else {
                 None
             },
@@ -320,7 +320,7 @@ impl FunctionVisitor {
             name: if Self::is_conversion(entity) {
                 // The semantic result spelling retains aliases and dependent parameter
                 // names, unlike get_name() on member-template conversion cursors.
-                format!("operator {}", parse_callable_return_type(entity)?.raw_text)
+                format!("operator {}", Self::conversion_target(entity)?)
             } else {
                 entity.get_name()?
             },
@@ -331,6 +331,12 @@ impl FunctionVisitor {
         entity.get_kind() == EntityKind::ConversionFunction
             || (entity.get_kind() == EntityKind::FunctionTemplate
                 && entity.get_template_kind() == Some(EntityKind::ConversionFunction))
+    }
+
+    fn conversion_target(entity: &Entity) -> Option<String> {
+        entity
+            .get_result_type()
+            .map(|original| resolve_declared_type(entity, &original).render_for_display())
     }
 
     fn extract_function_kind(entity: &Entity, scope: &Scope) -> Option<FunctionKind> {

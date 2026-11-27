@@ -39,13 +39,6 @@ fn normalize_expectations(expected: &mut serde_json::Value, actual: &mut serde_j
             }
             for (key, expected_value) in expected_map.iter_mut() {
                 if let Some(actual_value) = actual_map.get_mut(key) {
-                    if matches!(
-                        key.as_str(),
-                        "original_type" | "data_type" | "param_type" | "return_type"
-                    ) && expected_value.is_string()
-                    {
-                        *expected_value = serde_json::json!({"raw_text": expected_value.take()});
-                    }
                     normalize_expectations(expected_value, actual_value);
                 }
             }

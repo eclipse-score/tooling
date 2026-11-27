@@ -205,7 +205,7 @@ fn parse_type_expr(pair: pest::iterators::Pair<Rule>) -> Option<TypeExpr> {
                             return None;
                         }
                         expression = Some(TypeExpr::NamedType(QualifiedTypeName {
-                            segments: name.split('.').map(str::to_string).collect(),
+                            segments: name.split('.').map(Into::into).collect(),
                             is_global: normalized.starts_with('.'),
                         }));
                     }
@@ -1765,7 +1765,7 @@ mod tests {
 
     fn named_type(segments: &[&str]) -> TypeExpr {
         TypeExpr::NamedType(QualifiedTypeName {
-            segments: segments.iter().map(|segment| segment.to_string()).collect(),
+            segments: segments.iter().map(|segment| (*segment).into()).collect(),
             is_global: false,
         })
     }

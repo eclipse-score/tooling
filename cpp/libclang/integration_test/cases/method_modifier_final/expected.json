@@ -11,7 +11,7 @@
             "methods": [
                 {
                     "name": "sealedHere",
-                    "return_type": "void",
+                    "return_type": { "raw_text": "void", "expression": { "Builtin": "void" } },
                     "visibility": "public",
                     "parameters": [],
                     "template_parameters": null,
@@ -26,7 +26,7 @@
                 },
                 {
                     "name": "overridable",
-                    "return_type": "void",
+                    "return_type": { "raw_text": "void", "expression": { "Builtin": "void" } },
                     "visibility": "public",
                     "parameters": [],
                     "template_parameters": null,
@@ -58,7 +58,7 @@
             "methods": [
                 {
                     "name": "overridable",
-                    "return_type": "void",
+                    "return_type": { "raw_text": "void", "expression": { "Builtin": "void" } },
                     "visibility": "public",
                     "parameters": [],
                     "template_parameters": null,

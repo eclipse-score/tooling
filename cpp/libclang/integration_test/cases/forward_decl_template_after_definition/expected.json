@@ -12,7 +12,10 @@
             "methods": [
                 {
                     "name": "Get",
-                    "return_type": "T",
+                    "return_type": {
+                        "raw_text": "T",
+                        "expression": { "NamedType": { "segments": ["T"] } }
+                    },
                     "visibility": "public",
                     "parameters": [],
                     "template_parameters": null,

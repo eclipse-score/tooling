@@ -4,11 +4,17 @@
     {
       "name": "declared_only",
       "enclosing_namespace_id": "utility",
-      "return_type": "T",
+      "return_type": {
+        "raw_text": "T",
+        "expression": { "NamedType": { "segments": ["T"] } }
+      },
       "parameters": [
         {
           "name": "value",
-          "param_type": "T",
+          "param_type": {
+            "raw_text": "T",
+            "expression": { "NamedType": { "segments": ["T"] } }
+          },
           "is_variadic": false
         }
       ],
@@ -28,7 +34,7 @@
     {
       "name": "run",
       "enclosing_namespace_id": null,
-      "return_type": "int",
+      "return_type": { "raw_text": "int", "expression": { "Builtin": "int" } },
       "parameters": [],
       "template_parameters": null,
       "source_location": {

@@ -153,7 +153,10 @@
         {
             "name": "declval",
             "enclosing_namespace_id": null,
-            "return_type": "T",
+            "return_type": {
+                "raw_text": "T",
+                "expression": { "NamedType": { "segments": ["T"] } }
+            },
             "parameters": [],
             "template_parameters": [
                 {
@@ -171,11 +174,14 @@
         {
             "name": "is_maplike_container_impl",
             "enclosing_namespace_id": null,
-            "return_type": "decltype(value.begin())",
+            "return_type": { "raw_text": "decltype(value.begin())" },
             "parameters": [
                 {
                     "name": "value",
-                    "param_type": "T",
+                    "param_type": {
+                        "raw_text": "T",
+                        "expression": { "NamedType": { "segments": ["T"] } }
+                    },
                     "is_variadic": false
                 }
             ],
@@ -195,7 +201,10 @@
         {
             "name": "make_widget",
             "enclosing_namespace_id": null,
-            "return_type": "Widget",
+            "return_type": {
+                "raw_text": "Widget",
+                "expression": { "NamedType": { "segments": ["Widget"] } }
+            },
             "parameters": [],
             "template_parameters": null,
             "source_location": {

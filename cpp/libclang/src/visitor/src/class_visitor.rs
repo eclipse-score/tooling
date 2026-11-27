@@ -26,8 +26,8 @@ use crate::context::{
     CallableDeclarationKey, CallableOwnerKey, ExtractedMethodDeclaration, ParsedBaseClass,
     ParsedClassInfo, ParsedVariableType, VisitContext,
 };
-use crate::types::renderer::render_type_for_display;
-use crate::types::resolver::{resolve_declared_type, resolve_type};
+use crate::types::describe_type;
+use crate::types::resolver::{declared_type_display_name, resolve_declared_type, resolve_type};
 use crate::visitor::AstVisitor;
 
 pub struct ClassVisitor;
@@ -182,7 +182,7 @@ impl ClassVisitor {
             EntityKind::BaseSpecifier => {
                 if let Some(base_type) = entity.get_type() {
                     builder.base_classes.push(ParsedBaseClass {
-                        resolved_type: resolve_type(&base_type),
+                        resolved_type: resolve_type(entity, &base_type),
                         source_location: parse_source_location(entity),
                     });
                 }
@@ -244,10 +244,12 @@ fn parse_type_alias(entity: &Entity) -> Option<TypeAlias> {
         return None;
     };
 
-    let Some(original_type) = entity
-        .get_typedef_underlying_type()
-        .map(|t| render_type_for_display(&t, &resolve_type(&t)))
-    else {
+    let Some(original_type) = entity.get_typedef_underlying_type().map(|underlying| {
+        describe_type(
+            underlying.get_display_name(),
+            &resolve_type(entity, &underlying),
+        )
+    }) else {
         log::debug!(
             "skipping type alias '{}': could not determine underlying type",
             alias
@@ -257,7 +259,7 @@ fn parse_type_alias(entity: &Entity) -> Option<TypeAlias> {
 
     Some(TypeAlias {
         alias,
-        original_type: original_type.into(),
+        original_type,
         source_location: parse_source_location(entity),
     })
 }
@@ -269,7 +271,10 @@ fn parse_variable(
     Some(MemberVariable {
         name: parsed_variable_type.name.clone(),
         data_type: entity.get_type().map(|field_type| {
-            render_type_for_display(&field_type, &parsed_variable_type.resolved_type).into()
+            describe_type(
+                declared_type_display_name(entity, &field_type),
+                &parsed_variable_type.resolved_type,
+            )
         }),
         visibility: parse_visibility(entity),
         is_static: entity.get_kind() == EntityKind::VarDecl,

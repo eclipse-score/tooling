@@ -4,7 +4,7 @@
     {
       "name": "handle_outer_else",
       "enclosing_namespace_id": null,
-      "return_type": "void",
+      "return_type": { "raw_text": "void", "expression": { "Builtin": "void" } },
       "parameters": [],
       "template_parameters": null,
       "source_location": {
@@ -15,7 +15,7 @@
     {
       "name": "handle_nested",
       "enclosing_namespace_id": null,
-      "return_type": "void",
+      "return_type": { "raw_text": "void", "expression": { "Builtin": "void" } },
       "parameters": [],
       "template_parameters": null,
       "source_location": {
@@ -26,16 +26,16 @@
     {
       "name": "nested_if",
       "enclosing_namespace_id": "flow",
-      "return_type": "void",
+      "return_type": { "raw_text": "void", "expression": { "Builtin": "void" } },
       "parameters": [
         {
           "name": "outer",
-          "param_type": "bool",
+          "param_type": { "raw_text": "bool", "expression": { "Builtin": "bool" } },
           "is_variadic": false
         },
         {
           "name": "inner",
-          "param_type": "bool",
+          "param_type": { "raw_text": "bool", "expression": { "Builtin": "bool" } },
           "is_variadic": false
         }
       ],

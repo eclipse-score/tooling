@@ -10,7 +10,7 @@
             "variables": [
                 {
                     "name": "nested",
-                    "data_type": "std::map<int, std::vector<EventControl>>",
+                    "data_type": { "raw_text": "std::map<int, std::vector<EventControl>>" },
                     "visibility": "public",
                     "is_static": false,
                     "source_location": {
@@ -22,12 +22,12 @@
             "methods": [
                 {
                     "name": "valid_return_bad_param",
-                    "return_type": "bool",
+                    "return_type": { "raw_text": "bool", "expression": { "Builtin": "bool" } },
                     "visibility": "public",
                     "parameters": [
                         {
                             "name": "control",
-                            "param_type": "const EventControl &",
+                            "param_type": { "raw_text": "const EventControl &" },
                             "is_variadic": false
                         }
                     ],
@@ -40,12 +40,12 @@
                 },
                 {
                     "name": "operator==",
-                    "return_type": "bool",
+                    "return_type": { "raw_text": "bool", "expression": { "Builtin": "bool" } },
                     "visibility": "public",
                     "parameters": [
                         {
                             "name": "other",
-                            "param_type": "const EventControl &",
+                            "param_type": { "raw_text": "const EventControl &" },
                             "is_variadic": false
                         }
                     ],
@@ -58,7 +58,7 @@
                 },
                 {
                     "name": "out_of_line",
-                    "return_type": "EventControl",
+                    "return_type": { "raw_text": "EventControl" },
                     "visibility": "public",
                     "parameters": [],
                     "template_parameters": null,

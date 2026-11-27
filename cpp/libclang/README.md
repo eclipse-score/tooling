@@ -155,6 +155,21 @@ Expected result:
 - When `emit_debug_json = True`, the parser also writes:
   - `bazel-bin/cpp/libclang/cpp_parser_include_3rdparty_debug.json`
 
+## Structured type names
+
+Debug JSON preserves source spelling in `raw_text`. A supported type also has an
+`expression`. Qualified names use string segments for identifiers and objects
+with `name` and `arguments` for template segments. For `demo::Owner<double>::Nested`:
+
+```json
+{"NamedType": {"segments": ["demo", {"name": "Owner", "arguments": [{"Builtin": "double"}]}, "Nested"]}}
+```
+
+Each template segment retains its own arguments. Declaration IDs used for
+relationships remain separate from instantiated type names. Existing ordinary
+name segments and simple `Template` expressions retain their JSON format.
+Unresolvable types remain raw-only.
+
 ## Configure debug logging
 
 To enable debug output for parser actions, set the Bazel build setting:

@@ -37,7 +37,10 @@
       "variables": [
         {
           "name": "wheel1",
-          "data_type": "Wheel *",
+          "data_type": {
+            "raw_text": "Wheel *",
+            "expression": { "Pointer": { "NamedType": { "segments": ["Wheel"] } } }
+          },
           "is_static": false,
           "visibility": "public",
           "source_location": {
@@ -47,7 +50,15 @@
         },
         {
           "name": "wheel2",
-          "data_type": "std::vector<Wheel>",
+          "data_type": {
+            "raw_text": "std::vector<Wheel>",
+            "expression": {
+              "Template": {
+                "name": { "segments": ["std", "vector"] },
+                "arguments": [{ "NamedType": { "segments": ["Wheel"] } }]
+              }
+            }
+          },
           "is_static": false,
           "visibility": "public",
           "source_location": {
@@ -57,7 +68,10 @@
         },
         {
           "name": "wheel3",
-          "data_type": "Wheel *",
+          "data_type": {
+            "raw_text": "class Wheel *",
+            "expression": { "Pointer": { "NamedType": { "segments": ["Wheel"] } } }
+          },
           "is_static": false,
           "visibility": "public",
           "source_location": {
@@ -67,7 +81,15 @@
         },
         {
           "name": "wheel4",
-          "data_type": "std::vector<const Wheel *>",
+          "data_type": {
+            "raw_text": "std::vector<const Wheel *>",
+            "expression": {
+              "Template": {
+                "name": { "segments": ["std", "vector"] },
+                "arguments": [{ "Pointer": { "Const": { "NamedType": { "segments": ["Wheel"] } } } }]
+              }
+            }
+          },
           "is_static": false,
           "visibility": "public",
           "source_location": {
@@ -77,7 +99,22 @@
         },
         {
           "name": "wheel5",
-          "data_type": "std::vector<std::vector<Wheel>>",
+          "data_type": {
+            "raw_text": "std::vector<std::vector<Wheel>>",
+            "expression": {
+              "Template": {
+                "name": { "segments": ["std", "vector"] },
+                "arguments": [
+                  {
+                    "Template": {
+                      "name": { "segments": ["std", "vector"] },
+                      "arguments": [{ "NamedType": { "segments": ["Wheel"] } }]
+                    }
+                  }
+                ]
+              }
+            }
+          },
           "is_static": false,
           "visibility": "public",
           "source_location": {
@@ -87,7 +124,10 @@
         },
         {
           "name": "wheel6",
-          "data_type": "Wheel *",
+          "data_type": {
+            "raw_text": "::Wheel *",
+            "expression": { "Pointer": { "NamedType": { "segments": ["Wheel"] } } }
+          },
           "is_static": false,
           "visibility": "public",
           "source_location": {

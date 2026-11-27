@@ -3,7 +3,7 @@
     {
       "name": "declared_only",
       "enclosing_namespace_id": null,
-      "return_type": "void",
+      "return_type": { "raw_text": "void", "expression": { "Builtin": "void" } },
       "parameters": [],
       "template_parameters": null,
       "source_location": {
@@ -14,7 +14,7 @@
     {
       "name": "global_value",
       "enclosing_namespace_id": null,
-      "return_type": "int",
+      "return_type": { "raw_text": "int", "expression": { "Builtin": "int" } },
       "parameters": [],
       "template_parameters": null,
       "source_location": {
@@ -25,7 +25,7 @@
     {
       "name": "run",
       "enclosing_namespace_id": "app",
-      "return_type": "void",
+      "return_type": { "raw_text": "void", "expression": { "Builtin": "void" } },
       "parameters": [],
       "template_parameters": null,
       "source_location": {
@@ -36,7 +36,7 @@
     {
       "name": "enabled",
       "enclosing_namespace_id": "app::internal",
-      "return_type": "bool",
+      "return_type": { "raw_text": "bool", "expression": { "Builtin": "bool" } },
       "parameters": [],
       "template_parameters": null,
       "source_location": {

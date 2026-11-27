@@ -4,11 +4,17 @@
     {
       "name": "identity",
       "enclosing_namespace_id": "utility",
-      "return_type": "T",
+      "return_type": {
+        "raw_text": "T",
+        "expression": { "NamedType": { "segments": ["T"] } }
+      },
       "parameters": [
         {
           "name": "value",
-          "param_type": "T",
+          "param_type": {
+            "raw_text": "T",
+            "expression": { "NamedType": { "segments": ["T"] } }
+          },
           "is_variadic": false
         }
       ],
@@ -28,7 +34,7 @@
     {
       "name": "first",
       "enclosing_namespace_id": null,
-      "return_type": "int",
+      "return_type": { "raw_text": "int", "expression": { "Builtin": "int" } },
       "parameters": [],
       "template_parameters": null,
       "source_location": {
@@ -39,7 +45,7 @@
     {
       "name": "second",
       "enclosing_namespace_id": null,
-      "return_type": "int",
+      "return_type": { "raw_text": "int", "expression": { "Builtin": "int" } },
       "parameters": [],
       "template_parameters": null,
       "source_location": {
@@ -60,7 +66,7 @@
       },
       "kind": "Free",
       "return_type": {
-        "Dependent": "T"
+        "TemplateTypeParameter": "T"
       },
       "body": []
     },

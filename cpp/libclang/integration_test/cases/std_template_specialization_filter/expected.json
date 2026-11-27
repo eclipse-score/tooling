@@ -18,7 +18,7 @@
       "type_aliases": [],
       "variables": [
         {
-          "data_type": "std::uint32_t",
+          "data_type": { "raw_text": "std::uint32_t", "expression": { "Builtin": "unsigned int" } },
           "is_static": false,
           "name": "value",
           "source_location": {

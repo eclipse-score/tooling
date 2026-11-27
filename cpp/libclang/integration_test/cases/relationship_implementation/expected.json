@@ -9,7 +9,7 @@
       "methods": [
         {
           "name": "run",
-          "return_type": "void",
+          "return_type": { "raw_text": "void", "expression": { "Builtin": "void" } },
           "parameters": [],
           "modifiers": [
             "Virtual",
@@ -69,7 +69,7 @@
         },
         {
           "name": "run",
-          "return_type": "void",
+          "return_type": { "raw_text": "void", "expression": { "Builtin": "void" } },
           "parameters": [],
           "modifiers": [
             "Virtual",

@@ -4,7 +4,7 @@
     {
       "name": "is_ready",
       "enclosing_namespace_id": null,
-      "return_type": "bool",
+      "return_type": { "raw_text": "bool", "expression": { "Builtin": "bool" } },
       "parameters": [],
       "template_parameters": null,
       "source_location": {
@@ -15,7 +15,7 @@
     {
       "name": "is_allowed",
       "enclosing_namespace_id": null,
-      "return_type": "bool",
+      "return_type": { "raw_text": "bool", "expression": { "Builtin": "bool" } },
       "parameters": [],
       "template_parameters": null,
       "source_location": {
@@ -26,7 +26,7 @@
     {
       "name": "has_permission",
       "enclosing_namespace_id": null,
-      "return_type": "bool",
+      "return_type": { "raw_text": "bool", "expression": { "Builtin": "bool" } },
       "parameters": [],
       "template_parameters": null,
       "source_location": {
@@ -37,7 +37,7 @@
     {
       "name": "handle_complex",
       "enclosing_namespace_id": null,
-      "return_type": "void",
+      "return_type": { "raw_text": "void", "expression": { "Builtin": "void" } },
       "parameters": [],
       "template_parameters": null,
       "source_location": {
@@ -48,7 +48,7 @@
     {
       "name": "complex_condition",
       "enclosing_namespace_id": "flow",
-      "return_type": "void",
+      "return_type": { "raw_text": "void", "expression": { "Builtin": "void" } },
       "parameters": [],
       "template_parameters": null,
       "source_location": {

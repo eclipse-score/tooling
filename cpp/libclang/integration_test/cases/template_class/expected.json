@@ -10,7 +10,15 @@
       "methods": [
         {
           "name": "values",
-          "return_type": "Container<int>",
+          "return_type": {
+            "raw_text": "Container<int>",
+            "expression": {
+              "Template": {
+                "name": { "segments": ["Container"] },
+                "arguments": [{ "Builtin": "int" }]
+              }
+            }
+          },
           "parameters": [],
           "modifiers": [],
           "template_parameters": null,
@@ -56,11 +64,14 @@
       "methods": [
         {
           "name": "push",
-          "return_type": "void",
+          "return_type": { "raw_text": "void", "expression": { "Builtin": "void" } },
           "parameters": [
             {
               "name": "value",
-              "param_type": "const T &",
+              "param_type": {
+                "raw_text": "const T &",
+                "expression": { "Reference": { "Const": { "NamedType": { "segments": ["T"] } } } }
+              },
               "is_variadic": false
             }
           ],
@@ -74,7 +85,10 @@
         },
         {
           "name": "pop",
-          "return_type": "T",
+          "return_type": {
+            "raw_text": "T",
+            "expression": { "NamedType": { "segments": ["T"] } }
+          },
           "parameters": [],
           "modifiers": [],
           "template_parameters": null,
@@ -86,11 +100,17 @@
         },
         {
           "name": "convert",
-          "return_type": "U",
+          "return_type": {
+            "raw_text": "U",
+            "expression": { "NamedType": { "segments": ["U"] } }
+          },
           "parameters": [
             {
               "name": "input",
-              "param_type": "const T &",
+              "param_type": {
+                "raw_text": "const T &",
+                "expression": { "Reference": { "Const": { "NamedType": { "segments": ["T"] } } } }
+              },
               "is_variadic": false
             }
           ],
@@ -111,11 +131,11 @@
         },
         {
           "name": "emplace",
-          "return_type": "void",
+          "return_type": { "raw_text": "void", "expression": { "Builtin": "void" } },
           "parameters": [
             {
               "name": "args",
-              "param_type": "Args &&",
+              "param_type": { "raw_text": "Args &&" },
               "is_variadic": false,
               "is_pack_expansion": true
             }
@@ -137,7 +157,7 @@
         },
         {
           "name": "capacity",
-          "return_type": "int",
+          "return_type": { "raw_text": "int", "expression": { "Builtin": "int" } },
           "parameters": [],
           "modifiers": ["Const"],
           "template_parameters": null,
@@ -175,7 +195,7 @@
       "variables": [
         {
           "name": "m_data",
-          "data_type": "T[N]",
+          "data_type": { "raw_text": "T[N]" },
           "is_static": false,
           "visibility": "private",
           "source_location": {
@@ -185,7 +205,7 @@
         },
         {
           "name": "m_size",
-          "data_type": "int",
+          "data_type": { "raw_text": "int", "expression": { "Builtin": "int" } },
           "is_static": false,
           "visibility": "private",
           "source_location": {

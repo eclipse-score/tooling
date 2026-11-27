@@ -11,12 +11,15 @@
       "methods": [
         {
           "name": "update",
-          "return_type": "void",
+          "return_type": { "raw_text": "void", "expression": { "Builtin": "void" } },
           "visibility": "public",
           "parameters": [
             {
               "name": "value",
-              "param_type": "T &&",
+              "param_type": {
+                "raw_text": "T &&",
+                "expression": { "RValueReference": { "NamedType": { "segments": ["T"] } } }
+              },
               "is_variadic": false
             }
           ],
@@ -54,7 +57,7 @@
       "methods": [
         {
           "name": "run",
-          "return_type": "void",
+          "return_type": { "raw_text": "void", "expression": { "Builtin": "void" } },
           "visibility": "public",
           "parameters": [],
           "template_parameters": null,
@@ -90,7 +93,7 @@
     {
       "name": "notify",
       "enclosing_namespace_id": null,
-      "return_type": "void",
+      "return_type": { "raw_text": "void", "expression": { "Builtin": "void" } },
       "parameters": [],
       "template_parameters": null,
       "source_location": {

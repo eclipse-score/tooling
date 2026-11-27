@@ -4,7 +4,7 @@
     {
       "name": "handle_unbraced",
       "enclosing_namespace_id": null,
-      "return_type": "void",
+      "return_type": { "raw_text": "void", "expression": { "Builtin": "void" } },
       "parameters": [],
       "template_parameters": null,
       "source_location": {
@@ -15,7 +15,7 @@
     {
       "name": "handle_failure",
       "enclosing_namespace_id": null,
-      "return_type": "void",
+      "return_type": { "raw_text": "void", "expression": { "Builtin": "void" } },
       "parameters": [],
       "template_parameters": null,
       "source_location": {
@@ -26,11 +26,11 @@
     {
       "name": "without_braces",
       "enclosing_namespace_id": "flow",
-      "return_type": "void",
+      "return_type": { "raw_text": "void", "expression": { "Builtin": "void" } },
       "parameters": [
         {
           "name": "enabled",
-          "param_type": "bool",
+          "param_type": { "raw_text": "bool", "expression": { "Builtin": "bool" } },
           "is_variadic": false
         }
       ],

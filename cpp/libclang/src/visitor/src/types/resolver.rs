@@ -15,17 +15,45 @@
 
 #![cfg_attr(test, allow(dead_code))]
 
-use clang::{Entity, EntityKind, Type, TypeKind};
-use cpp_semantics::ResolvedType;
+use clang::{Entity, EntityKind, TemplateArgument, Type, TypeKind};
+use cpp_semantics::{ResolvedNameSegment, ResolvedTemplateArgument, ResolvedType};
 
 use crate::clang_adapter::exception_specification::has_plain_noexcept;
 use crate::clang_adapter::source_filter;
 
-pub(crate) fn resolve_type(original: &Type) -> ResolvedType {
+pub(crate) fn resolve_signature_type(original: &Type) -> ResolvedType {
+    resolve_type_with_parameters(&original.get_canonical_type(), &[])
+}
+
+pub(crate) fn resolve_type(entity: &Entity, original: &Type) -> ResolvedType {
+    resolve_type_with_parameters(original, &template_type_parameter_names(entity))
+}
+
+fn template_type_parameter_names(entity: &Entity) -> Vec<String> {
+    let mut names = Vec::new();
+    let mut scope = Some(*entity);
+    while let Some(entity) = scope {
+        names.extend(
+            entity
+                .get_children()
+                .into_iter()
+                .filter(|child| child.get_kind() == EntityKind::TemplateTypeParameter)
+                .filter_map(|parameter| parameter.get_name())
+                .filter(|name| !name.is_empty()),
+        );
+        scope = entity.get_semantic_parent();
+    }
+    names
+}
+
+fn resolve_type_with_parameters(
+    original: &Type,
+    template_type_parameters: &[String],
+) -> ResolvedType {
     // Resolve unqualified structural shape first, then re-apply top-level cv-qualifiers.
     // This keeps qualifier placement consistent across all branches.
     let canonical = original.get_canonical_type();
-    let mut resolved = resolve_unqualified_type(original, &canonical);
+    let mut resolved = resolve_unqualified_type(original, &canonical, template_type_parameters);
 
     if original.is_const_qualified() {
         resolved = ResolvedType::Const(Box::new(resolved));
@@ -53,8 +81,13 @@ pub(crate) fn resolve_type(original: &Type) -> ResolvedType {
 pub(crate) fn resolve_declared_type(entity: &Entity, original: &Type) -> ResolvedType {
     match recover_declared_spelling(entity, original, entity.is_invalid_declaration()) {
         Some(spelled) => ResolvedType::Unknown(spelled),
-        None => resolve_type(original),
+        None => resolve_type(entity, original),
     }
+}
+
+pub(crate) fn declared_type_display_name(entity: &Entity, original: &Type) -> String {
+    recover_declared_spelling(entity, original, entity.is_invalid_declaration())
+        .unwrap_or_else(|| original.get_display_name())
 }
 
 /// Same guard as [`resolve_declared_type`], for a callable's parameter.
@@ -71,7 +104,8 @@ pub(crate) fn resolve_declared_argument_type(
     let invalid = argument.is_invalid_declaration() || callable.is_invalid_declaration();
     match recover_declared_spelling(argument, original, invalid) {
         Some(spelled) => ResolvedType::Unknown(spelled),
-        None => resolve_type(original),
+        // libclang exposes no type-pattern API for Unexposed pack expansions; keep them opaque.
+        None => resolve_type(callable, original),
     }
 }
 
@@ -241,7 +275,11 @@ fn render_type_tokens(tokens: &[String]) -> String {
     rendered
 }
 
-fn resolve_unqualified_type(original: &Type, canonical: &Type) -> ResolvedType {
+fn resolve_unqualified_type(
+    original: &Type,
+    canonical: &Type,
+    template_type_parameters: &[String],
+) -> ResolvedType {
     // Single source of truth for builtin mapping; extend here when adding builtin support.
     if let Some(name) = builtin_name(original.get_kind()) {
         return ResolvedType::Builtin(name.to_string());
@@ -251,32 +289,41 @@ fn resolve_unqualified_type(original: &Type, canonical: &Type) -> ResolvedType {
         // ===== pointer =====
         TypeKind::Pointer => original
             .get_pointee_type()
-            .map(|inner| match resolve_type(&inner) {
-                function @ ResolvedType::Function { .. } => {
-                    ResolvedType::FunctionPointer(Box::new(function))
-                }
-                inner => ResolvedType::Pointer(Box::new(inner)),
-            })
+            .map(
+                |inner| match resolve_type_with_parameters(&inner, template_type_parameters) {
+                    function @ ResolvedType::Function { .. } => {
+                        ResolvedType::FunctionPointer(Box::new(function))
+                    }
+                    inner => ResolvedType::Pointer(Box::new(inner)),
+                },
+            )
             .unwrap_or_else(|| unknown(original)),
 
         // ===== reference =====
         TypeKind::LValueReference => original
             .get_pointee_type()
-            .map(|inner| match resolve_type(&inner) {
-                function @ ResolvedType::Function { .. } => {
-                    ResolvedType::FunctionReference(Box::new(function))
-                }
-                inner => ResolvedType::Reference(Box::new(inner)),
-            })
+            .map(
+                |inner| match resolve_type_with_parameters(&inner, template_type_parameters) {
+                    function @ ResolvedType::Function { .. } => {
+                        ResolvedType::FunctionReference(Box::new(function))
+                    }
+                    inner => ResolvedType::Reference(Box::new(inner)),
+                },
+            )
             .unwrap_or_else(|| unknown(original)),
         TypeKind::RValueReference => original
             .get_pointee_type()
-            .map(|inner| ResolvedType::RValueReference(Box::new(resolve_type(&inner))))
+            .map(|inner| {
+                ResolvedType::RValueReference(Box::new(resolve_type_with_parameters(
+                    &inner,
+                    template_type_parameters,
+                )))
+            })
             .unwrap_or_else(|| unknown(original)),
 
         // ===== function =====
         TypeKind::FunctionPrototype | TypeKind::FunctionNoPrototype => {
-            resolve_function_type(original)
+            resolve_function_type(original, template_type_parameters)
         }
 
         // ===== arrays =====
@@ -284,7 +331,7 @@ fn resolve_unqualified_type(original: &Type, canonical: &Type) -> ResolvedType {
             element: Box::new(
                 original
                     .get_element_type()
-                    .map(|element| resolve_type(&element))
+                    .map(|element| resolve_type_with_parameters(&element, template_type_parameters))
                     .unwrap_or_else(|| unknown(original)),
             ),
             size: original.get_size(),
@@ -293,7 +340,7 @@ fn resolve_unqualified_type(original: &Type, canonical: &Type) -> ResolvedType {
             element: Box::new(
                 original
                     .get_element_type()
-                    .map(|element| resolve_type(&element))
+                    .map(|element| resolve_type_with_parameters(&element, template_type_parameters))
                     .unwrap_or_else(|| unknown(original)),
             ),
             size: None,
@@ -301,7 +348,7 @@ fn resolve_unqualified_type(original: &Type, canonical: &Type) -> ResolvedType {
 
         // ===== user-defined / template =====
         // Named types (including aliases/templates) are resolved through decl-aware fallback.
-        _ => resolve_named_type(original, canonical),
+        _ => resolve_named_type(original, canonical, template_type_parameters),
     }
 }
 
@@ -327,16 +374,16 @@ fn builtin_name(kind: TypeKind) -> Option<&'static str> {
     }
 }
 
-fn resolve_function_type(original: &Type) -> ResolvedType {
+fn resolve_function_type(original: &Type, template_type_parameters: &[String]) -> ResolvedType {
     let return_type = original
         .get_result_type()
-        .map(|ty| resolve_type(&ty))
+        .map(|ty| resolve_type_with_parameters(&ty, template_type_parameters))
         .unwrap_or_else(|| unknown(original));
     let parameter_types = original
         .get_argument_types()
         .unwrap_or_default()
         .into_iter()
-        .map(|ty| resolve_type(&ty))
+        .map(|ty| resolve_type_with_parameters(&ty, template_type_parameters))
         .collect();
 
     ResolvedType::Function {
@@ -347,7 +394,11 @@ fn resolve_function_type(original: &Type) -> ResolvedType {
     }
 }
 
-fn resolve_named_type(original: &Type, canonical: &Type) -> ResolvedType {
+fn resolve_named_type(
+    original: &Type,
+    canonical: &Type,
+    template_type_parameters: &[String],
+) -> ResolvedType {
     let display_name = original.get_display_name();
     let canonical_name = canonical.get_display_name();
 
@@ -361,7 +412,7 @@ fn resolve_named_type(original: &Type, canonical: &Type) -> ResolvedType {
             if let Some(declaration) = original.get_declaration() {
                 return ResolvedType::UserDefined(entity_id_from_decl(&declaration));
             }
-        } else if let Some(resolved) = resolve_decl_based(canonical) {
+        } else if let Some(resolved) = resolve_decl_based(canonical, template_type_parameters) {
             return resolved;
         }
     }
@@ -371,7 +422,7 @@ fn resolve_named_type(original: &Type, canonical: &Type) -> ResolvedType {
     // This runs after alias handling so an external alias cannot be replaced by an
     // implementation-detail canonical type.
     if !display_name.contains("::") && canonical_name.contains("::") {
-        if let Some(resolved) = resolve_decl_based(canonical) {
+        if let Some(resolved) = resolve_decl_based(canonical, template_type_parameters) {
             return resolved;
         }
     }
@@ -379,11 +430,15 @@ fn resolve_named_type(original: &Type, canonical: &Type) -> ResolvedType {
     // Fallback order matters:
     // 1) source declaration (preserves local spelling when available)
     // 2) canonical declaration (captures normalized identity)
-    // 3) dependent-expression heuristic (e.g. `decltype(expr_using<T>)` inside an
+    // 3) canonical builtin when declaration-based resolution is unavailable
+    // 4) dependent-expression heuristic (e.g. `decltype(expr_using<T>)` inside an
     //    uninstantiated template) — structurally unresolvable before instantiation
-    // 4) unknown name heuristic
-    resolve_decl_based(original)
-        .or_else(|| resolve_decl_based(canonical))
+    // 5) unknown name heuristic
+    resolve_decl_based(original, template_type_parameters)
+        .or_else(|| resolve_decl_based(canonical, template_type_parameters))
+        .or_else(|| {
+            builtin_name(canonical.get_kind()).map(|name| ResolvedType::Builtin(name.to_string()))
+        })
         .unwrap_or_else(|| {
             let name = resolve_unknown_name(original, canonical);
             if is_dependent_expression_type(original) {
@@ -401,6 +456,9 @@ fn resolve_named_type(original: &Type, canonical: &Type) -> ResolvedType {
                             name = inner.to_string();
                         }
                     }
+                }
+                if template_type_parameters.contains(&name) {
+                    return ResolvedType::TemplateTypeParameter(name);
                 }
                 log::debug!(
                     "type '{}' is structurally unresolvable before template instantiation",
@@ -451,34 +509,214 @@ fn is_alias_type(ty: &Type) -> bool {
     )
 }
 
-fn resolve_decl_based(ty: &Type) -> Option<ResolvedType> {
+fn resolve_decl_based(ty: &Type, template_type_parameters: &[String]) -> Option<ResolvedType> {
     // Declaration-derived id is the primary identity source for user-defined types.
     // Template arguments are recursively resolved into the same semantic model.
     let declaration = ty.get_declaration()?;
+    if declaration.get_kind() == EntityKind::TemplateTypeParameter {
+        return declaration
+            .get_name()
+            .map(ResolvedType::TemplateTypeParameter);
+    }
+    if has_specialized_owner(&declaration) {
+        return Some(
+            resolve_qualified_type(&declaration, template_type_parameters).unwrap_or_else(|| {
+                ResolvedType::Unknown(unqualified_named_spelling(
+                    &ty.get_display_name(),
+                    ty.is_const_qualified(),
+                    ty.is_volatile_qualified(),
+                ))
+            }),
+        );
+    }
     let base = entity_id_from_decl(&declaration);
-    let argument_types = ty.get_template_argument_types().unwrap_or_default();
-    if argument_types.iter().any(Option::is_none) {
-        // Non-type/unsupported arguments must not disappear and shift later positions.
-        // Preserve clang's entire spelling: rebuilding a qualified base plus a suffix
-        // would be unsafe for nested owning types. This fallback may be less qualified
-        // than the declaration-derived identity and is not mixed-argument resolution.
+    if ty.get_template_argument_types().is_none() {
+        return Some(ResolvedType::UserDefined(base));
+    }
+    if has_templated_owner(&declaration) {
         return Some(ResolvedType::Unknown(unqualified_named_spelling(
             &ty.get_display_name(),
             ty.is_const_qualified(),
             ty.is_volatile_qualified(),
         )));
     }
-    let args = argument_types
-        .into_iter()
-        .filter_map(|argument| argument.map(|argument| resolve_type(&argument)))
-        .collect::<Vec<_>>();
+    Some(
+        match resolve_template_arguments(ty, &declaration, template_type_parameters) {
+            Some(args) => ResolvedType::Template { base, args },
+            None => ResolvedType::Unknown(unqualified_named_spelling(
+                &ty.get_display_name(),
+                ty.is_const_qualified(),
+                ty.is_volatile_qualified(),
+            )),
+        },
+    )
+}
 
-    (!args.is_empty())
-        .then_some(ResolvedType::Template {
-            base: base.clone(),
-            args,
+fn resolve_template_arguments(
+    ty: &Type,
+    declaration: &Entity,
+    template_type_parameters: &[String],
+) -> Option<Vec<ResolvedTemplateArgument>> {
+    let argument_types = ty.get_template_argument_types()?;
+    let arguments = declaration
+        .get_template_arguments()
+        .filter(|arguments| arguments.len() == argument_types.len());
+    let parameters = declaration
+        .get_template()
+        .map(|template| {
+            template
+                .get_children()
+                .into_iter()
+                .filter(|parameter| {
+                    matches!(
+                        parameter.get_kind(),
+                        EntityKind::TemplateTypeParameter
+                            | EntityKind::NonTypeTemplateParameter
+                            | EntityKind::TemplateTemplateParameter
+                    )
+                })
+                .collect::<Vec<_>>()
         })
-        .or(Some(ResolvedType::UserDefined(base)))
+        .unwrap_or_default();
+    argument_types
+        .into_iter()
+        .enumerate()
+        .map(|(index, argument)| match argument {
+            Some(argument) => Some(ResolvedTemplateArgument::Type(
+                resolve_type_with_parameters(&argument, template_type_parameters),
+            )),
+            None => match arguments.as_ref()?.get(index)? {
+                TemplateArgument::Integral(signed, unsigned) => parameters
+                    .get(index)
+                    .and_then(Entity::get_type)
+                    .and_then(|value_type| {
+                        render_integral_argument(&value_type, *signed, *unsigned)
+                    })
+                    .map(ResolvedTemplateArgument::Value),
+                TemplateArgument::Nullptr => {
+                    Some(ResolvedTemplateArgument::Value("nullptr".into()))
+                }
+                _ => None,
+            },
+        })
+        .collect()
+}
+
+fn has_specialized_owner(declaration: &Entity) -> bool {
+    if declaration.get_kind() == EntityKind::TemplateTemplateParameter {
+        return false;
+    }
+    let mut owner = declaration.get_semantic_parent();
+    while let Some(entity) = owner {
+        if matches!(
+            entity.get_kind(),
+            EntityKind::ClassDecl
+                | EntityKind::StructDecl
+                | EntityKind::UnionDecl
+                | EntityKind::ClassTemplatePartialSpecialization
+        ) && entity.get_template().is_some()
+        {
+            return true;
+        }
+        owner = entity.get_semantic_parent();
+    }
+    false
+}
+
+fn resolve_qualified_type(
+    declaration: &Entity,
+    template_type_parameters: &[String],
+) -> Option<ResolvedType> {
+    let mut owners = Vec::new();
+    let mut current = Some(*declaration);
+    while let Some(entity) = current {
+        owners.push(entity);
+        current = entity.get_semantic_parent();
+    }
+    let mut segments = Vec::new();
+    for entity in owners.into_iter().rev() {
+        match entity.get_kind() {
+            EntityKind::Namespace => {
+                let Some(name) = entity.get_name() else {
+                    continue;
+                };
+                if matches!(segments.last(), Some(ResolvedNameSegment::Identifier(previous)) if previous == "std")
+                    && is_std_internal_namespace_segment(&name)
+                {
+                    continue;
+                }
+                segments.push(ResolvedNameSegment::Identifier(name));
+            }
+            EntityKind::ClassDecl
+            | EntityKind::StructDecl
+            | EntityKind::UnionDecl
+            | EntityKind::EnumDecl
+            | EntityKind::ClassTemplate
+            | EntityKind::ClassTemplatePartialSpecialization
+            | EntityKind::TypedefDecl
+            | EntityKind::TypeAliasDecl => {
+                let name = entity.get_name()?;
+                let ty = entity.get_type()?;
+                segments.push(if ty.get_template_argument_types().is_some() {
+                    ResolvedNameSegment::Template {
+                        name,
+                        args: resolve_template_arguments(&ty, &entity, template_type_parameters)?,
+                    }
+                } else {
+                    ResolvedNameSegment::Identifier(name)
+                });
+            }
+            _ => {}
+        }
+    }
+    Some(ResolvedType::Qualified {
+        declaration_id: entity_id_from_decl(declaration),
+        segments,
+    })
+}
+
+fn has_templated_owner(declaration: &Entity) -> bool {
+    if declaration.get_kind() == EntityKind::TemplateTemplateParameter {
+        return false;
+    }
+    let mut owner = declaration.get_semantic_parent();
+    while let Some(entity) = owner {
+        if matches!(
+            entity.get_kind(),
+            EntityKind::ClassTemplate | EntityKind::ClassTemplatePartialSpecialization
+        ) || entity.get_template().is_some()
+        {
+            return true;
+        }
+        owner = entity.get_semantic_parent();
+    }
+    false
+}
+
+fn render_integral_argument(value_type: &Type, signed: i64, unsigned: u64) -> Option<String> {
+    let canonical = value_type.get_canonical_type();
+    Some(match canonical.get_kind() {
+        TypeKind::Bool => (unsigned != 0).to_string(),
+        TypeKind::CharU
+        | TypeKind::UChar
+        | TypeKind::UShort
+        | TypeKind::UInt
+        | TypeKind::ULong
+        | TypeKind::ULongLong
+        | TypeKind::Char16
+        | TypeKind::Char32 => unsigned.to_string(),
+        TypeKind::CharS
+        | TypeKind::SChar
+        | TypeKind::Short
+        | TypeKind::Int
+        | TypeKind::Long
+        | TypeKind::LongLong => signed.to_string(),
+        TypeKind::Enum => {
+            let underlying = canonical.get_declaration()?.get_enum_underlying_type()?;
+            return render_integral_argument(&underlying, signed, unsigned);
+        }
+        _ => return None,
+    })
 }
 
 fn unknown(ty: &Type) -> ResolvedType {
