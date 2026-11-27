@@ -22,6 +22,32 @@ pub enum ResolvedTemplateArgument {
     Value(String),
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum ResolvedNameSegment {
+    Identifier(String),
+    Template {
+        name: String,
+        args: Vec<ResolvedTemplateArgument>,
+    },
+}
+
+impl ResolvedNameSegment {
+    fn arguments(&self) -> &[ResolvedTemplateArgument] {
+        match self {
+            Self::Identifier(_) => &[],
+            Self::Template { args, .. } => args,
+        }
+    }
+
+    fn render(&self) -> String {
+        match self {
+            Self::Identifier(name) => name.clone(),
+            Self::Template { name, args } => render_template(name, args),
+        }
+    }
+}
+
 /// Language-level representation of a C++ type after libclang extraction.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ResolvedType {
@@ -31,6 +57,10 @@ pub enum ResolvedType {
     Template {
         base: EntityId,
         args: Vec<ResolvedTemplateArgument>,
+    },
+    Qualified {
+        declaration_id: EntityId,
+        segments: Vec<ResolvedNameSegment>,
     },
     Function {
         return_type: Box<ResolvedType>,
@@ -84,6 +114,12 @@ impl ResolvedType {
                     || parameter_types.iter().any(ResolvedType::is_non_owning)
             }
             Self::Array { element, .. } => element.is_non_owning(),
+            Self::Qualified { segments, .. } => segments.last().is_some_and(|segment| {
+                segment.arguments().iter().any(|argument| match argument {
+                    ResolvedTemplateArgument::Type(ty) => ty.is_non_owning(),
+                    ResolvedTemplateArgument::Value(_) => false,
+                })
+            }),
             Self::Template { base, args } => {
                 matches!(
                     base.trim_start_matches("::"),
@@ -116,6 +152,23 @@ impl ResolvedType {
             | Self::Unknown(_)
             | Self::Dependent(_) => None,
             Self::UserDefined(id) => Some(id),
+            Self::Qualified {
+                declaration_id,
+                segments,
+            } => segments
+                .last()
+                .and_then(|segment| {
+                    segment
+                        .arguments()
+                        .iter()
+                        .find_map(|argument| match argument {
+                            ResolvedTemplateArgument::Type(ty) => {
+                                ty.relationship_target_entity_id()
+                            }
+                            ResolvedTemplateArgument::Value(_) => None,
+                        })
+                })
+                .or(Some(declaration_id)),
             Self::Template { base, args } => args
                 .iter()
                 .find_map(|argument| match argument {
@@ -152,6 +205,7 @@ impl ResolvedType {
         match self.referenced_entity_root() {
             Self::UserDefined(id) => Some(id),
             Self::Template { base, .. } => Some(base),
+            Self::Qualified { declaration_id, .. } => Some(declaration_id),
             _ => None,
         }
     }
@@ -185,16 +239,12 @@ impl ResolvedType {
             | Self::TemplateTypeParameter(name)
             | Self::Unknown(name)
             | Self::Dependent(name) => name.clone(),
-            Self::Template { base, args } => format!(
-                "{base}<{}>",
-                args.iter()
-                    .map(|argument| match argument {
-                        ResolvedTemplateArgument::Type(ty) => ty.render(),
-                        ResolvedTemplateArgument::Value(value) => value.clone(),
-                    })
-                    .collect::<Vec<_>>()
-                    .join(", ")
-            ),
+            Self::Template { base, args } => render_template(base, args),
+            Self::Qualified { segments, .. } => segments
+                .iter()
+                .map(ResolvedNameSegment::render)
+                .collect::<Vec<_>>()
+                .join("::"),
             Self::Function {
                 return_type,
                 parameter_types,
@@ -228,6 +278,19 @@ impl ResolvedType {
             },
         }
     }
+}
+
+fn render_template(name: &str, args: &[ResolvedTemplateArgument]) -> String {
+    format!(
+        "{name}<{}>",
+        args.iter()
+            .map(|argument| match argument {
+                ResolvedTemplateArgument::Type(ty) => ty.render(),
+                ResolvedTemplateArgument::Value(value) => value.clone(),
+            })
+            .collect::<Vec<_>>()
+            .join(", ")
+    )
 }
 
 fn render_function_wrapper(inner: &ResolvedType, marker: &str) -> String {
@@ -313,7 +376,40 @@ fn insert_space_before_pointer_marker(output: &mut String, characters: &[char], 
 
 #[cfg(test)]
 mod tests {
-    use super::{ResolvedTemplateArgument, ResolvedType};
+    use super::{ResolvedNameSegment, ResolvedTemplateArgument, ResolvedType};
+
+    #[test]
+    fn qualified_types_preserve_arguments_and_declaration_identity() {
+        let ty = ResolvedType::Qualified {
+            declaration_id: "demo::Owner::Inner::Leaf".into(),
+            segments: vec![
+                ResolvedNameSegment::Identifier("demo".into()),
+                ResolvedNameSegment::Template {
+                    name: "Owner".into(),
+                    args: vec![ResolvedTemplateArgument::Type(ResolvedType::Pointer(
+                        Box::new(ResolvedType::Builtin("double".into())),
+                    ))],
+                },
+                ResolvedNameSegment::Template {
+                    name: "Inner".into(),
+                    args: vec![ResolvedTemplateArgument::Type(ResolvedType::Builtin(
+                        "int".into(),
+                    ))],
+                },
+                ResolvedNameSegment::Identifier("Leaf".into()),
+            ],
+        };
+        assert_eq!(
+            ty.render_for_display(),
+            "demo::Owner<double *>::Inner<int>::Leaf"
+        );
+        assert_eq!(ty.referenced_entity_id(), Some("demo::Owner::Inner::Leaf"));
+        assert_eq!(
+            ty.relationship_target_entity_id(),
+            Some("demo::Owner::Inner::Leaf")
+        );
+        assert!(!ty.is_non_owning());
+    }
 
     #[test]
     fn resolves_referenced_entities_through_wrappers() {

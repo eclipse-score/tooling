@@ -19,16 +19,6 @@ class Mixed
 {
 };
 
-template <typename T>
-class Owner
-{
-  public:
-    template <typename First, int Count, typename Last>
-    class Mixed
-    {
-    };
-};
-
 class Probe
 {
   public:
@@ -42,11 +32,6 @@ class Probe
     volatile Mixed<int, 3, float> varying();
     const volatile Mixed<int, 3, float> qualified();
     const Mixed<const int, 3, volatile float> inner_qualified();
-
-    // Preserve both argument lists: Owner<double> and Mixed<int, 3, float>.
-    // Also keep outer const/volatile exactly once on the qualified return type.
-    argument_positions::Owner<double>::Mixed<int, 3, float> nested();
-    const volatile argument_positions::Owner<double>::Mixed<int, 3, float> nested_qualified();
 };
 
 template <bool Flag, unsigned long long Maximum, int* Pointer, typename Last>

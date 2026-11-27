@@ -16,7 +16,7 @@
 #![cfg_attr(test, allow(dead_code))]
 
 use clang::{Entity, EntityKind, TemplateArgument, Type, TypeKind};
-use cpp_semantics::{ResolvedTemplateArgument, ResolvedType};
+use cpp_semantics::{ResolvedNameSegment, ResolvedTemplateArgument, ResolvedType};
 
 use crate::clang_adapter::exception_specification::has_plain_noexcept;
 use crate::clang_adapter::source_filter;
@@ -518,10 +518,21 @@ fn resolve_decl_based(ty: &Type, template_type_parameters: &[String]) -> Option<
             .get_name()
             .map(ResolvedType::TemplateTypeParameter);
     }
+    if has_specialized_owner(&declaration) {
+        return Some(
+            resolve_qualified_type(&declaration, template_type_parameters).unwrap_or_else(|| {
+                ResolvedType::Unknown(unqualified_named_spelling(
+                    &ty.get_display_name(),
+                    ty.is_const_qualified(),
+                    ty.is_volatile_qualified(),
+                ))
+            }),
+        );
+    }
     let base = entity_id_from_decl(&declaration);
-    let Some(argument_types) = ty.get_template_argument_types() else {
+    if ty.get_template_argument_types().is_none() {
         return Some(ResolvedType::UserDefined(base));
-    };
+    }
     if has_templated_owner(&declaration) {
         return Some(ResolvedType::Unknown(unqualified_named_spelling(
             &ty.get_display_name(),
@@ -529,6 +540,24 @@ fn resolve_decl_based(ty: &Type, template_type_parameters: &[String]) -> Option<
             ty.is_volatile_qualified(),
         )));
     }
+    Some(
+        match resolve_template_arguments(ty, &declaration, template_type_parameters) {
+            Some(args) => ResolvedType::Template { base, args },
+            None => ResolvedType::Unknown(unqualified_named_spelling(
+                &ty.get_display_name(),
+                ty.is_const_qualified(),
+                ty.is_volatile_qualified(),
+            )),
+        },
+    )
+}
+
+fn resolve_template_arguments(
+    ty: &Type,
+    declaration: &Entity,
+    template_type_parameters: &[String],
+) -> Option<Vec<ResolvedTemplateArgument>> {
+    let argument_types = ty.get_template_argument_types()?;
     let arguments = declaration
         .get_template_arguments()
         .filter(|arguments| arguments.len() == argument_types.len());
@@ -549,7 +578,7 @@ fn resolve_decl_based(ty: &Type, template_type_parameters: &[String]) -> Option<
                 .collect::<Vec<_>>()
         })
         .unwrap_or_default();
-    let args = argument_types
+    argument_types
         .into_iter()
         .enumerate()
         .map(|(index, argument)| match argument {
@@ -570,15 +599,79 @@ fn resolve_decl_based(ty: &Type, template_type_parameters: &[String]) -> Option<
                 _ => None,
             },
         })
-        .collect::<Option<Vec<_>>>();
+        .collect()
+}
 
-    Some(match args {
-        Some(args) => ResolvedType::Template { base, args },
-        None => ResolvedType::Unknown(unqualified_named_spelling(
-            &ty.get_display_name(),
-            ty.is_const_qualified(),
-            ty.is_volatile_qualified(),
-        )),
+fn has_specialized_owner(declaration: &Entity) -> bool {
+    if declaration.get_kind() == EntityKind::TemplateTemplateParameter {
+        return false;
+    }
+    let mut owner = declaration.get_semantic_parent();
+    while let Some(entity) = owner {
+        if matches!(
+            entity.get_kind(),
+            EntityKind::ClassDecl
+                | EntityKind::StructDecl
+                | EntityKind::UnionDecl
+                | EntityKind::ClassTemplatePartialSpecialization
+        ) && entity.get_template().is_some()
+        {
+            return true;
+        }
+        owner = entity.get_semantic_parent();
+    }
+    false
+}
+
+fn resolve_qualified_type(
+    declaration: &Entity,
+    template_type_parameters: &[String],
+) -> Option<ResolvedType> {
+    let mut owners = Vec::new();
+    let mut current = Some(*declaration);
+    while let Some(entity) = current {
+        owners.push(entity);
+        current = entity.get_semantic_parent();
+    }
+    let mut segments = Vec::new();
+    for entity in owners.into_iter().rev() {
+        match entity.get_kind() {
+            EntityKind::Namespace => {
+                let Some(name) = entity.get_name() else {
+                    continue;
+                };
+                if matches!(segments.last(), Some(ResolvedNameSegment::Identifier(previous)) if previous == "std")
+                    && is_std_internal_namespace_segment(&name)
+                {
+                    continue;
+                }
+                segments.push(ResolvedNameSegment::Identifier(name));
+            }
+            EntityKind::ClassDecl
+            | EntityKind::StructDecl
+            | EntityKind::UnionDecl
+            | EntityKind::EnumDecl
+            | EntityKind::ClassTemplate
+            | EntityKind::ClassTemplatePartialSpecialization
+            | EntityKind::TypedefDecl
+            | EntityKind::TypeAliasDecl => {
+                let name = entity.get_name()?;
+                let ty = entity.get_type()?;
+                segments.push(if ty.get_template_argument_types().is_some() {
+                    ResolvedNameSegment::Template {
+                        name,
+                        args: resolve_template_arguments(&ty, &entity, template_type_parameters)?,
+                    }
+                } else {
+                    ResolvedNameSegment::Identifier(name)
+                });
+            }
+            _ => {}
+        }
+    }
+    Some(ResolvedType::Qualified {
+        declaration_id: entity_id_from_decl(declaration),
+        segments,
     })
 }
 

@@ -11,8 +11,8 @@
 // SPDX-License-Identifier: Apache-2.0
 // *******************************************************************************
 
-use class_diagram::{QualifiedTypeName, TypeArgument, TypeDescription, TypeExpr};
-use cpp_semantics::{ResolvedTemplateArgument, ResolvedType};
+use class_diagram::{QualifiedTypeName, TypeArgument, TypeDescription, TypeExpr, TypeNameSegment};
+use cpp_semantics::{ResolvedNameSegment, ResolvedTemplateArgument, ResolvedType};
 
 pub(crate) fn describe_type(raw_text: String, resolved: &ResolvedType) -> TypeDescription {
     TypeDescription {
@@ -29,16 +29,26 @@ fn to_type_expr(resolved: &ResolvedType) -> Option<TypeExpr> {
         }
         ResolvedType::Template { base, args } => TypeExpr::Template {
             name: qualified_name(base)?,
-            arguments: args
+            arguments: type_arguments(args)?,
+        },
+        ResolvedType::Qualified { segments, .. } => TypeExpr::NamedType(QualifiedTypeName {
+            segments: segments
                 .iter()
-                .map(|argument| match argument {
-                    ResolvedTemplateArgument::Type(ty) => to_type_expr(ty).map(TypeArgument::Type),
-                    ResolvedTemplateArgument::Value(value) => {
-                        Some(TypeArgument::Value(value.clone()))
+                .map(|segment| match segment {
+                    ResolvedNameSegment::Identifier(name) if is_identifier(name) => {
+                        Some(TypeNameSegment::Identifier(name.clone()))
                     }
+                    ResolvedNameSegment::Template { name, args } if is_identifier(name) => {
+                        Some(TypeNameSegment::Template {
+                            name: name.clone(),
+                            arguments: type_arguments(args)?,
+                        })
+                    }
+                    _ => None,
                 })
                 .collect::<Option<_>>()?,
-        },
+            is_global: false,
+        }),
         ResolvedType::Function {
             return_type,
             parameter_types,
@@ -72,17 +82,27 @@ fn to_type_expr(resolved: &ResolvedType) -> Option<TypeExpr> {
     })
 }
 
+fn type_arguments(args: &[ResolvedTemplateArgument]) -> Option<Vec<TypeArgument>> {
+    args.iter()
+        .map(|argument| match argument {
+            ResolvedTemplateArgument::Type(ty) => to_type_expr(ty).map(TypeArgument::Type),
+            ResolvedTemplateArgument::Value(value) => Some(TypeArgument::Value(value.clone())),
+        })
+        .collect()
+}
+
+fn is_identifier(name: &str) -> bool {
+    let mut characters = name.chars();
+    characters.next().is_some_and(|first| {
+        (first.is_ascii_alphabetic() || first == '_')
+            && characters.all(|character| character.is_ascii_alphanumeric() || character == '_')
+    })
+}
+
 fn qualified_name(name: &str) -> Option<QualifiedTypeName> {
     let segments = name.strip_prefix("::").unwrap_or(name).split("::");
     let segments = segments
-        .map(|segment| {
-            let mut characters = segment.chars();
-            let first = characters.next()?;
-            ((first.is_ascii_alphabetic() || first == '_')
-                && characters
-                    .all(|character| character.is_ascii_alphanumeric() || character == '_'))
-            .then(|| segment.to_string())
-        })
+        .map(|segment| is_identifier(segment).then(|| segment.into()))
         .collect::<Option<_>>()?;
     Some(QualifiedTypeName {
         segments,
@@ -93,6 +113,39 @@ fn qualified_name(name: &str) -> Option<QualifiedTypeName> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn describes_each_template_owner_without_changing_raw_text() {
+        let resolved = ResolvedType::Qualified {
+            declaration_id: "demo::Owner::Nested".into(),
+            segments: vec![
+                ResolvedNameSegment::Identifier("demo".into()),
+                ResolvedNameSegment::Template {
+                    name: "Owner".into(),
+                    args: vec![ResolvedTemplateArgument::Type(ResolvedType::Builtin(
+                        "double".into(),
+                    ))],
+                },
+                ResolvedNameSegment::Identifier("Nested".into()),
+            ],
+        };
+        let description = describe_type("Owner<double>::Nested".into(), &resolved);
+        assert_eq!(description.raw_text, "Owner<double>::Nested");
+        assert_eq!(
+            description.expression,
+            Some(TypeExpr::NamedType(QualifiedTypeName {
+                segments: vec![
+                    "demo".into(),
+                    TypeNameSegment::Template {
+                        name: "Owner".into(),
+                        arguments: vec![TypeArgument::Type(TypeExpr::Builtin("double".into()))],
+                    },
+                    "Nested".into(),
+                ],
+                is_global: false,
+            }))
+        );
+    }
 
     #[test]
     fn describes_structured_types_without_rendering_raw_text() {

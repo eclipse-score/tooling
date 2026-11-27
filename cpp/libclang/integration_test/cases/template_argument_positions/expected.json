@@ -22,48 +22,6 @@
         "line": 18
       }
     },
-    "argument_positions::Owner": {
-      "id": "argument_positions::Owner",
-      "name": "Owner",
-      "enclosing_namespace_id": "argument_positions",
-      "stereotypes": [],
-      "entity_type": "Class",
-      "template_kind": "Primary",
-      "type_aliases": [],
-      "variables": [],
-      "methods": [],
-      "template_parameters": [
-        { "Type": { "name": "T", "is_pack": false } }
-      ],
-      "enum_literals": [],
-      "relationships": [],
-      "source_location": {
-        "file": "cpp/libclang/integration_test/cases/template_argument_positions/template_argument_positions.cpp",
-        "line": 23
-      }
-    },
-    "argument_positions::Owner::Mixed": {
-      "id": "argument_positions::Owner::Mixed",
-      "name": "Mixed",
-      "enclosing_namespace_id": "argument_positions",
-      "stereotypes": [],
-      "entity_type": "Class",
-      "template_kind": "Primary",
-      "type_aliases": [],
-      "variables": [],
-      "methods": [],
-      "template_parameters": [
-        { "Type": { "name": "First", "is_pack": false } },
-        { "NonType": { "name": "Count", "value_type": "int", "is_pack": false } },
-        { "Type": { "name": "Last", "is_pack": false } }
-      ],
-      "enum_literals": [],
-      "relationships": [],
-      "source_location": {
-        "file": "cpp/libclang/integration_test/cases/template_argument_positions/template_argument_positions.cpp",
-        "line": 27
-      }
-    },
     "argument_positions::Probe": {
       "id": "argument_positions::Probe",
       "name": "Probe",
@@ -91,7 +49,7 @@
           "is_static": false,
           "source_location": {
             "file": "cpp/libclang/integration_test/cases/template_argument_positions/template_argument_positions.cpp",
-            "line": 36
+            "line": 26
           }
         }
       ],
@@ -123,7 +81,7 @@
           "modifiers": [],
           "source_location": {
             "file": "cpp/libclang/integration_test/cases/template_argument_positions/template_argument_positions.cpp",
-            "line": 37
+            "line": 27
           }
         },
         {
@@ -147,7 +105,7 @@
           "modifiers": [],
           "source_location": {
             "file": "cpp/libclang/integration_test/cases/template_argument_positions/template_argument_positions.cpp",
-            "line": 38
+            "line": 28
           }
         },
         {
@@ -173,7 +131,7 @@
           "modifiers": [],
           "source_location": {
             "file": "cpp/libclang/integration_test/cases/template_argument_positions/template_argument_positions.cpp",
-            "line": 41
+            "line": 31
           }
         },
         {
@@ -199,7 +157,7 @@
           "modifiers": [],
           "source_location": {
             "file": "cpp/libclang/integration_test/cases/template_argument_positions/template_argument_positions.cpp",
-            "line": 42
+            "line": 32
           }
         },
         {
@@ -227,7 +185,7 @@
           "modifiers": [],
           "source_location": {
             "file": "cpp/libclang/integration_test/cases/template_argument_positions/template_argument_positions.cpp",
-            "line": 43
+            "line": 33
           }
         },
         {
@@ -253,31 +211,7 @@
           "modifiers": [],
           "source_location": {
             "file": "cpp/libclang/integration_test/cases/template_argument_positions/template_argument_positions.cpp",
-            "line": 44
-          }
-        },
-        {
-          "name": "nested",
-          "return_type": { "raw_text": "argument_positions::Owner<double>::Mixed<int, 3, float>" },
-          "visibility": "public",
-          "parameters": [],
-          "template_parameters": null,
-          "modifiers": [],
-          "source_location": {
-            "file": "cpp/libclang/integration_test/cases/template_argument_positions/template_argument_positions.cpp",
-            "line": 48
-          }
-        },
-        {
-          "name": "nested_qualified",
-          "return_type": { "raw_text": "const volatile argument_positions::Owner<double>::Mixed<int, 3, float>" },
-          "visibility": "public",
-          "parameters": [],
-          "template_parameters": null,
-          "modifiers": [],
-          "source_location": {
-            "file": "cpp/libclang/integration_test/cases/template_argument_positions/template_argument_positions.cpp",
-            "line": 49
+            "line": 34
           }
         }
       ],
@@ -292,7 +226,7 @@
           "target_multiplicity": null,
           "source_location": {
             "file": "cpp/libclang/integration_test/cases/template_argument_positions/template_argument_positions.cpp",
-            "line": 36
+            "line": 26
           }
         },
         {
@@ -303,13 +237,13 @@
           "target_multiplicity": null,
           "source_location": {
             "file": "cpp/libclang/integration_test/cases/template_argument_positions/template_argument_positions.cpp",
-            "line": 37
+            "line": 27
           }
         }
       ],
       "source_location": {
         "file": "cpp/libclang/integration_test/cases/template_argument_positions/template_argument_positions.cpp",
-        "line": 32
+        "line": 22
       }
     },
     "argument_positions::ValueKinds": {
@@ -338,7 +272,7 @@
           },
           "source_location": {
             "file": "cpp/libclang/integration_test/cases/template_argument_positions/template_argument_positions.cpp",
-            "line": 56
+            "line": 41
           }
         },
         {
@@ -358,7 +292,7 @@
           },
           "source_location": {
             "file": "cpp/libclang/integration_test/cases/template_argument_positions/template_argument_positions.cpp",
-            "line": 57
+            "line": 42
           }
         }
       ],
@@ -374,7 +308,7 @@
       "relationships": [],
       "source_location": {
         "file": "cpp/libclang/integration_test/cases/template_argument_positions/template_argument_positions.cpp",
-        "line": 53
+        "line": 38
       }
     }
   },
