@@ -24,7 +24,7 @@ SPDX-FileCopyrightText = "Copyright (c) 2026 Contributors to the Eclipse Foundat
 SPDX-License-Identifier = "Apache-2.0"
 
 [[annotations]]
-path = ["**/*.lock.json"]
+path = ["**/*.lock.json", "maven_install.json"]
 SPDX-FileCopyrightText = "Copyright (c) 2026 Contributors to the Eclipse Foundation"
 SPDX-License-Identifier = "Apache-2.0"
 
