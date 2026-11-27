@@ -147,6 +147,27 @@ class TestSafetyMap(unittest.TestCase):
 
 
 class TestParseDirectives(unittest.TestCase):
+    def test_multiline_field_preserves_following_fields_and_body(self):
+        rst = _rst(
+            ".. comp_req:: Configuration",
+            "   :id: comp_req__test__config",
+            "   :derived_from:",
+            "      feat_req__test__one[version==1],",
+            "      feat_req__test__two[version==2]",
+            "   :safety: ASIL_B",
+            "   :version: 3",
+            "",
+            "   The component shall load configuration.",
+        )
+        item = parse_directives(rst)[0]
+        self.assertEqual(
+            item["fields"]["derived_from"],
+            "feat_req__test__one[version==1], feat_req__test__two[version==2]",
+        )
+        self.assertEqual(item["fields"]["safety"], "ASIL_B")
+        self.assertEqual(item["fields"]["version"], "3")
+        self.assertEqual(item["body"], "The component shall load configuration.")
+
     # --- Assumed System Requirements ---
 
     def test_parses_assumed_system_req(self):

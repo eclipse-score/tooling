@@ -104,13 +104,20 @@ _TRLC_HEADER = """\
 def _collect_fields(lines: list[str], i: int) -> tuple[dict[str, str], int]:
     """Read RST field list starting at line i. Return (fields dict, next line)."""
     fields: dict[str, str] = {}
+    current_field = None
+    field_indent = 0
     while i < len(lines):
         m = _RE_FIELD.match(lines[i])
         if m:
-            fields[m.group(1)] = m.group(2).strip()
+            current_field = m.group(1)
+            field_indent = len(lines[i]) - len(lines[i].lstrip())
+            fields[current_field] = m.group(2).strip()
             i += 1
         elif not lines[i].strip():
             return fields, i + 1
+        elif current_field and len(lines[i]) - len(lines[i].lstrip()) > field_indent:
+            fields[current_field] = " ".join(filter(None, (fields[current_field], lines[i].strip())))
+            i += 1
         else:
             return fields, i
     return fields, i
